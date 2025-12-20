@@ -168,7 +168,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .drawer.is-open {
@@ -184,6 +184,15 @@ body {
 .drawer-header h2 {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.drawer__body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
 }
 
 .drawer-close {

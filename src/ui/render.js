@@ -3,7 +3,8 @@ import { clearElement } from './dom.js';
 import {
   buildHeader,
   buildBackdrop,
-  buildDrawer,
+  buildDrawerShell,
+  buildDrawerContent,
   buildAbsentChildrenSection,
   buildAngebotSection,
   buildObservationsSection,
@@ -66,7 +67,9 @@ const normalizeObservations = (value) => {
 
 let drawerOpen = false;
 let drawerRefs = null;
+let drawerShell = null;
 let escapeListenerBound = false;
+let drawerCloseBound = false;
 
 const applyDrawerState = (open) => {
   drawerOpen = open;
@@ -94,6 +97,30 @@ const bindDrawerEscape = () => {
   escapeListenerBound = true;
 };
 
+const renderDrawerContent = (state, drawerBody, attendanceSection, angebotSection) => {
+  if (!drawerBody) {
+    return null;
+  }
+
+  const scrollTop = drawerBody.scrollTop;
+  const exportMode = state?.ui?.exportMode === 'all' ? 'all' : 'day';
+  const drawerSections = state?.ui?.drawer?.sections || {};
+  const content = buildDrawerContent({
+    exportMode,
+    drawerSections,
+    attendanceSection: attendanceSection?.element,
+    angebotSection: angebotSection?.element,
+  });
+
+  drawerBody.replaceChildren(...content.nodes);
+
+  requestAnimationFrame(() => {
+    drawerBody.scrollTop = scrollTop;
+  });
+
+  return content.refs;
+};
+
 export const renderApp = (root, state) => {
   if (!root) {
     return;
@@ -110,9 +137,7 @@ export const renderApp = (root, state) => {
   container.className = 'app';
 
   const selectedDate = state?.ui?.selectedDate || todayYmd();
-  const exportMode = state?.ui?.exportMode === 'all' ? 'all' : 'day';
   const db = state?.db || {};
-  const drawerSections = state?.ui?.drawer?.sections || {};
   const entry =
     db.records?.entriesByDate?.[selectedDate] ||
     createFallbackEntry(selectedDate);
@@ -142,12 +167,6 @@ export const renderApp = (root, state) => {
     newValue: angebotInputValue || '',
     savePresetChecked: angebotPresetChecked,
   });
-  const drawer = buildDrawer({
-    exportMode,
-    drawerSections,
-    attendanceSection: absentSection.element,
-    angebotSection: angebotSection.element,
-  });
   const backdrop = buildBackdrop();
   const observationsSection = buildObservationsSection({
     children: presentChildren,
@@ -155,22 +174,33 @@ export const renderApp = (root, state) => {
     presets: observationPresets,
   });
 
+  if (!drawerShell) {
+    drawerShell = buildDrawerShell();
+  }
+
+  const drawerContentRefs = renderDrawerContent(
+    state,
+    drawerShell.refs.body,
+    absentSection,
+    angebotSection,
+  );
+
   container.append(
     header.element,
     backdrop,
-    drawer.element,
+    drawerShell.element,
     observationsSection.element,
   );
   root.appendChild(container);
 
   bindDateEntry(header.refs.dateInput);
   bindImportExport({
-    exportModeButtons: drawer.refs.exportModeButtons,
-    exportButton: drawer.refs.exportButton,
-    importButton: drawer.refs.importButton,
-    deleteButton: drawer.refs.deleteButton,
-    resetButton: drawer.refs.resetButton,
-    fileInput: drawer.refs.importInput,
+    exportModeButtons: drawerContentRefs?.exportModeButtons || [],
+    exportButton: drawerContentRefs?.exportButton,
+    importButton: drawerContentRefs?.importButton,
+    deleteButton: drawerContentRefs?.deleteButton,
+    resetButton: drawerContentRefs?.resetButton,
+    fileInput: drawerContentRefs?.importInput,
   });
   bindAbsentChildren({
     absentList: absentSection.refs.absentList,
@@ -191,7 +221,7 @@ export const renderApp = (root, state) => {
   });
 
   drawerRefs = {
-    drawer: drawer.element,
+    drawer: drawerShell.element,
     backdrop,
   };
   applyDrawerState(drawerOpen);
@@ -200,18 +230,23 @@ export const renderApp = (root, state) => {
   header.refs.menuButton.addEventListener('click', () => {
     applyDrawerState(true);
   });
-  drawer.refs.closeButton.addEventListener('click', () => {
-    applyDrawerState(false);
-  });
+  if (!drawerCloseBound) {
+    drawerShell.refs.closeButton.addEventListener('click', () => {
+      applyDrawerState(false);
+    });
+    drawerCloseBound = true;
+  }
   backdrop.addEventListener('click', () => {
     applyDrawerState(false);
   });
 
-  Object.entries(drawer.refs.sections).forEach(([id, section]) => {
-    section.refs.toggleButton.addEventListener('click', () => {
-      const nextOpen = !section.isOpen();
-      section.setOpen(nextOpen);
-      setDrawerSectionState(id, nextOpen);
+  if (drawerContentRefs?.sections) {
+    Object.entries(drawerContentRefs.sections).forEach(([id, section]) => {
+      section.refs.toggleButton.addEventListener('click', () => {
+        const nextOpen = !section.isOpen();
+        section.setOpen(nextOpen);
+        setDrawerSectionState(id, nextOpen);
+      });
     });
-  });
+  }
 };
