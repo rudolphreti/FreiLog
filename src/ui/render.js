@@ -223,7 +223,7 @@ export const renderApp = (root, state) => {
   const filterButtons = observationsSection.refs.filterButtons || [];
   filterButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      const value = button.dataset.initial || 'ALL';
+      const value = button.dataset.value || 'ALL';
       setObservationsFilter(value);
     });
   });
