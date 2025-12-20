@@ -81,7 +81,6 @@ export const renderApp = (root, state) => {
     return;
   }
 
-  const searchValue = root.querySelector('[data-role="absent-search"]')?.value;
   const newAngebotValue = root.querySelector('[data-role="angebot-new"]')?.value;
 
   clearElement(root);
@@ -113,14 +112,16 @@ export const renderApp = (root, state) => {
     (child) => !absentChildren.includes(child),
   );
 
-  const header = buildHeader({ selectedDate });
-  const drawer = buildDrawer({ exportMode });
-  const backdrop = buildBackdrop();
   const absentSection = buildAbsentChildrenSection({
     children: childrenList,
     absentChildren,
-    searchValue: searchValue || '',
   });
+  const header = buildHeader({ selectedDate });
+  const drawer = buildDrawer({
+    exportMode,
+    attendanceSection: absentSection.element,
+  });
+  const backdrop = buildBackdrop();
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
     selectedAngebot,
@@ -136,7 +137,6 @@ export const renderApp = (root, state) => {
     header.element,
     backdrop,
     drawer.element,
-    absentSection.element,
     angebotSection.element,
     observationsSection.element,
   );
@@ -152,8 +152,8 @@ export const renderApp = (root, state) => {
     fileInput: drawer.refs.importInput,
   });
   bindAbsentChildren({
-    searchInput: absentSection.refs.searchInput,
-    list: absentSection.refs.list,
+    absentList: absentSection.refs.absentList,
+    allList: absentSection.refs.allList,
     date: selectedDate,
   });
   bindAngebot({

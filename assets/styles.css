@@ -217,6 +217,81 @@ body {
   font-size: 0.95rem;
 }
 
+.attendance-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attendance-subtitle {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.absent-pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.absent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.absent-pill-remove {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+}
+
+.attendance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attendance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.attendance-row.is-absent {
+  opacity: 0.65;
+  background: #f8fafc;
+}
+
+.attendance-status {
+  border-radius: 999px;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .drawer-open {
   overflow: hidden;
 }

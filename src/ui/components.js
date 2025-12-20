@@ -59,7 +59,7 @@ export const buildMenuSection = ({ title, children }) => {
   return section;
 };
 
-export const buildDrawer = ({ exportMode }) => {
+export const buildDrawer = ({ exportMode, attendanceSection }) => {
   const drawer = createEl('aside', { className: 'drawer' });
 
   const drawerHeader = createEl('div', { className: 'drawer-header' });
@@ -122,15 +122,17 @@ export const buildDrawer = ({ exportMode }) => {
     children: [actionsGroup],
   });
 
-  const attendanceSection = buildMenuSection({
-    title: 'Anwesenheit',
-    children: [
-      createEl('p', {
-        className: 'drawer-placeholder',
-        text: 'Platzhalter für spätere Funktionen.',
-      }),
-    ],
-  });
+  const attendanceContent =
+    attendanceSection ||
+    buildMenuSection({
+      title: 'Anwesenheit',
+      children: [
+        createEl('p', {
+          className: 'drawer-placeholder',
+          text: 'Platzhalter für spätere Funktionen.',
+        }),
+      ],
+    });
   const offersSection = buildMenuSection({
     title: 'Angebote',
     children: [
@@ -150,7 +152,7 @@ export const buildDrawer = ({ exportMode }) => {
   drawer.append(
     drawerHeader,
     actionsSection,
-    attendanceSection,
+    attendanceContent,
     offersSection,
     importInput,
   );
@@ -172,40 +174,67 @@ export const buildDrawer = ({ exportMode }) => {
 export const buildAbsentChildrenSection = ({
   children,
   absentChildren,
-  searchValue,
 }) => {
-  const section = createEl('section', { className: 'section' });
-  const title = createEl('h2', { text: 'Abwesende Kinder' });
-  const searchInput = createEl('input', {
-    className: 'input',
-    attrs: { type: 'search', placeholder: 'Suchen...' },
-    dataset: { role: 'absent-search' },
+  const absentTitle = createEl('h4', {
+    className: 'attendance-subtitle',
+    text: 'Abwesend',
   });
-  if (searchValue) {
-    searchInput.value = searchValue;
-  }
-
-  const list = createEl('div', { className: 'checkbox-list' });
-  children.forEach((child) => {
-    const checkbox = createEl('input', {
-      attrs: {
-        type: 'checkbox',
-        value: child,
-        checked: absentChildren.includes(child) ? 'checked' : null,
-      },
+  const absentList = createEl('div', { className: 'absent-pill-list' });
+  absentChildren.forEach((child) => {
+    const name = createEl('span', { text: child });
+    const removeButton = createEl('button', {
+      className: 'absent-pill-remove',
+      text: '✕',
+      attrs: { type: 'button', 'aria-label': `${child} wieder anwesend` },
+      dataset: { role: 'absent-remove', child },
     });
-    const label = createEl('span', { text: child });
-    const item = createEl('label', {
-      className: 'checkbox-item',
+    const pill = createEl('span', {
+      className: 'absent-pill',
       dataset: { child },
-      children: [checkbox, label],
+      children: [name, removeButton],
     });
-    list.appendChild(item);
+    absentList.appendChild(pill);
   });
 
-  section.append(title, searchInput, list);
+  const absentBlock = createEl('div', {
+    className: 'attendance-block',
+    children: [absentTitle, absentList],
+  });
 
-  return { element: section, refs: { searchInput, list } };
+  const allTitle = createEl('h4', {
+    className: 'attendance-subtitle',
+    text: 'Alle Kinder',
+  });
+  const allList = createEl('div', { className: 'attendance-list' });
+  children.forEach((child) => {
+    const isAbsent = absentChildren.includes(child);
+    const name = createEl('span', { text: child });
+    const status = isAbsent
+      ? createEl('span', { className: 'attendance-status', text: 'abwesend' })
+      : null;
+    const row = createEl('button', {
+      className: `attendance-row${isAbsent ? ' is-absent' : ''}`,
+      attrs: {
+        type: 'button',
+        'aria-pressed': isAbsent ? 'true' : 'false',
+      },
+      dataset: { role: 'attendance-row', child },
+      children: status ? [name, status] : [name],
+    });
+    allList.appendChild(row);
+  });
+
+  const allBlock = createEl('div', {
+    className: 'attendance-block',
+    children: [allTitle, allList],
+  });
+
+  const section = buildMenuSection({
+    title: 'Anwesenheit',
+    children: [absentBlock, allBlock],
+  });
+
+  return { element: section, refs: { absentList, allList } };
 };
 
 export const buildAngebotSection = ({ angebote, selectedAngebot, newValue }) => {
