@@ -23,8 +23,8 @@ const normalizeTagList = (value) => {
   return result;
 };
 
-const updateObservationNote = (date, list, child) => {
-  const card = list.querySelector(`[data-child="${child}"]`);
+const updateObservationNote = (date, container, child) => {
+  const card = container.querySelector(`[data-child="${child}"]`);
   if (!card) {
     return;
   }
@@ -137,8 +137,38 @@ const updatePresetButtonState = (card, value, presets) => {
   button.classList.toggle('d-none', !shouldShow);
 };
 
-export const bindObservations = ({ list, date }) => {
-  if (!list) {
+const parseChildFromHash = () => {
+  if (!window.location.hash) {
+    return null;
+  }
+
+  const normalized = window.location.hash.replace('#', '');
+  const parts = normalized.split('/');
+  if (parts.length < 2) {
+    return null;
+  }
+
+  const [route, childId] = parts;
+  if (route !== 'beobachtungen' || !childId) {
+    return null;
+  }
+
+  try {
+    return decodeURIComponent(childId);
+  } catch (error) {
+    return null;
+  }
+};
+
+export const bindObservations = ({
+  list,
+  overlay,
+  overlayContent,
+  overlayTitle,
+  closeButton,
+  date,
+}) => {
+  if (!list || !overlay || !overlayContent || !overlayTitle) {
     return;
   }
 
@@ -147,15 +177,68 @@ export const bindObservations = ({ list, date }) => {
     if (!debouncedByChild.has(child)) {
       debouncedByChild.set(
         child,
-        debounce(() => updateObservationNote(date, list, child)),
+        debounce(() => updateObservationNote(date, overlayContent, child)),
       );
     }
     return debouncedByChild.get(child);
   };
 
   const presets = getPresets('observations');
+  let activeChild = null;
+  let isOverlayOpen = false;
 
-  list.addEventListener('input', (event) => {
+  const setOverlayState = (child) => {
+    const detailPanels = overlayContent.querySelectorAll('[data-child]');
+    detailPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.child !== child;
+    });
+    overlayTitle.textContent = child || '';
+    overlayContent.scrollTop = 0;
+  };
+
+  const openOverlay = (child, { updateHistory = true } = {}) => {
+    if (!child) {
+      return;
+    }
+    activeChild = child;
+    isOverlayOpen = true;
+    setOverlayState(child);
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('observation-overlay-open');
+    if (updateHistory) {
+      const encoded = encodeURIComponent(child);
+      history.pushState(
+        { observationChild: child },
+        '',
+        `#beobachtungen/${encoded}`,
+      );
+    }
+  };
+
+  const closeOverlayInternal = () => {
+    if (!isOverlayOpen) {
+      return;
+    }
+    isOverlayOpen = false;
+    activeChild = null;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('observation-overlay-open');
+  };
+
+  const closeOverlay = ({ updateHistory = true } = {}) => {
+    if (!isOverlayOpen) {
+      return;
+    }
+    if (updateHistory && history.state?.observationChild) {
+      history.back();
+      return;
+    }
+    closeOverlayInternal();
+  };
+
+  overlayContent.addEventListener('input', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
       return;
@@ -179,7 +262,7 @@ export const bindObservations = ({ list, date }) => {
     }
   });
 
-  list.addEventListener('keydown', (event) => {
+  overlayContent.addEventListener('keydown', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
       return;
@@ -199,7 +282,7 @@ export const bindObservations = ({ list, date }) => {
     updatePresetButtonState(card, '', presets);
   });
 
-  list.addEventListener('click', (event) => {
+  overlayContent.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -247,4 +330,54 @@ export const bindObservations = ({ list, date }) => {
       }
     }
   });
+
+  list.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const button = target.closest('[data-role="observation-child"]');
+    if (!button) {
+      return;
+    }
+
+    const child = button.dataset.child;
+    if (child) {
+      openOverlay(child);
+    }
+  });
+
+  overlay.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target === overlay) {
+      closeOverlay();
+    }
+  });
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => {
+      closeOverlay();
+    });
+  }
+
+  window.addEventListener('popstate', () => {
+    const stateChild = history.state?.observationChild;
+    const hashChild = parseChildFromHash();
+    const nextChild = stateChild || hashChild;
+    if (nextChild) {
+      openOverlay(nextChild, { updateHistory: false });
+      return;
+    }
+    closeOverlayInternal();
+  });
+
+  const initialChild = parseChildFromHash();
+  if (initialChild) {
+    openOverlay(initialChild, { updateHistory: false });
+  }
 };

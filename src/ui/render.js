@@ -11,13 +11,9 @@ import {
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAbsentChildren } from '../features/absentChildren.js';
 import { bindAngebot } from '../features/angebot.js';
-import {
-  applyInitialFilter,
-  bindObservations,
-  getInitialLetters,
-} from '../features/observations.js';
+import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
-import { setDrawerSectionState, setObservationsFilter } from '../state/store.js';
+import { setDrawerSectionState } from '../state/store.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -114,6 +110,9 @@ export const renderApp = (root, state) => {
     createFallbackEntry(selectedDate);
 
   const childrenList = db.children || [];
+  const sortedChildren = [...childrenList].sort((a, b) =>
+    a.localeCompare(b, 'de'),
+  );
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
 
@@ -122,10 +121,6 @@ export const renderApp = (root, state) => {
     : [];
 
   const observations = normalizeObservations(entry.observations);
-  const presentChildren = childrenList.filter(
-    (child) => !absentChildren.includes(child),
-  );
-
   const absentSection = buildAbsentChildrenSection({
     children: childrenList,
     absentChildren,
@@ -138,25 +133,10 @@ export const renderApp = (root, state) => {
     newValue: angebotInputValue || '',
     savePresetChecked: angebotPresetChecked,
   });
-  const initials = getInitialLetters(presentChildren);
-  let selectedInitial =
-    typeof state?.ui?.observationsFilter === 'string'
-      ? state.ui.observationsFilter
-      : 'ALL';
-  if (selectedInitial && selectedInitial !== 'ALL') {
-    selectedInitial = selectedInitial.toLocaleUpperCase();
-  }
-  if (selectedInitial !== 'ALL' && !initials.includes(selectedInitial)) {
-    setObservationsFilter('ALL');
-    selectedInitial = 'ALL';
-  }
-  const filteredChildren = applyInitialFilter(presentChildren, selectedInitial);
   const observationsSection = buildObservationsSection({
-    children: filteredChildren,
+    children: sortedChildren,
     observations,
     presets: observationPresets,
-    initials,
-    selectedInitial,
   });
 
   if (!drawerShell) {
@@ -197,6 +177,10 @@ export const renderApp = (root, state) => {
   });
   bindObservations({
     list: observationsSection.refs.list,
+    overlay: observationsSection.refs.overlay,
+    overlayContent: observationsSection.refs.overlayContent,
+    overlayTitle: observationsSection.refs.overlayTitle,
+    closeButton: observationsSection.refs.closeButton,
     date: selectedDate,
   });
 
@@ -220,11 +204,4 @@ export const renderApp = (root, state) => {
     });
   }
 
-  const filterButtons = observationsSection.refs.filterButtons || [];
-  filterButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const value = button.dataset.value || 'ALL';
-      setObservationsFilter(value);
-    });
-  });
 };

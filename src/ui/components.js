@@ -446,8 +446,6 @@ export const buildObservationsSection = ({
   children,
   observations,
   presets,
-  initials,
-  selectedInitial,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
@@ -457,7 +455,21 @@ export const buildObservationsSection = ({
     className: 'h5 mb-0 section-title',
     text: 'Beobachtungen',
   });
-  const filterBar = buildInitialFilterBar({ initials, selectedInitial });
+
+  const list = createEl('div', { className: 'd-flex flex-column gap-2' });
+  children.forEach((child) => {
+    const button = createEl('button', {
+      className:
+        'btn btn-outline-primary d-flex align-items-center justify-content-between observation-child-button',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-child', child },
+      children: [
+        createEl('span', { className: 'fw-semibold', text: child }),
+        createEl('span', { className: 'text-muted small', text: 'Details' }),
+      ],
+    });
+    list.appendChild(button);
+  });
 
   const datalistId = 'observations-list';
   const datalist = createEl('datalist', { attrs: { id: datalistId } });
@@ -465,13 +477,40 @@ export const buildObservationsSection = ({
     datalist.appendChild(createEl('option', { attrs: { value: item } }));
   });
 
-  const list = createEl('div', { className: 'd-flex flex-column gap-3' });
+  const overlay = createEl('div', {
+    className: 'observation-overlay',
+    dataset: { role: 'observation-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const overlayPanel = createEl('div', {
+    className: 'observation-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const overlayHeader = createEl('div', {
+    className: 'observation-overlay__header',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn btn-link p-0 observation-overlay__close',
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-close' },
+    children: [
+      createEl('span', { className: 'me-2', text: '←' }),
+      createEl('span', { text: 'Zurück' }),
+    ],
+  });
+  const overlayTitle = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Kind',
+    dataset: { role: 'observation-child-title' },
+  });
+  overlayHeader.append(closeButton, overlayTitle);
+
+  const overlayContent = createEl('div', {
+    className: 'observation-overlay__content',
+    dataset: { role: 'observation-detail-scroll' },
+  });
   children.forEach((child) => {
     const data = observations[child] || {};
-    const name = createEl('div', {
-      className: 'fw-semibold',
-      text: child,
-    });
     const comboInput = createEl('input', {
       className: 'form-control',
       attrs: {
@@ -498,6 +537,10 @@ export const buildObservationsSection = ({
     });
     savePresetButton.disabled = true;
 
+    const noteLabel = createEl('label', {
+      className: 'form-label text-muted small mb-1',
+      text: 'Notiz',
+    });
     const noteInput = createEl('input', {
       className: 'form-control',
       attrs: { type: 'text', placeholder: 'Notiz' },
@@ -514,28 +557,37 @@ export const buildObservationsSection = ({
     });
 
     const comboRow = createEl('div', {
-      className: 'd-flex flex-column flex-lg-row gap-2',
+      className: 'd-flex flex-column gap-2',
       children: [comboInput, addButton, savePresetButton],
     });
+    const noteRow = createEl('div', {
+      className: 'd-flex flex-column',
+      children: [noteLabel, noteInput],
+    });
 
-    const card = createEl('div', {
-      className: 'card border-0 shadow-sm',
+    const detail = createEl('div', {
+      className: 'observation-detail d-flex flex-column gap-3',
       dataset: { child },
+      children: [comboRow, tagsList, noteRow],
     });
-    const cardBody = createEl('div', {
-      className: 'card-body d-flex flex-column gap-2',
-      children: [name, comboRow, tagsList, noteInput],
-    });
-    card.appendChild(cardBody);
-
-    list.appendChild(card);
+    detail.hidden = true;
+    overlayContent.appendChild(detail);
   });
 
-  body.append(title, filterBar.element, datalist, list);
+  overlayPanel.append(overlayHeader, datalist, overlayContent);
+  overlay.appendChild(overlayPanel);
+
+  body.append(title, list, overlay);
   section.appendChild(body);
 
   return {
     element: section,
-    refs: { list, filterButtons: filterBar.buttons },
+    refs: {
+      list,
+      overlay,
+      overlayContent,
+      overlayTitle,
+      closeButton,
+    },
   };
 };
