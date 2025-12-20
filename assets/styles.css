@@ -166,9 +166,9 @@ body {
   transition: transform 0.25s ease;
   z-index: 30;
   padding: 18px;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  row-gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   overflow: hidden;
   min-height: 0;
 }
@@ -194,7 +194,7 @@ body {
   gap: 16px;
   overflow-y: auto;
   min-height: 0;
-  flex: 1 1 0;
+  flex: 1 1 auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
