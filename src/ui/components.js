@@ -283,6 +283,10 @@ export const buildAbsentChildrenSection = ({ children, absentChildren }) => {
       value: child,
     });
     pill.dataset.child = child;
+    const removeButton = pill.querySelector('[data-role="absent-remove"]');
+    if (removeButton) {
+      removeButton.dataset.child = child;
+    }
     absentList.appendChild(pill);
   });
 
@@ -304,7 +308,7 @@ export const buildAbsentChildrenSection = ({ children, absentChildren }) => {
       : null;
     const row = createEl('button', {
       className: `list-group-item list-group-item-action d-flex align-items-center justify-content-between${
-        isAbsent ? ' list-group-item-secondary' : ''
+        isAbsent ? ' list-group-item-secondary is-absent' : ''
       }`,
       attrs: {
         type: 'button',
