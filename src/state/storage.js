@@ -1,4 +1,6 @@
-const STORAGE_KEY = 'freilog-state';
+import { APP_STORAGE_KEY } from '../config.js';
+
+const STORAGE_KEY = APP_STORAGE_KEY;
 
 export const storage = {
   load() {
