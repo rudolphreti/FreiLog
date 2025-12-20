@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "children": [
+    "Angelo",
+    "Asel",
+    "Azade",
+    "Donya",
+    "Elif",
+    "Ella",
+    "Erica",
+    "Giti",
+    "Haidar",
+    "Hamza",
+    "Ilwad",
+    "Serita",
+    "Karelyn",
+    "Layen",
+    "Leon",
+    "Luna",
+    "Lynara",
+    "Mihaela",
+    "Milan",
+    "Mirac Nur",
+    "Natalia",
+    "Rayan",
+    "Sophie",
+    "Yasin",
+    "Daphne"
+  ],
+  "angebote": [
+    "Basteln",
+    "Sport",
+    "Freispiel",
+    "Lesen",
+    "Musik",
+    "Ausflug",
+    "Lernzeit",
+    "Spiele"
+  ],
+  "observationTemplates": [
+    "ruhig",
+    "Konflikt",
+    "hilfsbereit",
+    "konzentriert",
+    "müde",
+    "sehr aktiv",
+    "braucht Pause",
+    "streitet",
+    "arbeitet gut in Gruppe"
+  ],
+  "days": {},
+  "observationStats": {},
+  "settings": {
+    "exportMode": "day"
+  }
+}

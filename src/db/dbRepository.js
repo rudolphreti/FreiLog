@@ -1,11 +1,10 @@
 import {
   ensureUniqueSortedStrings,
-  normalizeBaseDb,
-  safeDeepMerge,
-  sanitizeEntriesByDate,
+  normalizeAppData,
+  sanitizeDaysByDate,
 } from './dbSchema.js';
-import { clearOverlay } from '../state/persistence.js';
-import { getState, initStore, updateOverlay } from '../state/store.js';
+import { clearAppData } from '../state/persistence.js';
+import { getState, initStore, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 
 const normalizeTagList = (value) => {
@@ -41,11 +40,11 @@ const buildDefaultObservations = (childrenList) => {
   }, {});
 };
 
-const createDefaultEntry = (date, childrenList = []) => ({
+const createDefaultDay = (date, childrenList = []) => ({
   date,
   angebote: [],
   observations: buildDefaultObservations(childrenList),
-  absentChildren: [],
+  absentChildIds: [],
   notes: '',
 });
 
@@ -85,38 +84,28 @@ const mergeObservations = (currentObservations, patchObservations) => {
   return base;
 };
 
-const ensureRecordsContainer = (overlay) => {
-  if (!overlay.records) {
-    overlay.records = { entriesByDate: {} };
-  }
-
-  if (!overlay.records.entriesByDate) {
-    overlay.records.entriesByDate = {};
-  }
-};
-
-const ensurePresetOverrides = (overlay) => {
-  if (!overlay.presetOverrides) {
-    overlay.presetOverrides = { angeboteAdded: [], observationsAdded: [] };
+const ensureDaysContainer = (data) => {
+  if (!data.days) {
+    data.days = {};
   }
 };
 
 export const getChildrenList = () => {
-  return getState().db?.presetData?.childrenList || [];
+  return getState().db?.children || [];
 };
 
 export const getPresets = (type) => {
-  const presets = getState().db?.presetData;
+  const presets = getState().db;
   if (!presets) {
     return [];
   }
 
   if (type === 'angebote') {
-    return presets.angebote;
+    return presets.angebote || [];
   }
 
   if (type === 'observations') {
-    return presets.observations;
+    return presets.observationTemplates || [];
   }
 
   return [];
@@ -124,17 +113,17 @@ export const getPresets = (type) => {
 
 export const getEntry = (date) => {
   const ymd = ensureYmd(date, todayYmd());
-  const entries = getState().db?.records?.entriesByDate || {};
+  const days = getState().db?.days || {};
 
-  if (entries[ymd]) {
-    return entries[ymd];
+  if (days[ymd]) {
+    return days[ymd];
   }
 
   const childrenList = getChildrenList();
-  const entry = createDefaultEntry(ymd, childrenList);
-  updateOverlay((overlay) => {
-    ensureRecordsContainer(overlay);
-    overlay.records.entriesByDate[ymd] = entry;
+  const entry = createDefaultDay(ymd, childrenList);
+  updateAppData((data) => {
+    ensureDaysContainer(data);
+    data.days[ymd] = entry;
   });
 
   return entry;
@@ -144,12 +133,11 @@ export const updateEntry = (date, patch) => {
   const ymd = ensureYmd(date, todayYmd());
   const payload = patch && typeof patch === 'object' ? patch : {};
 
-  updateOverlay((overlay) => {
-    ensureRecordsContainer(overlay);
+  updateAppData((data) => {
+    ensureDaysContainer(data);
     const existing =
-      overlay.records.entriesByDate[ymd] ||
-      createDefaultEntry(ymd, getChildrenList());
-    const merged = safeDeepMerge(existing, payload);
+      data.days[ymd] || createDefaultDay(ymd, getChildrenList());
+    const merged = { ...existing, ...payload };
     if (payload.observations) {
       merged.observations = mergeObservations(
         existing.observations,
@@ -157,7 +145,7 @@ export const updateEntry = (date, patch) => {
       );
     }
     merged.date = ymd;
-    overlay.records.entriesByDate[ymd] = merged;
+    data.days[ymd] = merged;
   });
 };
 
@@ -172,33 +160,35 @@ export const addPreset = (type, value) => {
     return;
   }
 
-  updateOverlay((overlay) => {
-    ensurePresetOverrides(overlay);
-    const key =
-      type === 'angebote' ? 'angeboteAdded' : 'observationsAdded';
-    const current = Array.isArray(overlay.presetOverrides[key])
-      ? overlay.presetOverrides[key]
-      : [];
-
-    if (!current.includes(trimmed)) {
-      current.push(trimmed);
+  updateAppData((data) => {
+    if (type === 'angebote') {
+      data.angebote = ensureUniqueSortedStrings([
+        ...(data.angebote || []),
+        trimmed,
+      ]);
+      return;
     }
 
-    overlay.presetOverrides[key] = current;
+    if (type === 'observations') {
+      data.observationTemplates = ensureUniqueSortedStrings([
+        ...(data.observationTemplates || []),
+        trimmed,
+      ]);
+    }
   });
 };
 
 export const clearDay = (date) => {
   const ymd = ensureYmd(date, todayYmd());
 
-  updateOverlay((overlay) => {
-    ensureRecordsContainer(overlay);
-    delete overlay.records.entriesByDate[ymd];
+  updateAppData((data) => {
+    ensureDaysContainer(data);
+    delete data.days[ymd];
   });
 };
 
 export const resetOverlay = async () => {
-  clearOverlay();
+  clearAppData();
   await initStore();
 };
 
@@ -219,8 +209,7 @@ export const exportJson = (mode) => {
 
   const date = ensureYmd(ui.selectedDate, todayYmd());
   const entry =
-    db.records.entriesByDate[date] ||
-    createDefaultEntry(date, getChildrenList());
+    db.days?.[date] || createDefaultDay(date, getChildrenList());
   const payload = { type: 'day', date, entry };
 
   return {
@@ -234,34 +223,17 @@ export const importJson = (obj) => {
     return;
   }
 
-  const childrenList = getState().db?.presetData?.childrenList || [];
+  const childrenList = getState().db?.children || [];
   const isFullDb =
-    obj.meta &&
-    typeof obj.meta.schemaVersion === 'number' &&
-    obj.presetData;
+    typeof obj.schemaVersion === 'number' &&
+    (Array.isArray(obj.children) || obj.days);
 
   if (isFullDb) {
-    const normalized = normalizeBaseDb(obj);
-    const sanitizedEntries = sanitizeEntriesByDate(
-      normalized.records.entriesByDate,
-      childrenList,
-    );
+    const normalized = normalizeAppData(obj, getState().db || {});
 
-    updateOverlay((overlay) => {
-      ensureRecordsContainer(overlay);
-      ensurePresetOverrides(overlay);
-      overlay.records.entriesByDate = safeDeepMerge(
-        overlay.records.entriesByDate,
-        sanitizedEntries,
-      );
-      overlay.presetOverrides.angeboteAdded = ensureUniqueSortedStrings([
-        ...(overlay.presetOverrides.angeboteAdded || []),
-        ...normalized.presetData.angebote,
-      ]);
-      overlay.presetOverrides.observationsAdded = ensureUniqueSortedStrings([
-        ...(overlay.presetOverrides.observationsAdded || []),
-        ...normalized.presetData.observations,
-      ]);
+    updateAppData((data) => {
+      const merged = normalizeAppData(normalized, data);
+      Object.assign(data, merged);
     });
 
     return;
@@ -272,10 +244,10 @@ export const importJson = (obj) => {
     return;
   }
 
-  const sanitizedEntry =
-    sanitizeEntriesByDate({ [payload.date]: payload.entry }, childrenList)[
+  const sanitizedDay =
+    sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList)[
       payload.date
-    ] || createDefaultEntry(payload.date, childrenList);
+    ] || createDefaultDay(payload.date, childrenList);
 
-  updateEntry(payload.date, sanitizedEntry);
+  updateEntry(payload.date, sanitizedDay);
 };

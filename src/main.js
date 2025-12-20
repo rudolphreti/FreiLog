@@ -23,6 +23,6 @@ const startApp = async () => {
 startApp();
 
 // Manuelle Tests:
-// - db.json tauschen: alte Kinder-Daten verschwinden aus Overlay.
-// - Import: full db.json & Tag-Payload prüfen.
+// - appData.default.json tauschen: Defaults werden geladen.
+// - Import: Full JSON & Day-Payload prüfen.
 // - Suche/Combobox tippen: keine Ruckler, keine Console Errors.

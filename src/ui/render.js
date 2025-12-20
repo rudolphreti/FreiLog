@@ -23,7 +23,7 @@ const createFallbackEntry = (date) => ({
   date,
   angebote: [],
   observations: {},
-  absentChildren: [],
+  absentChildIds: [],
   notes: '',
 });
 
@@ -110,15 +110,15 @@ export const renderApp = (root, state) => {
   const selectedDate = state?.ui?.selectedDate || todayYmd();
   const db = state?.db || {};
   const entry =
-    db.records?.entriesByDate?.[selectedDate] ||
+    db.days?.[selectedDate] ||
     createFallbackEntry(selectedDate);
 
-  const childrenList = db.presetData?.childrenList || [];
-  const angebotePresets = db.presetData?.angebote || [];
-  const observationPresets = db.presetData?.observations || [];
+  const childrenList = db.children || [];
+  const angebotePresets = db.angebote || [];
+  const observationPresets = db.observationTemplates || [];
 
-  const absentChildren = Array.isArray(entry.absentChildren)
-    ? entry.absentChildren
+  const absentChildren = Array.isArray(entry.absentChildIds)
+    ? entry.absentChildIds
     : [];
 
   const observations = normalizeObservations(entry.observations);
@@ -199,21 +199,32 @@ export const renderApp = (root, state) => {
     list: observationsSection.refs.list,
     date: selectedDate,
   });
-  observationsSection.refs.filterButtons.forEach((button) => {
+
+  const drawerButtons = drawerShell.refs.drawerButtons;
+  if (drawerButtons?.actionsToggle) {
+    drawerButtons.actionsToggle.addEventListener('click', () => {
+      const isOpen = drawerContentRefs?.actionsCollapse?.classList.contains('show');
+      setDrawerSectionState('actions', !isOpen);
+    });
+  }
+  if (drawerButtons?.attendanceToggle) {
+    drawerButtons.attendanceToggle.addEventListener('click', () => {
+      const isOpen = drawerContentRefs?.attendanceCollapse?.classList.contains('show');
+      setDrawerSectionState('attendance', !isOpen);
+    });
+  }
+  if (drawerButtons?.angeboteToggle) {
+    drawerButtons.angeboteToggle.addEventListener('click', () => {
+      const isOpen = drawerContentRefs?.angeboteCollapse?.classList.contains('show');
+      setDrawerSectionState('angebote', !isOpen);
+    });
+  }
+
+  const filterButtons = observationsSection.refs.filterButtons || [];
+  filterButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      const value = button.dataset.value || 'ALL';
+      const value = button.dataset.initial || 'ALL';
       setObservationsFilter(value);
     });
   });
-
-  if (drawerContentRefs?.sections) {
-    Object.entries(drawerContentRefs.sections).forEach(([id, section]) => {
-      section.refs.collapse.addEventListener('shown.bs.collapse', () => {
-        setDrawerSectionState(id, true);
-      });
-      section.refs.collapse.addEventListener('hidden.bs.collapse', () => {
-        setDrawerSectionState(id, false);
-      });
-    });
-  }
 };

@@ -8,7 +8,7 @@ const getOrderedChildren = (list) =>
 const updateAbsent = (allList, absentSet, date) => {
   const ordered = getOrderedChildren(allList);
   const absent = ordered.filter((child) => absentSet.has(child));
-  updateEntry(date, { absentChildren: absent });
+  updateEntry(date, { absentChildIds: absent });
 };
 
 export const bindAbsentChildren = ({ absentList, allList, date }) => {

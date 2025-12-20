@@ -1,5 +1,4 @@
-import { importJson } from '../db/dbRepository.js';
-import { getState } from '../state/store.js';
+import { exportJson, importJson } from '../db/dbRepository.js';
 
 const downloadJson = (filename, jsonString) => {
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -14,9 +13,8 @@ const downloadJson = (filename, jsonString) => {
 };
 
 const handleExport = () => {
-  const { db } = getState();
-  const payload = db ? JSON.stringify(db, null, 2) : '{}';
-  downloadJson('kidsobs_all.json', payload);
+  const { filename, jsonString } = exportJson('all');
+  downloadJson(filename, jsonString);
 };
 
 const handleImport = async (file) => {

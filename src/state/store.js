@@ -1,38 +1,9 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
-import {
-  buildEffectiveDb,
-  loadBaseDb,
-  loadOverlay as loadOverlayFromDb,
-} from '../db/dbLoader.js';
-import { normalizeOverlay, sanitizeEntriesByDate } from '../db/dbSchema.js';
-import { saveOverlay } from './persistence.js';
+import { normalizeAppData } from '../db/dbSchema.js';
+import { loadAppData, saveAppData } from './persistence.js';
 
-let baseDb = null;
-let overlay = null;
-let effectiveDb = null;
+let appData = null;
 const subscribers = new Set();
-
-const createEmptyOverlay = () => ({
-  meta: { savedAt: new Date().toISOString() },
-  records: { entriesByDate: {} },
-  presetOverrides: { angeboteAdded: [], observationsAdded: [] },
-  ui: {
-    selectedDate: '',
-    exportMode: '',
-    observationsFilter: 'ALL',
-    drawer: {
-      open: false,
-      sections: { ...DEFAULT_DRAWER_SECTIONS },
-    },
-  },
-});
-
-const ensureOverlay = () => {
-  if (!overlay) {
-    overlay = createEmptyOverlay();
-  }
-  return overlay;
-};
 
 export const subscribe = (fn) => {
   if (typeof fn !== 'function') {
@@ -51,41 +22,26 @@ export const notify = () => {
 };
 
 export const initStore = async () => {
-  baseDb = await loadBaseDb();
-  overlay = loadOverlayFromDb();
-  if (overlay?.records?.entriesByDate) {
-    const childrenList = baseDb?.presetData?.childrenList || [];
-    const sanitized = sanitizeEntriesByDate(
-      overlay.records.entriesByDate,
-      childrenList,
-    );
-    const original = JSON.stringify(overlay.records.entriesByDate);
-    const updated = JSON.stringify(sanitized);
-    if (original !== updated) {
-      overlay.records.entriesByDate = sanitized;
-      saveOverlay(overlay);
-    }
-  }
-  effectiveDb = buildEffectiveDb(baseDb, overlay);
+  appData = await loadAppData();
   notify();
 };
 
 export const getState = () => {
-  const selectedDate = overlay?.ui?.selectedDate || '';
+  const selectedDate = appData?.ui?.selectedDate || '';
   const exportMode =
-    overlay?.ui?.exportMode ||
-    effectiveDb?.settings?.exportMode ||
+    appData?.ui?.exportMode ||
+    appData?.settings?.exportMode ||
     DEFAULT_EXPORT_MODE;
-  const drawer = overlay?.ui?.drawer || {};
+  const drawer = appData?.ui?.drawer || {};
   const drawerSections = drawer.sections || DEFAULT_DRAWER_SECTIONS;
   const observationsFilter =
-    typeof overlay?.ui?.observationsFilter === 'string' &&
-    overlay.ui.observationsFilter.trim()
-      ? overlay.ui.observationsFilter
+    typeof appData?.ui?.observationsFilter === 'string' &&
+    appData.ui.observationsFilter.trim()
+      ? appData.ui.observationsFilter
       : 'ALL';
 
   return {
-    db: effectiveDb,
+    db: appData,
     ui: {
       selectedDate,
       exportMode,
@@ -112,19 +68,19 @@ export const getState = () => {
 };
 
 export const setSelectedDate = (date) => {
-  updateOverlay((draft) => {
+  updateAppData((draft) => {
     draft.ui.selectedDate = date;
   });
 };
 
 export const setExportMode = (mode) => {
-  updateOverlay((draft) => {
+  updateAppData((draft) => {
     draft.ui.exportMode = mode;
   });
 };
 
 export const setDrawerSectionState = (sectionId, isOpen) => {
-  updateOverlay((draft) => {
+  updateAppData((draft) => {
     if (!draft.ui.drawer) {
       draft.ui.drawer = { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } };
     }
@@ -136,7 +92,7 @@ export const setDrawerSectionState = (sectionId, isOpen) => {
 };
 
 export const setObservationsFilter = (value) => {
-  updateOverlay((draft) => {
+  updateAppData((draft) => {
     if (!draft.ui) {
       draft.ui = {
         selectedDate: '',
@@ -153,19 +109,19 @@ export const setObservationsFilter = (value) => {
   });
 };
 
-export const updateOverlay = (mutatorFn) => {
-  const working = ensureOverlay();
+export const updateAppData = (mutatorFn) => {
+  const working = appData ? { ...appData } : null;
+
+  if (!working) {
+    return;
+  }
 
   if (typeof mutatorFn === 'function') {
     mutatorFn(working);
   }
 
-  overlay = normalizeOverlay(working) || createEmptyOverlay();
-  saveOverlay(overlay);
-
-  if (baseDb) {
-    effectiveDb = buildEffectiveDb(baseDb, overlay);
-  }
+  appData = normalizeAppData(working, appData);
+  saveAppData(appData);
 
   notify();
 };
