@@ -7,7 +7,16 @@ import { clearAppData } from '../state/persistence.js';
 import { getState, initStore, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 
-const normalizeTagList = (value) => {
+const normalizeObservationList = (value) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return normalizeObservationList(value.tags);
+  }
+
   if (!Array.isArray(value)) {
     return [];
   }
@@ -35,7 +44,7 @@ const buildDefaultObservations = (childrenList) => {
   }
 
   return childrenList.reduce((acc, child) => {
-    acc[child] = { tags: [], note: '' };
+    acc[child] = [];
     return acc;
   }, {});
 };
@@ -59,26 +68,30 @@ const mergeObservations = (currentObservations, patchObservations) => {
       : {};
 
   Object.entries(patchObservations).forEach(([child, incomingValue]) => {
-    const incoming =
-      incomingValue && typeof incomingValue === 'object' ? incomingValue : {};
-    const existing =
-      base[child] && typeof base[child] === 'object' ? base[child] : {};
-    const incomingTags = normalizeTagList(incoming.tags);
-    const existingTags = normalizeTagList(existing.tags);
-    const shouldReplaceTags = incoming.replaceTags === true;
-    const tags = incoming.tags
-      ? shouldReplaceTags
-        ? incomingTags
-        : normalizeTagList([...existingTags, ...incomingTags])
-      : existingTags;
-    const note =
-      typeof incoming.note === 'string'
-        ? incoming.note
-        : typeof existing.note === 'string'
-          ? existing.note
-          : '';
+    const existing = normalizeObservationList(base[child]);
+    let replace = false;
+    let incomingList = [];
 
-    base[child] = { tags, note };
+    if (Array.isArray(incomingValue) || typeof incomingValue === 'string') {
+      incomingList = normalizeObservationList(incomingValue);
+    } else if (incomingValue && typeof incomingValue === 'object') {
+      const items =
+        Array.isArray(incomingValue.items) || typeof incomingValue.items === 'string'
+          ? incomingValue.items
+          : Array.isArray(incomingValue.tags)
+            ? incomingValue.tags
+            : [];
+      incomingList = normalizeObservationList(items);
+      replace =
+        incomingValue.replace === true ||
+        incomingValue.replaceObservations === true ||
+        incomingValue.replaceTags === true;
+    }
+
+    const merged = replace
+      ? incomingList
+      : normalizeObservationList([...existing, ...incomingList]);
+    base[child] = merged;
   });
 
   return base;

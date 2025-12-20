@@ -537,38 +537,27 @@ export const buildObservationsSection = ({
     });
     savePresetButton.disabled = true;
 
-    const noteLabel = createEl('label', {
-      className: 'form-label text-muted small mb-1',
-      text: 'Notiz',
+    const todayTitle = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Heute',
     });
-    const noteInput = createEl('input', {
-      className: 'form-control',
-      attrs: { type: 'text', placeholder: 'Notiz' },
-      dataset: { role: 'observation-note' },
-    });
-    noteInput.value = data.note || '';
 
-    const tags = Array.isArray(data.tags) ? data.tags : [];
-    const tagsList = buildPillList({
-      items: tags,
+    const todayList = buildPillList({
+      items: Array.isArray(data) ? data : [],
       getLabel: (item) => item,
       getRemoveLabel: (label) => `${label} entfernen`,
-      removeRole: 'observation-tag-remove',
+      removeRole: 'observation-today-remove',
     });
 
     const comboRow = createEl('div', {
       className: 'd-flex flex-column gap-2',
       children: [comboInput, addButton, savePresetButton],
     });
-    const noteRow = createEl('div', {
-      className: 'd-flex flex-column',
-      children: [noteLabel, noteInput],
-    });
 
     const detail = createEl('div', {
       className: 'observation-detail d-flex flex-column gap-3',
       dataset: { child },
-      children: [comboRow, tagsList, noteRow],
+      children: [comboRow, todayTitle, todayList],
     });
     detail.hidden = true;
     overlayContent.appendChild(detail);

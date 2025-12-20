@@ -52,11 +52,7 @@ const normalizeObservationEntries = (value, childrenSet) => {
   if (Array.isArray(value)) {
     source = value.reduce((acc, item) => {
       if (item && item.child) {
-        acc[item.child] = {
-          tags: Array.isArray(item.tags) ? item.tags : [],
-          preset: item.preset || '',
-          note: item.note || '',
-        };
+        acc[item.child] = item;
       }
       return acc;
     }, {});
@@ -70,16 +66,26 @@ const normalizeObservationEntries = (value, childrenSet) => {
       return;
     }
 
-    const item = isPlainObject(source[child]) ? source[child] : {};
+    const entry = source[child];
+    if (Array.isArray(entry)) {
+      result[child] = ensureUniqueStrings(entry);
+      return;
+    }
+
+    if (typeof entry === 'string') {
+      result[child] = ensureUniqueStrings([entry]);
+      return;
+    }
+
+    const item = isPlainObject(entry) ? entry : {};
     const preset =
       typeof item.preset === 'string' ? item.preset.trim() : '';
     const tags = ensureUniqueStrings(item.tags);
     if (preset && !tags.includes(preset)) {
       tags.push(preset);
     }
-    const note = typeof item.note === 'string' ? item.note : '';
 
-    result[child] = { tags, note };
+    result[child] = tags;
   });
 
   return result;
@@ -186,10 +192,12 @@ export const buildObservationStats = (days) => {
     }
 
     Object.entries(entry.observations).forEach(([child, data]) => {
-      if (!data || typeof data !== 'object') {
-        return;
-      }
-      const tags = ensureUniqueStrings(data.tags);
+      const list = Array.isArray(data)
+        ? data
+        : isPlainObject(data)
+          ? data.tags
+          : [];
+      const tags = ensureUniqueStrings(list);
       if (!tags.length) {
         return;
       }
