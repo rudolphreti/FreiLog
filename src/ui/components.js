@@ -415,6 +415,48 @@ const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
   return list;
 };
 
+const buildTopList = (items) => {
+  const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+  items.forEach(({ label, count }) => {
+    const button = createEl('button', {
+      className:
+        'btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-top-add', value: label },
+      children: [
+        createEl('span', { text: label }),
+        createEl('span', {
+          className: 'badge text-bg-light border',
+          text: String(count),
+        }),
+      ],
+    });
+    list.appendChild(button);
+  });
+
+  return list;
+};
+
+const buildTopItems = (stats) => {
+  if (!stats || typeof stats !== 'object') {
+    return [];
+  }
+
+  return Object.entries(stats)
+    .map(([label, count]) => ({
+      label,
+      count: Number.isFinite(count) ? count : Number(count) || 0,
+    }))
+    .filter((item) => item.label && item.count > 0)
+    .sort((a, b) => {
+      if (b.count !== a.count) {
+        return b.count - a.count;
+      }
+      return a.label.localeCompare(b.label, 'de');
+    })
+    .slice(0, 10);
+};
+
 export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
   const wrapper = createEl('div', { className: 'd-flex flex-wrap gap-2' });
   const buttons = [];
@@ -446,6 +488,7 @@ export const buildObservationsSection = ({
   children,
   observations,
   presets,
+  observationStats,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
@@ -511,6 +554,7 @@ export const buildObservationsSection = ({
   });
   children.forEach((child) => {
     const data = observations[child] || {};
+    const topItems = buildTopItems(observationStats?.[child]);
     const comboInput = createEl('input', {
       className: 'form-control',
       attrs: {
@@ -549,6 +593,18 @@ export const buildObservationsSection = ({
       removeRole: 'observation-today-remove',
     });
 
+    const topTitle = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Top 10',
+    });
+
+    const topList = topItems.length
+      ? buildTopList(topItems)
+      : createEl('p', {
+          className: 'text-muted small mb-0',
+          text: 'Noch keine Daten',
+        });
+
     const comboRow = createEl('div', {
       className: 'd-flex flex-column gap-2',
       children: [comboInput, addButton, savePresetButton],
@@ -557,7 +613,7 @@ export const buildObservationsSection = ({
     const detail = createEl('div', {
       className: 'observation-detail d-flex flex-column gap-3',
       dataset: { child },
-      children: [comboRow, todayTitle, todayList],
+      children: [comboRow, todayTitle, todayList, topTitle, topList],
     });
     detail.hidden = true;
     overlayContent.appendChild(detail);

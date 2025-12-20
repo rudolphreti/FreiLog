@@ -297,6 +297,18 @@ export const bindObservations = ({
       if (tag) {
         removeObservationForChild(date, card.dataset.child, tag);
       }
+      return;
+    }
+
+    const topButton = target.closest('[data-role="observation-top-add"]');
+    if (topButton) {
+      const tag = topButton.dataset.value;
+      if (tag) {
+        addTagForChild(date, card.dataset.child, tag);
+        if (!presets.includes(tag)) {
+          addPreset('observations', tag);
+        }
+      }
     }
   });
 
