@@ -13,6 +13,7 @@ import { bindAbsentChildren } from '../features/absentChildren.js';
 import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
+import { setDrawerSectionState } from '../state/store.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -111,6 +112,7 @@ export const renderApp = (root, state) => {
   const selectedDate = state?.ui?.selectedDate || todayYmd();
   const exportMode = state?.ui?.exportMode === 'all' ? 'all' : 'day';
   const db = state?.db || {};
+  const drawerSections = state?.ui?.drawer?.sections || {};
   const entry =
     db.records?.entriesByDate?.[selectedDate] ||
     createFallbackEntry(selectedDate);
@@ -142,6 +144,7 @@ export const renderApp = (root, state) => {
   });
   const drawer = buildDrawer({
     exportMode,
+    drawerSections,
     attendanceSection: absentSection.element,
     angebotSection: angebotSection.element,
   });
@@ -202,5 +205,13 @@ export const renderApp = (root, state) => {
   });
   backdrop.addEventListener('click', () => {
     applyDrawerState(false);
+  });
+
+  Object.entries(drawer.refs.sections).forEach(([id, section]) => {
+    section.refs.toggleButton.addEventListener('click', () => {
+      const nextOpen = !section.isOpen();
+      section.setOpen(nextOpen);
+      setDrawerSectionState(id, nextOpen);
+    });
   });
 };

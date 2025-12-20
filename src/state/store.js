@@ -1,4 +1,4 @@
-import { DEFAULT_EXPORT_MODE } from '../config.js';
+import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import {
   buildEffectiveDb,
   loadBaseDb,
@@ -16,7 +16,14 @@ const createEmptyOverlay = () => ({
   meta: { savedAt: new Date().toISOString() },
   records: { entriesByDate: {} },
   presetOverrides: { angeboteAdded: [], observationsAdded: [] },
-  ui: { selectedDate: '', exportMode: '' },
+  ui: {
+    selectedDate: '',
+    exportMode: '',
+    drawer: {
+      open: false,
+      sections: { ...DEFAULT_DRAWER_SECTIONS },
+    },
+  },
 });
 
 const ensureOverlay = () => {
@@ -68,12 +75,31 @@ export const getState = () => {
     overlay?.ui?.exportMode ||
     effectiveDb?.settings?.exportMode ||
     DEFAULT_EXPORT_MODE;
+  const drawer = overlay?.ui?.drawer || {};
+  const drawerSections = drawer.sections || DEFAULT_DRAWER_SECTIONS;
 
   return {
     db: effectiveDb,
     ui: {
       selectedDate,
       exportMode,
+      drawer: {
+        open: Boolean(drawer.open),
+        sections: {
+          actions:
+            typeof drawerSections.actions === 'boolean'
+              ? drawerSections.actions
+              : DEFAULT_DRAWER_SECTIONS.actions,
+          attendance:
+            typeof drawerSections.attendance === 'boolean'
+              ? drawerSections.attendance
+              : DEFAULT_DRAWER_SECTIONS.attendance,
+          angebote:
+            typeof drawerSections.angebote === 'boolean'
+              ? drawerSections.angebote
+              : DEFAULT_DRAWER_SECTIONS.angebote,
+        },
+      },
     },
   };
 };
@@ -87,6 +113,18 @@ export const setSelectedDate = (date) => {
 export const setExportMode = (mode) => {
   updateOverlay((draft) => {
     draft.ui.exportMode = mode;
+  });
+};
+
+export const setDrawerSectionState = (sectionId, isOpen) => {
+  updateOverlay((draft) => {
+    if (!draft.ui.drawer) {
+      draft.ui.drawer = { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } };
+    }
+    if (!draft.ui.drawer.sections) {
+      draft.ui.drawer.sections = { ...DEFAULT_DRAWER_SECTIONS };
+    }
+    draft.ui.drawer.sections[sectionId] = Boolean(isOpen);
   });
 };
 
