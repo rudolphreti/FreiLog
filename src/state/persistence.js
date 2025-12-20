@@ -21,10 +21,7 @@ export const loadOverlay = () => {
     return null;
   }
 
-  const raw = localStorage.getItem(OVERLAY_STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
+  const raw = localStorage.getItem(OVERLAY_STORAGE_KEY) || '{}';
 
   try {
     return normalizeOverlay(JSON.parse(raw));

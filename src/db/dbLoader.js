@@ -8,9 +8,13 @@ import {
 } from './dbSchema.js';
 
 export const loadBaseDb = async () => {
-  const response = await fetch('/data/db.json', { cache: 'no-store' });
+  const response = await fetch('data/db.json', { cache: 'no-store' });
+  if (!response.ok) {
+    console.warn('Failed to load base db.json.', response.status);
+    return normalizeBaseDb({});
+  }
   const text = await response.text();
-  const data = JSON.parse(text);
+  const data = JSON.parse(text || '{}');
   return normalizeBaseDb(data);
 };
 
@@ -19,10 +23,7 @@ export const loadOverlay = () => {
     return null;
   }
 
-  const raw = localStorage.getItem(OVERLAY_STORAGE_KEY);
-  if (!raw) {
-    return null;
-  }
+  const raw = localStorage.getItem(OVERLAY_STORAGE_KEY) || '{}';
 
   try {
     return normalizeOverlay(JSON.parse(raw));
