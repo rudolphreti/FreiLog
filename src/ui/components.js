@@ -1,7 +1,18 @@
 import { createEl } from './dom.js';
 
-export const buildHeader = ({ selectedDate, exportMode }) => {
+export const buildHeader = ({ selectedDate }) => {
   const header = createEl('header', { className: 'app-header' });
+
+  const menuButton = createEl('button', {
+    className: 'icon-button',
+    text: '☰',
+    attrs: { type: 'button', 'aria-label': 'Menü öffnen' },
+  });
+  const title = createEl('h1', { className: 'app-title', text: 'Beobachtungen' });
+  const titleGroup = createEl('div', {
+    className: 'header-title',
+    children: [menuButton, title],
+  });
 
   const dateLabel = createEl('span', {
     className: 'field-label',
@@ -12,9 +23,53 @@ export const buildHeader = ({ selectedDate, exportMode }) => {
     attrs: { type: 'date', value: selectedDate },
   });
   const dateGroup = createEl('label', {
-    className: 'field-group',
+    className: 'field-group header-date',
     children: [dateLabel, dateInput],
   });
+
+  const headerContent = createEl('div', {
+    className: 'header-content',
+    children: [titleGroup, dateGroup],
+  });
+
+  header.append(headerContent);
+
+  return {
+    element: header,
+    refs: {
+      dateInput,
+      menuButton,
+    },
+  };
+};
+
+export const buildBackdrop = () =>
+  createEl('div', { className: 'drawer-backdrop' });
+
+export const buildMenuSection = ({ title, children }) => {
+  const heading = createEl('h3', {
+    className: 'drawer-section-title',
+    text: title,
+  });
+  const section = createEl('section', {
+    className: 'drawer-section',
+    children: [heading, ...children],
+  });
+
+  return section;
+};
+
+export const buildDrawer = ({ exportMode }) => {
+  const drawer = createEl('aside', { className: 'drawer' });
+
+  const drawerHeader = createEl('div', { className: 'drawer-header' });
+  const drawerTitle = createEl('h2', { text: 'Menü' });
+  const closeButton = createEl('button', {
+    className: 'icon-button drawer-close',
+    text: '✕',
+    attrs: { type: 'button', 'aria-label': 'Menü schließen' },
+  });
+  drawerHeader.append(drawerTitle, closeButton);
 
   const segmented = createEl('div', { className: 'segmented' });
   const exportDayButton = createEl('button', {
@@ -31,7 +86,6 @@ export const buildHeader = ({ selectedDate, exportMode }) => {
   });
   segmented.append(exportDayButton, exportAllButton);
 
-  const actions = createEl('div', { className: 'header-actions' });
   const exportButton = createEl('button', {
     className: 'button',
     text: 'Exportieren',
@@ -52,7 +106,40 @@ export const buildHeader = ({ selectedDate, exportMode }) => {
     text: 'Reset (db.json)',
     attrs: { type: 'button' },
   });
-  actions.append(exportButton, importButton, deleteButton, resetButton);
+  const actionsGroup = createEl('div', {
+    className: 'drawer-actions',
+    children: [
+      segmented,
+      exportButton,
+      importButton,
+      deleteButton,
+      resetButton,
+    ],
+  });
+
+  const actionsSection = buildMenuSection({
+    title: 'Aktionen',
+    children: [actionsGroup],
+  });
+
+  const attendanceSection = buildMenuSection({
+    title: 'Anwesenheit',
+    children: [
+      createEl('p', {
+        className: 'drawer-placeholder',
+        text: 'Platzhalter für spätere Funktionen.',
+      }),
+    ],
+  });
+  const offersSection = buildMenuSection({
+    title: 'Angebote',
+    children: [
+      createEl('p', {
+        className: 'drawer-placeholder',
+        text: 'Platzhalter für spätere Funktionen.',
+      }),
+    ],
+  });
 
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
@@ -60,18 +147,24 @@ export const buildHeader = ({ selectedDate, exportMode }) => {
   });
   importInput.style.display = 'none';
 
-  header.append(dateGroup, segmented, actions, importInput);
+  drawer.append(
+    drawerHeader,
+    actionsSection,
+    attendanceSection,
+    offersSection,
+    importInput,
+  );
 
   return {
-    element: header,
+    element: drawer,
     refs: {
-      dateInput,
       exportModeButtons: [exportDayButton, exportAllButton],
       exportButton,
       importButton,
       deleteButton,
       resetButton,
       importInput,
+      closeButton,
     },
   };
 };

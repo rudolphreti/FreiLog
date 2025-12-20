@@ -2,6 +2,8 @@ import { todayYmd } from '../utils/date.js';
 import { clearElement } from './dom.js';
 import {
   buildHeader,
+  buildBackdrop,
+  buildDrawer,
   buildAbsentChildrenSection,
   buildAngebotSection,
   buildObservationsSection,
@@ -44,6 +46,36 @@ const normalizeObservations = (value) => {
   return {};
 };
 
+let drawerOpen = false;
+let drawerRefs = null;
+let escapeListenerBound = false;
+
+const applyDrawerState = (open) => {
+  drawerOpen = open;
+
+  if (!drawerRefs) {
+    return;
+  }
+
+  drawerRefs.drawer.classList.toggle('is-open', open);
+  drawerRefs.backdrop.classList.toggle('is-visible', open);
+  document.body.classList.toggle('drawer-open', open);
+};
+
+const bindDrawerEscape = () => {
+  if (escapeListenerBound) {
+    return;
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && drawerOpen) {
+      applyDrawerState(false);
+    }
+  });
+
+  escapeListenerBound = true;
+};
+
 export const renderApp = (root, state) => {
   if (!root) {
     return;
@@ -81,7 +113,9 @@ export const renderApp = (root, state) => {
     (child) => !absentChildren.includes(child),
   );
 
-  const header = buildHeader({ selectedDate, exportMode });
+  const header = buildHeader({ selectedDate });
+  const drawer = buildDrawer({ exportMode });
+  const backdrop = buildBackdrop();
   const absentSection = buildAbsentChildrenSection({
     children: childrenList,
     absentChildren,
@@ -100,6 +134,8 @@ export const renderApp = (root, state) => {
 
   container.append(
     header.element,
+    backdrop,
+    drawer.element,
     absentSection.element,
     angebotSection.element,
     observationsSection.element,
@@ -108,12 +144,12 @@ export const renderApp = (root, state) => {
 
   bindDateEntry(header.refs.dateInput);
   bindImportExport({
-    exportModeButtons: header.refs.exportModeButtons,
-    exportButton: header.refs.exportButton,
-    importButton: header.refs.importButton,
-    deleteButton: header.refs.deleteButton,
-    resetButton: header.refs.resetButton,
-    fileInput: header.refs.importInput,
+    exportModeButtons: drawer.refs.exportModeButtons,
+    exportButton: drawer.refs.exportButton,
+    importButton: drawer.refs.importButton,
+    deleteButton: drawer.refs.deleteButton,
+    resetButton: drawer.refs.resetButton,
+    fileInput: drawer.refs.importInput,
   });
   bindAbsentChildren({
     searchInput: absentSection.refs.searchInput,
@@ -129,5 +165,22 @@ export const renderApp = (root, state) => {
   bindObservations({
     list: observationsSection.refs.list,
     date: selectedDate,
+  });
+
+  drawerRefs = {
+    drawer: drawer.element,
+    backdrop,
+  };
+  applyDrawerState(drawerOpen);
+  bindDrawerEscape();
+
+  header.refs.menuButton.addEventListener('click', () => {
+    applyDrawerState(true);
+  });
+  drawer.refs.closeButton.addEventListener('click', () => {
+    applyDrawerState(false);
+  });
+  backdrop.addEventListener('click', () => {
+    applyDrawerState(false);
   });
 };
