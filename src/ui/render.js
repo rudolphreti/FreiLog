@@ -12,9 +12,13 @@ import {
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAbsentChildren } from '../features/absentChildren.js';
 import { bindAngebot } from '../features/angebot.js';
-import { bindObservations } from '../features/observations.js';
+import {
+  applyInitialFilter,
+  bindObservations,
+  getInitialLetters,
+} from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
-import { setDrawerSectionState } from '../state/store.js';
+import { setDrawerSectionState, setObservationsFilter } from '../state/store.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -168,10 +172,25 @@ export const renderApp = (root, state) => {
     savePresetChecked: angebotPresetChecked,
   });
   const backdrop = buildBackdrop();
+  const initials = getInitialLetters(presentChildren);
+  let selectedInitial =
+    typeof state?.ui?.observationsFilter === 'string'
+      ? state.ui.observationsFilter
+      : 'ALL';
+  if (selectedInitial && selectedInitial !== 'ALL') {
+    selectedInitial = selectedInitial.toLocaleUpperCase();
+  }
+  if (selectedInitial !== 'ALL' && !initials.includes(selectedInitial)) {
+    setObservationsFilter('ALL');
+    selectedInitial = 'ALL';
+  }
+  const filteredChildren = applyInitialFilter(presentChildren, selectedInitial);
   const observationsSection = buildObservationsSection({
-    children: presentChildren,
+    children: filteredChildren,
     observations,
     presets: observationPresets,
+    initials,
+    selectedInitial,
   });
 
   if (!drawerShell) {
@@ -216,8 +235,13 @@ export const renderApp = (root, state) => {
   });
   bindObservations({
     list: observationsSection.refs.list,
-    searchInput: observationsSection.refs.searchInput,
     date: selectedDate,
+  });
+  observationsSection.refs.filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const value = button.dataset.value || 'ALL';
+      setObservationsFilter(value);
+    });
   });
 
   drawerRefs = {

@@ -413,8 +413,27 @@ body {
   gap: 12px;
 }
 
-.observation-search {
-  max-width: 320px;
+.observation-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-button {
+  border: 1px solid var(--border);
+  background: #fff;
+  border-radius: 999px;
+  padding: 8px 16px;
+  min-height: 44px;
+  min-width: 44px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.filter-button.is-active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
 }
 
 .observation-card {

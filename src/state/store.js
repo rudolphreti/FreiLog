@@ -19,6 +19,7 @@ const createEmptyOverlay = () => ({
   ui: {
     selectedDate: '',
     exportMode: '',
+    observationsFilter: 'ALL',
     drawer: {
       open: false,
       sections: { ...DEFAULT_DRAWER_SECTIONS },
@@ -77,12 +78,18 @@ export const getState = () => {
     DEFAULT_EXPORT_MODE;
   const drawer = overlay?.ui?.drawer || {};
   const drawerSections = drawer.sections || DEFAULT_DRAWER_SECTIONS;
+  const observationsFilter =
+    typeof overlay?.ui?.observationsFilter === 'string' &&
+    overlay.ui.observationsFilter.trim()
+      ? overlay.ui.observationsFilter
+      : 'ALL';
 
   return {
     db: effectiveDb,
     ui: {
       selectedDate,
       exportMode,
+      observationsFilter,
       drawer: {
         open: Boolean(drawer.open),
         sections: {
@@ -125,6 +132,24 @@ export const setDrawerSectionState = (sectionId, isOpen) => {
       draft.ui.drawer.sections = { ...DEFAULT_DRAWER_SECTIONS };
     }
     draft.ui.drawer.sections[sectionId] = Boolean(isOpen);
+  });
+};
+
+export const setObservationsFilter = (value) => {
+  updateOverlay((draft) => {
+    if (!draft.ui) {
+      draft.ui = {
+        selectedDate: '',
+        exportMode: '',
+        observationsFilter: 'ALL',
+        drawer: { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } },
+      };
+    }
+    const next =
+      typeof value === 'string' && value.trim()
+        ? value.trim().toLocaleUpperCase()
+        : 'ALL';
+    draft.ui.observationsFilter = next;
   });
 };
 

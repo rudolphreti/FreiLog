@@ -435,19 +435,43 @@ const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
   return list;
 };
 
+export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
+  const wrapper = createEl('div', { className: 'observation-filter' });
+  const buttons = [];
+  const current = selectedInitial === 'ALL' ? 'ALL' : selectedInitial;
+
+  const addButton = (label, value) => {
+    const isActive = current === value;
+    const button = createEl('button', {
+      className: `filter-button${isActive ? ' is-active' : ''}`,
+      text: label,
+      attrs: { type: 'button', 'aria-pressed': isActive ? 'true' : 'false' },
+      dataset: { role: 'observation-filter', value },
+    });
+    buttons.push(button);
+    wrapper.appendChild(button);
+  };
+
+  addButton('Alle', 'ALL');
+
+  const letterList = Array.isArray(initials) ? initials : [];
+  letterList.forEach((letter) => {
+    addButton(letter, letter);
+  });
+
+  return { element: wrapper, buttons };
+};
+
 export const buildObservationsSection = ({
   children,
   observations,
   presets,
+  initials,
+  selectedInitial,
 }) => {
   const section = createEl('section', { className: 'section' });
   const title = createEl('h2', { text: 'Beobachtungen' });
-
-  const searchInput = createEl('input', {
-    className: 'input observation-search',
-    attrs: { type: 'search', placeholder: 'Kind suchen…' },
-    dataset: { role: 'observation-search' },
-  });
+  const filterBar = buildInitialFilterBar({ initials, selectedInitial });
 
   const datalistId = 'observations-list';
   const datalist = createEl('datalist', { attrs: { id: datalistId } });
@@ -518,7 +542,10 @@ export const buildObservationsSection = ({
     list.appendChild(card);
   });
 
-  section.append(title, searchInput, datalist, list);
+  section.append(title, filterBar.element, datalist, list);
 
-  return { element: section, refs: { list, searchInput } };
+  return {
+    element: section,
+    refs: { list, filterButtons: filterBar.buttons },
+  };
 };

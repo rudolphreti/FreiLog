@@ -41,24 +41,50 @@ const updateObservationNote = (date, list, child) => {
   });
 };
 
-const normalizeSearch = (value) => {
-  if (typeof value !== 'string') {
-    return '';
+export const getInitialLetters = (children) => {
+  if (!Array.isArray(children)) {
+    return [];
   }
 
-  return value
-    .trim()
-    .toLocaleLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '');
+  const letters = new Set();
+  children.forEach((child) => {
+    if (typeof child !== 'string') {
+      return;
+    }
+    const trimmed = child.trim();
+    if (!trimmed) {
+      return;
+    }
+    letters.add(trimmed[0].toLocaleUpperCase());
+  });
+
+  return Array.from(letters).sort((a, b) => a.localeCompare(b));
 };
 
-const applyChildFilter = (list, value) => {
-  const query = normalizeSearch(value);
-  const cards = Array.from(list.querySelectorAll('[data-child]'));
-  cards.forEach((card) => {
-    const name = normalizeSearch(card.dataset.child || '');
-    card.classList.toggle('is-hidden', Boolean(query && !name.includes(query)));
+export const applyInitialFilter = (children, selectedInitial) => {
+  if (!Array.isArray(children)) {
+    return [];
+  }
+
+  if (
+    typeof selectedInitial !== 'string' ||
+    !selectedInitial.trim() ||
+    selectedInitial === 'ALL'
+  ) {
+    return [...children];
+  }
+
+  const normalized = selectedInitial.trim().toLocaleUpperCase();
+
+  return children.filter((child) => {
+    if (typeof child !== 'string') {
+      return false;
+    }
+    const trimmed = child.trim();
+    if (!trimmed) {
+      return false;
+    }
+    return trimmed[0].toLocaleUpperCase() === normalized;
   });
 };
 
@@ -111,7 +137,7 @@ const updatePresetButtonState = (card, value, presets) => {
   button.classList.toggle('is-hidden', !shouldShow);
 };
 
-export const bindObservations = ({ list, searchInput, date }) => {
+export const bindObservations = ({ list, date }) => {
   if (!list) {
     return;
   }
@@ -128,14 +154,6 @@ export const bindObservations = ({ list, searchInput, date }) => {
   };
 
   const presets = getPresets('observations');
-
-  if (searchInput instanceof HTMLInputElement) {
-    const handleSearch = debounce(
-      () => applyChildFilter(list, searchInput.value),
-      150,
-    );
-    searchInput.addEventListener('input', handleSearch);
-  }
 
   list.addEventListener('input', (event) => {
     const target = event.target;
