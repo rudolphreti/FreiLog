@@ -8,13 +8,82 @@ import { clearOverlay } from '../state/persistence.js';
 import { getState, initStore, updateOverlay } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 
-const createDefaultEntry = (date) => ({
+const normalizeTagList = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const unique = new Set();
+  const result = [];
+  value.forEach((item) => {
+    if (typeof item !== 'string') {
+      return;
+    }
+    const trimmed = item.trim();
+    if (!trimmed || unique.has(trimmed)) {
+      return;
+    }
+    unique.add(trimmed);
+    result.push(trimmed);
+  });
+
+  return result;
+};
+
+const buildDefaultObservations = (childrenList) => {
+  if (!Array.isArray(childrenList)) {
+    return {};
+  }
+
+  return childrenList.reduce((acc, child) => {
+    acc[child] = { tags: [], note: '' };
+    return acc;
+  }, {});
+};
+
+const createDefaultEntry = (date, childrenList = []) => ({
   date,
   angebote: [],
-  observations: [],
+  observations: buildDefaultObservations(childrenList),
   absentChildren: [],
   notes: '',
 });
+
+const mergeObservations = (currentObservations, patchObservations) => {
+  if (!patchObservations || typeof patchObservations !== 'object') {
+    return currentObservations;
+  }
+
+  const base =
+    currentObservations && typeof currentObservations === 'object'
+      ? { ...currentObservations }
+      : {};
+
+  Object.entries(patchObservations).forEach(([child, incomingValue]) => {
+    const incoming =
+      incomingValue && typeof incomingValue === 'object' ? incomingValue : {};
+    const existing =
+      base[child] && typeof base[child] === 'object' ? base[child] : {};
+    const incomingTags = normalizeTagList(incoming.tags);
+    const existingTags = normalizeTagList(existing.tags);
+    const shouldReplaceTags = incoming.replaceTags === true;
+    const tags = incoming.tags
+      ? shouldReplaceTags
+        ? incomingTags
+        : normalizeTagList([...existingTags, ...incomingTags])
+      : existingTags;
+    const note =
+      typeof incoming.note === 'string'
+        ? incoming.note
+        : typeof existing.note === 'string'
+          ? existing.note
+          : '';
+
+    base[child] = { tags, note };
+  });
+
+  return base;
+};
 
 const ensureRecordsContainer = (overlay) => {
   if (!overlay.records) {
@@ -61,7 +130,8 @@ export const getEntry = (date) => {
     return entries[ymd];
   }
 
-  const entry = createDefaultEntry(ymd);
+  const childrenList = getChildrenList();
+  const entry = createDefaultEntry(ymd, childrenList);
   updateOverlay((overlay) => {
     ensureRecordsContainer(overlay);
     overlay.records.entriesByDate[ymd] = entry;
@@ -76,9 +146,16 @@ export const updateEntry = (date, patch) => {
 
   updateOverlay((overlay) => {
     ensureRecordsContainer(overlay);
-    const existing = overlay.records.entriesByDate[ymd] ||
-      createDefaultEntry(ymd);
+    const existing =
+      overlay.records.entriesByDate[ymd] ||
+      createDefaultEntry(ymd, getChildrenList());
     const merged = safeDeepMerge(existing, payload);
+    if (payload.observations) {
+      merged.observations = mergeObservations(
+        existing.observations,
+        payload.observations,
+      );
+    }
     merged.date = ymd;
     overlay.records.entriesByDate[ymd] = merged;
   });
@@ -141,7 +218,9 @@ export const exportJson = (mode) => {
   }
 
   const date = ensureYmd(ui.selectedDate, todayYmd());
-  const entry = db.records.entriesByDate[date] || createDefaultEntry(date);
+  const entry =
+    db.records.entriesByDate[date] ||
+    createDefaultEntry(date, getChildrenList());
   const payload = { type: 'day', date, entry };
 
   return {
@@ -196,7 +275,7 @@ export const importJson = (obj) => {
   const sanitizedEntry =
     sanitizeEntriesByDate({ [payload.date]: payload.entry }, childrenList)[
       payload.date
-    ] || createDefaultEntry(payload.date);
+    ] || createDefaultEntry(payload.date, childrenList);
 
   updateEntry(payload.date, sanitizedEntry);
 };

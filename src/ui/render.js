@@ -30,8 +30,13 @@ const normalizeObservations = (value) => {
   if (Array.isArray(value)) {
     return value.reduce((acc, item) => {
       if (item && item.child) {
+        const preset = item.preset || '';
+        const tags = Array.isArray(item.tags) ? item.tags : [];
+        if (preset && !tags.includes(preset)) {
+          tags.push(preset);
+        }
         acc[item.child] = {
-          preset: item.preset || '',
+          tags,
           note: item.note || '',
         };
       }
@@ -40,7 +45,19 @@ const normalizeObservations = (value) => {
   }
 
   if (typeof value === 'object') {
-    return value;
+    return Object.entries(value).reduce((acc, [child, item]) => {
+      const entry = item && typeof item === 'object' ? item : {};
+      const preset = typeof entry.preset === 'string' ? entry.preset.trim() : '';
+      const tags = Array.isArray(entry.tags) ? [...entry.tags] : [];
+      if (preset && !tags.includes(preset)) {
+        tags.push(preset);
+      }
+      acc[child] = {
+        tags,
+        note: typeof entry.note === 'string' ? entry.note : '',
+      };
+      return acc;
+    }, {});
   }
 
   return {};
@@ -166,6 +183,7 @@ export const renderApp = (root, state) => {
   });
   bindObservations({
     list: observationsSection.refs.list,
+    searchInput: observationsSection.refs.searchInput,
     date: selectedDate,
   });
 
