@@ -59,7 +59,11 @@ export const buildMenuSection = ({ title, children }) => {
   return section;
 };
 
-export const buildDrawer = ({ exportMode, attendanceSection }) => {
+export const buildDrawer = ({
+  exportMode,
+  attendanceSection,
+  angebotSection,
+}) => {
   const drawer = createEl('aside', { className: 'drawer' });
 
   const drawerHeader = createEl('div', { className: 'drawer-header' });
@@ -133,15 +137,17 @@ export const buildDrawer = ({ exportMode, attendanceSection }) => {
         }),
       ],
     });
-  const offersSection = buildMenuSection({
-    title: 'Angebote',
-    children: [
-      createEl('p', {
-        className: 'drawer-placeholder',
-        text: 'Platzhalter für spätere Funktionen.',
-      }),
-    ],
-  });
+  const offersSection =
+    angebotSection ||
+    buildMenuSection({
+      title: 'Angebote',
+      children: [
+        createEl('p', {
+          className: 'drawer-placeholder',
+          text: 'Platzhalter für spätere Funktionen.',
+        }),
+      ],
+    });
 
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
@@ -179,17 +185,17 @@ export const buildAbsentChildrenSection = ({
     className: 'attendance-subtitle',
     text: 'Abwesend',
   });
-  const absentList = createEl('div', { className: 'absent-pill-list' });
+  const absentList = createEl('div', { className: 'pill-list' });
   absentChildren.forEach((child) => {
     const name = createEl('span', { text: child });
     const removeButton = createEl('button', {
-      className: 'absent-pill-remove',
+      className: 'pill-remove',
       text: '✕',
       attrs: { type: 'button', 'aria-label': `${child} wieder anwesend` },
       dataset: { role: 'absent-remove', child },
     });
     const pill = createEl('span', {
-      className: 'absent-pill',
+      className: 'pill',
       dataset: { child },
       children: [name, removeButton],
     });
@@ -237,10 +243,15 @@ export const buildAbsentChildrenSection = ({
   return { element: section, refs: { absentList, allList } };
 };
 
-export const buildAngebotSection = ({ angebote, selectedAngebot, newValue }) => {
-  const section = createEl('section', { className: 'section' });
-  const title = createEl('h2', { text: 'Angebot' });
-
+export const buildAngebotSection = ({
+  angebote,
+  selectedAngebote,
+  newValue,
+  savePresetChecked,
+}) => {
+  const activeAngebote = Array.isArray(selectedAngebote)
+    ? selectedAngebote
+    : [];
   const datalistId = 'angebote-list';
   const comboInput = createEl('input', {
     className: 'input',
@@ -249,26 +260,56 @@ export const buildAngebotSection = ({ angebote, selectedAngebot, newValue }) => 
       list: datalistId,
       placeholder: 'Angebot auswählen...',
     },
+    dataset: { role: 'angebot-input' },
   });
-  comboInput.value = selectedAngebot || '';
+  comboInput.value = newValue || '';
 
   const datalist = createEl('datalist', { attrs: { id: datalistId } });
   angebote.forEach((item) => {
     datalist.appendChild(createEl('option', { attrs: { value: item } }));
   });
 
-  const addInput = createEl('input', {
-    className: 'input',
-    attrs: { type: 'text', placeholder: 'Neues Angebot...' },
-    dataset: { role: 'angebot-new' },
-  });
-  if (newValue) {
-    addInput.value = newValue;
-  }
   const addButton = createEl('button', {
     className: 'button',
     text: 'Hinzufügen',
     attrs: { type: 'button' },
+  });
+
+  const savePresetInput = createEl('input', {
+    attrs: { type: 'checkbox' },
+    dataset: { role: 'angebot-save-preset' },
+  });
+  savePresetInput.checked = Boolean(savePresetChecked);
+  const savePresetLabel = createEl('label', {
+    className: 'preset-toggle',
+    children: [
+      savePresetInput,
+      createEl('span', { text: 'Als Preset speichern' }),
+    ],
+  });
+
+  const selectedTitle = createEl('h4', {
+    className: 'drawer-subtitle',
+    text: 'Heute ausgewählt',
+  });
+  const selectedList = createEl('div', {
+    className: 'pill-list',
+    dataset: { role: 'angebot-list' },
+  });
+  activeAngebote.forEach((angebot) => {
+    const name = createEl('span', { text: angebot });
+    const removeButton = createEl('button', {
+      className: 'pill-remove',
+      text: '✕',
+      attrs: { type: 'button', 'aria-label': `${angebot} entfernen` },
+      dataset: { role: 'angebot-remove', angebot },
+    });
+    const pill = createEl('span', {
+      className: 'pill',
+      dataset: { angebot },
+      children: [name, removeButton],
+    });
+    selectedList.appendChild(pill);
   });
 
   const comboRow = createEl('div', {
@@ -277,17 +318,21 @@ export const buildAngebotSection = ({ angebote, selectedAngebot, newValue }) => 
   });
   const addRow = createEl('div', {
     className: 'add-row',
-    children: [addInput, addButton],
+    children: [addButton, savePresetLabel],
   });
 
-  section.append(title, comboRow, addRow);
+  const section = buildMenuSection({
+    title: 'Angebote',
+    children: [comboRow, addRow, selectedTitle, selectedList],
+  });
 
   return {
     element: section,
     refs: {
       comboInput,
-      addInput,
       addButton,
+      savePresetInput,
+      selectedList,
     },
   };
 };
