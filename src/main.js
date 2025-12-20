@@ -1,19 +1,23 @@
-// Lokaler Server-Start:
-// python -m http.server 5500
-// http://localhost:5500
+import { initStore, subscribe, getState, setSelectedDate } from './state/store.js';
+import { todayYmd } from './utils/date.js';
+import { renderApp } from './ui/render.js';
 
 const app = document.querySelector('#app');
 
-fetch('/data/db.json')
-  .then((response) => response.json())
-  .then((data) => {
-    if (app) {
-      app.textContent = `Daten geladen: ${Object.keys(data).length} Einträge`;
-    }
-  })
-  .catch((error) => {
-    console.error('Fehler beim Laden der Daten:', error);
-    if (app) {
-      app.textContent = 'Daten konnten nicht geladen werden.';
-    }
+const startApp = async () => {
+  await initStore();
+
+  subscribe((state) => {
+    renderApp(app, state);
   });
+
+  const state = getState();
+  const initialDate = state.ui.selectedDate || todayYmd();
+  if (initialDate !== state.ui.selectedDate) {
+    setSelectedDate(initialDate);
+  } else {
+    renderApp(app, state);
+  }
+};
+
+startApp();
