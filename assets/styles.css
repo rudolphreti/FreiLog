@@ -159,6 +159,7 @@ body {
   left: 0;
   bottom: 0;
   width: min(92vw, 420px);
+  height: 100dvh;
   background: var(--panel);
   box-shadow: 12px 0 24px rgba(15, 23, 42, 0.12);
   transform: translateX(-100%);
@@ -192,7 +193,9 @@ body {
   gap: 16px;
   overflow-y: auto;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .drawer-close {
