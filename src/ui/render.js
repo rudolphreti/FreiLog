@@ -36,10 +36,7 @@ const normalizeObservations = (value) => {
         if (preset && !tags.includes(preset)) {
           tags.push(preset);
         }
-        acc[item.child] = {
-          tags,
-          note: item.note || '',
-        };
+        acc[item.child] = tags;
       }
       return acc;
     }, {});
@@ -47,16 +44,21 @@ const normalizeObservations = (value) => {
 
   if (typeof value === 'object') {
     return Object.entries(value).reduce((acc, [child, item]) => {
+      if (Array.isArray(item)) {
+        acc[child] = item;
+        return acc;
+      }
+      if (typeof item === 'string') {
+        acc[child] = [item];
+        return acc;
+      }
       const entry = item && typeof item === 'object' ? item : {};
       const preset = typeof entry.preset === 'string' ? entry.preset.trim() : '';
       const tags = Array.isArray(entry.tags) ? [...entry.tags] : [];
       if (preset && !tags.includes(preset)) {
         tags.push(preset);
       }
-      acc[child] = {
-        tags,
-        note: typeof entry.note === 'string' ? entry.note : '',
-      };
+      acc[child] = tags;
       return acc;
     }, {});
   }

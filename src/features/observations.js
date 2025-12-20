@@ -1,7 +1,14 @@
 import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
-import { debounce } from '../utils/debounce.js';
+const normalizeObservationList = (value) => {
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? [trimmed] : [];
+  }
 
-const normalizeTagList = (value) => {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return normalizeObservationList(value.tags);
+  }
+
   if (!Array.isArray(value)) {
     return [];
   }
@@ -21,24 +28,6 @@ const normalizeTagList = (value) => {
   });
 
   return result;
-};
-
-const updateObservationNote = (date, container, child) => {
-  const card = container.querySelector(`[data-child="${child}"]`);
-  if (!card) {
-    return;
-  }
-
-  const noteInput = card.querySelector('[data-role="observation-note"]');
-  const note = noteInput ? noteInput.value : '';
-
-  updateEntry(date, {
-    observations: {
-      [child]: {
-        note,
-      },
-    },
-  });
 };
 
 export const getInitialLetters = (children) => {
@@ -96,28 +85,26 @@ const addTagForChild = (date, child, value) => {
 
   updateEntry(date, {
     observations: {
-      [child]: {
-        tags: [trimmed],
-      },
+      [child]: [trimmed],
     },
   });
 };
 
-const removeTagForChild = (date, child, tag) => {
+const removeObservationForChild = (date, child, tag) => {
   const entry = getEntry(date);
   const current =
     entry.observations && entry.observations[child]
       ? entry.observations[child]
-      : {};
-  const updatedTags = normalizeTagList(current.tags).filter(
+      : [];
+  const updatedTags = normalizeObservationList(current).filter(
     (item) => item !== tag,
   );
 
   updateEntry(date, {
     observations: {
       [child]: {
-        tags: updatedTags,
-        replaceTags: true,
+        items: updatedTags,
+        replace: true,
       },
     },
   });
@@ -171,17 +158,6 @@ export const bindObservations = ({
   if (!list || !overlay || !overlayContent || !overlayTitle) {
     return;
   }
-
-  const debouncedByChild = new Map();
-  const getDebouncedUpdate = (child) => {
-    if (!debouncedByChild.has(child)) {
-      debouncedByChild.set(
-        child,
-        debounce(() => updateObservationNote(date, overlayContent, child)),
-      );
-    }
-    return debouncedByChild.get(child);
-  };
 
   const presets = getPresets('observations');
   let activeChild = null;
@@ -253,13 +229,6 @@ export const bindObservations = ({
       updatePresetButtonState(card, target.value, presets);
       return;
     }
-
-    if (target.dataset.role === 'observation-note') {
-      const debounced = getDebouncedUpdate(card.dataset.child);
-      if (debounced) {
-        debounced();
-      }
-    }
   });
 
   overlayContent.addEventListener('keydown', (event) => {
@@ -321,12 +290,12 @@ export const bindObservations = ({
     }
 
     const removeButton = target.closest(
-      '[data-role="observation-tag-remove"]',
+      '[data-role="observation-today-remove"]',
     );
     if (removeButton) {
       const tag = removeButton.dataset.value;
       if (tag) {
-        removeTagForChild(date, card.dataset.child, tag);
+        removeObservationForChild(date, card.dataset.child, tag);
       }
     }
   });
