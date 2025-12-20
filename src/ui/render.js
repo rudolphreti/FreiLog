@@ -81,7 +81,10 @@ export const renderApp = (root, state) => {
     return;
   }
 
-  const newAngebotValue = root.querySelector('[data-role="angebot-new"]')?.value;
+  const angebotInputValue =
+    root.querySelector('[data-role="angebot-input"]')?.value;
+  const angebotPresetChecked =
+    root.querySelector('[data-role="angebot-save-preset"]')?.checked;
 
   clearElement(root);
 
@@ -103,10 +106,6 @@ export const renderApp = (root, state) => {
     ? entry.absentChildren
     : [];
 
-  const selectedAngebot = Array.isArray(entry.angebote)
-    ? entry.angebote[0] || ''
-    : entry.angebote || '';
-
   const observations = normalizeObservations(entry.observations);
   const presentChildren = childrenList.filter(
     (child) => !absentChildren.includes(child),
@@ -117,16 +116,19 @@ export const renderApp = (root, state) => {
     absentChildren,
   });
   const header = buildHeader({ selectedDate });
+  const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
+  const angebotSection = buildAngebotSection({
+    angebote: angebotePresets,
+    selectedAngebote,
+    newValue: angebotInputValue || '',
+    savePresetChecked: angebotPresetChecked,
+  });
   const drawer = buildDrawer({
     exportMode,
     attendanceSection: absentSection.element,
+    angebotSection: angebotSection.element,
   });
   const backdrop = buildBackdrop();
-  const angebotSection = buildAngebotSection({
-    angebote: angebotePresets,
-    selectedAngebot,
-    newValue: newAngebotValue || '',
-  });
   const observationsSection = buildObservationsSection({
     children: presentChildren,
     observations,
@@ -137,7 +139,6 @@ export const renderApp = (root, state) => {
     header.element,
     backdrop,
     drawer.element,
-    angebotSection.element,
     observationsSection.element,
   );
   root.appendChild(container);
@@ -158,8 +159,9 @@ export const renderApp = (root, state) => {
   });
   bindAngebot({
     comboInput: angebotSection.refs.comboInput,
-    addInput: angebotSection.refs.addInput,
     addButton: angebotSection.refs.addButton,
+    savePresetInput: angebotSection.refs.savePresetInput,
+    selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
   });
   bindObservations({

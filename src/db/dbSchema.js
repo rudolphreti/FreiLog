@@ -80,13 +80,17 @@ const normalizeObservationEntries = (value, childrenSet) => {
 
 const normalizeEntry = (entry, date, childrenSet) => {
   const source = isPlainObject(entry) ? entry : {};
-  const angebote = ensureUniqueStrings(
-    Array.isArray(source.angebote)
-      ? source.angebote
-      : typeof source.angebote === 'string'
-        ? [source.angebote]
-        : [],
-  );
+  const legacyAngebot =
+    typeof source.angebot === 'string' ? source.angebot.trim() : '';
+  const angebotList = Array.isArray(source.angebote)
+    ? source.angebote
+    : typeof source.angebote === 'string'
+      ? [source.angebote]
+      : [];
+  if (legacyAngebot && !angebotList.includes(legacyAngebot)) {
+    angebotList.push(legacyAngebot);
+  }
+  const angebote = ensureUniqueStrings(angebotList);
   const absentChildren = ensureUniqueStrings(source.absentChildren);
   const filteredAbsent = childrenSet
     ? absentChildren.filter((name) => childrenSet.has(name))

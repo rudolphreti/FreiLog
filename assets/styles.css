@@ -229,13 +229,19 @@ body {
   color: var(--muted);
 }
 
-.absent-pill-list {
+.drawer-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.pill-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.absent-pill {
+.pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -247,7 +253,7 @@ body {
   font-size: 0.85rem;
 }
 
-.absent-pill-remove {
+.pill-remove {
   border: none;
   background: transparent;
   color: inherit;
@@ -342,12 +348,26 @@ body {
 
 .add-row {
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
 }
 
 .add-row .button {
-  min-width: 120px;
+  min-width: 140px;
+}
+
+.preset-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.preset-toggle input {
+  width: 18px;
+  height: 18px;
 }
 
 .observation-list {

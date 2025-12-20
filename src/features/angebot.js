@@ -1,33 +1,92 @@
-import { addPreset, updateEntry } from '../db/dbRepository.js';
-import { debounce } from '../utils/debounce.js';
+import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
 
-const updateAngebot = (date, value) => {
-  const trimmed = value.trim();
-  updateEntry(date, { angebote: trimmed ? [trimmed] : [] });
+const normalizeOffers = (value) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set();
+  return value.filter((item) => {
+    if (typeof item !== 'string') {
+      return false;
+    }
+    const trimmed = item.trim();
+    if (!trimmed || seen.has(trimmed)) {
+      return false;
+    }
+    seen.add(trimmed);
+    return true;
+  });
 };
 
-export const bindAngebot = ({ comboInput, addInput, addButton, date }) => {
-  if (!comboInput) {
+const addOffer = ({ date, value, savePreset }) => {
+  const trimmed = value.trim();
+  if (!trimmed) {
     return;
   }
 
-  const debouncedUpdate = debounce(() => {
-    updateAngebot(date, comboInput.value || '');
+  const entry = getEntry(date);
+  const current = normalizeOffers(entry.angebote);
+
+  if (!current.includes(trimmed)) {
+    updateEntry(date, { angebote: [...current, trimmed] });
+  }
+
+  const presets = getPresets('angebote');
+  if (savePreset && !presets.includes(trimmed)) {
+    addPreset('angebote', trimmed);
+  }
+};
+
+const removeOffer = (date, value) => {
+  const entry = getEntry(date);
+  const current = normalizeOffers(entry.angebote);
+  const updated = current.filter((item) => item !== value);
+  updateEntry(date, { angebote: updated });
+};
+
+export const bindAngebot = ({
+  comboInput,
+  addButton,
+  savePresetInput,
+  selectedList,
+  date,
+}) => {
+  if (!comboInput || !addButton || !selectedList) {
+    return;
+  }
+
+  const handleAdd = () => {
+    const value = comboInput.value || '';
+    addOffer({
+      date,
+      value,
+      savePreset: Boolean(savePresetInput?.checked),
+    });
+    comboInput.value = '';
+  };
+
+  addButton.addEventListener('click', handleAdd);
+  comboInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleAdd();
+    }
   });
 
-  comboInput.addEventListener('input', debouncedUpdate);
-
-  if (addButton && addInput) {
-    addButton.addEventListener('click', () => {
-      const value = addInput.value.trim();
-      if (!value) {
-        return;
-      }
-
-      addPreset('angebote', value);
-      comboInput.value = value;
-      updateAngebot(date, value);
-      addInput.value = '';
-    });
-  }
+  selectedList.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const removeButton = target.closest('[data-role="angebot-remove"]');
+    if (!removeButton) {
+      return;
+    }
+    const value = removeButton.dataset.angebot;
+    if (!value) {
+      return;
+    }
+    removeOffer(date, value);
+  });
 };
