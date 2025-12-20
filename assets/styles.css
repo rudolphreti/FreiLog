@@ -164,10 +164,9 @@ body {
   transform: translateX(-100%);
   transition: transform 0.25s ease;
   z-index: 30;
-  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -179,6 +178,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex: 0 0 auto;
+  padding: 18px 18px 0;
 }
 
 .drawer-header h2 {
@@ -191,8 +192,11 @@ body {
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  padding: 0 18px 18px;
 }
 
 .drawer-close {
