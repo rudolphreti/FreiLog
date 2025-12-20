@@ -1,4 +1,5 @@
 import { updateEntry } from '../db/dbRepository.js';
+import { debounce } from '../utils/debounce.js';
 
 const applyFilter = (list, query) => {
   const normalized = query.trim().toLowerCase();
@@ -23,9 +24,11 @@ export const bindAbsentChildren = ({ searchInput, list, date }) => {
     return;
   }
 
-  searchInput.addEventListener('input', () => {
+  const debouncedFilter = debounce(() => {
     applyFilter(list, searchInput.value);
   });
+
+  searchInput.addEventListener('input', debouncedFilter);
 
   list.addEventListener('change', (event) => {
     if (event.target instanceof HTMLInputElement) {

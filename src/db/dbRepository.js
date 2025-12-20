@@ -1,4 +1,9 @@
-import { normalizeBaseDb, safeDeepMerge } from './dbSchema.js';
+import {
+  ensureUniqueSortedStrings,
+  normalizeBaseDb,
+  safeDeepMerge,
+  sanitizeEntriesByDate,
+} from './dbSchema.js';
 import { clearOverlay } from '../state/persistence.js';
 import { getState, initStore, updateOverlay } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
@@ -150,6 +155,7 @@ export const importJson = (obj) => {
     return;
   }
 
+  const childrenList = getState().db?.presetData?.childrenList || [];
   const isFullDb =
     obj.meta &&
     typeof obj.meta.schemaVersion === 'number' &&
@@ -157,17 +163,26 @@ export const importJson = (obj) => {
 
   if (isFullDb) {
     const normalized = normalizeBaseDb(obj);
+    const sanitizedEntries = sanitizeEntriesByDate(
+      normalized.records.entriesByDate,
+      childrenList,
+    );
 
     updateOverlay((overlay) => {
       ensureRecordsContainer(overlay);
       ensurePresetOverrides(overlay);
       overlay.records.entriesByDate = safeDeepMerge(
         overlay.records.entriesByDate,
-        normalized.records.entriesByDate,
+        sanitizedEntries,
       );
-      overlay.presetOverrides.angeboteAdded = normalized.presetData.angebote;
-      overlay.presetOverrides.observationsAdded =
-        normalized.presetData.observations;
+      overlay.presetOverrides.angeboteAdded = ensureUniqueSortedStrings([
+        ...(overlay.presetOverrides.angeboteAdded || []),
+        ...normalized.presetData.angebote,
+      ]);
+      overlay.presetOverrides.observationsAdded = ensureUniqueSortedStrings([
+        ...(overlay.presetOverrides.observationsAdded || []),
+        ...normalized.presetData.observations,
+      ]);
     });
 
     return;
@@ -178,5 +193,10 @@ export const importJson = (obj) => {
     return;
   }
 
-  updateEntry(payload.date, payload.entry);
+  const sanitizedEntry =
+    sanitizeEntriesByDate({ [payload.date]: payload.entry }, childrenList)[
+      payload.date
+    ] || createDefaultEntry(payload.date);
+
+  updateEntry(payload.date, sanitizedEntry);
 };

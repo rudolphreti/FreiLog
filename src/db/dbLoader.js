@@ -27,7 +27,7 @@ export const loadOverlay = () => {
   try {
     return normalizeOverlay(JSON.parse(raw));
   } catch (error) {
-    console.error('Failed to parse overlay from localStorage.', error);
+    console.warn('Failed to parse overlay from localStorage.', error);
     return null;
   }
 };

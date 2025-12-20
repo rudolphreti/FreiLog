@@ -52,7 +52,7 @@ const handleImport = async (file) => {
     const parsed = JSON.parse(text);
     importJson(parsed);
   } catch (error) {
-    console.error('Import fehlgeschlagen', error);
+    console.warn('Import fehlgeschlagen', error);
     alert('Import fehlgeschlagen. Bitte eine gültige JSON-Datei wählen.');
   }
 };
