@@ -8,6 +8,7 @@ const createEmptyOverlay = () => ({
   ui: {
     selectedDate: '',
     exportMode: '',
+    observationsFilter: 'ALL',
     drawer: {
       open: false,
       sections: { ...DEFAULT_DRAWER_SECTIONS },

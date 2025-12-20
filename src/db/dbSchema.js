@@ -219,6 +219,10 @@ export const normalizeOverlay = (overlay) => {
     ui: {
       selectedDate: typeof ui.selectedDate === 'string' ? ui.selectedDate : '',
       exportMode: typeof ui.exportMode === 'string' ? ui.exportMode : '',
+      observationsFilter:
+        typeof ui.observationsFilter === 'string'
+          ? ui.observationsFilter
+          : 'ALL',
       drawer: {
         open: typeof drawer.open === 'boolean' ? drawer.open : false,
         sections: {
