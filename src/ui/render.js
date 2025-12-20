@@ -2,7 +2,6 @@ import { todayYmd } from '../utils/date.js';
 import { clearElement } from './dom.js';
 import {
   buildHeader,
-  buildBackdrop,
   buildDrawerShell,
   buildDrawerContent,
   buildAbsentChildrenSection,
@@ -69,37 +68,7 @@ const normalizeObservations = (value) => {
   return {};
 };
 
-let drawerOpen = false;
-let drawerRefs = null;
 let drawerShell = null;
-let escapeListenerBound = false;
-let drawerCloseBound = false;
-
-const applyDrawerState = (open) => {
-  drawerOpen = open;
-
-  if (!drawerRefs) {
-    return;
-  }
-
-  drawerRefs.drawer.classList.toggle('is-open', open);
-  drawerRefs.backdrop.classList.toggle('is-visible', open);
-  document.body.classList.toggle('drawer-open', open);
-};
-
-const bindDrawerEscape = () => {
-  if (escapeListenerBound) {
-    return;
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && drawerOpen) {
-      applyDrawerState(false);
-    }
-  });
-
-  escapeListenerBound = true;
-};
 
 const renderDrawerContent = (state, drawerBody, attendanceSection, angebotSection) => {
   if (!drawerBody) {
@@ -171,7 +140,6 @@ export const renderApp = (root, state) => {
     newValue: angebotInputValue || '',
     savePresetChecked: angebotPresetChecked,
   });
-  const backdrop = buildBackdrop();
   const initials = getInitialLetters(presentChildren);
   let selectedInitial =
     typeof state?.ui?.observationsFilter === 'string'
@@ -204,12 +172,11 @@ export const renderApp = (root, state) => {
     angebotSection,
   );
 
-  container.append(
-    header.element,
-    backdrop,
-    drawerShell.element,
-    observationsSection.element,
-  );
+  const contentWrap = document.createElement('div');
+  contentWrap.className = 'container d-flex flex-column gap-3';
+  contentWrap.append(header.element, observationsSection.element);
+
+  container.append(contentWrap, drawerShell.element);
   root.appendChild(container);
 
   bindDateEntry(header.refs.dateInput);
@@ -244,32 +211,13 @@ export const renderApp = (root, state) => {
     });
   });
 
-  drawerRefs = {
-    drawer: drawerShell.element,
-    backdrop,
-  };
-  applyDrawerState(drawerOpen);
-  bindDrawerEscape();
-
-  header.refs.menuButton.addEventListener('click', () => {
-    applyDrawerState(true);
-  });
-  if (!drawerCloseBound) {
-    drawerShell.refs.closeButton.addEventListener('click', () => {
-      applyDrawerState(false);
-    });
-    drawerCloseBound = true;
-  }
-  backdrop.addEventListener('click', () => {
-    applyDrawerState(false);
-  });
-
   if (drawerContentRefs?.sections) {
     Object.entries(drawerContentRefs.sections).forEach(([id, section]) => {
-      section.refs.toggleButton.addEventListener('click', () => {
-        const nextOpen = !section.isOpen();
-        section.setOpen(nextOpen);
-        setDrawerSectionState(id, nextOpen);
+      section.refs.collapse.addEventListener('shown.bs.collapse', () => {
+        setDrawerSectionState(id, true);
+      });
+      section.refs.collapse.addEventListener('hidden.bs.collapse', () => {
+        setDrawerSectionState(id, false);
       });
     });
   }
