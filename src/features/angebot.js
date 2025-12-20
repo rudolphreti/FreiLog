@@ -1,4 +1,5 @@
 import { addPreset, updateEntry } from '../db/dbRepository.js';
+import { debounce } from '../utils/debounce.js';
 
 const updateAngebot = (date, value) => {
   const trimmed = value.trim();
@@ -10,9 +11,11 @@ export const bindAngebot = ({ comboInput, addInput, addButton, date }) => {
     return;
   }
 
-  comboInput.addEventListener('input', () => {
+  const debouncedUpdate = debounce(() => {
     updateAngebot(date, comboInput.value || '');
   });
+
+  comboInput.addEventListener('input', debouncedUpdate);
 
   if (addButton && addInput) {
     addButton.addEventListener('click', () => {

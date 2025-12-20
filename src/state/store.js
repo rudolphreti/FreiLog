@@ -4,7 +4,7 @@ import {
   loadBaseDb,
   loadOverlay as loadOverlayFromDb,
 } from '../db/dbLoader.js';
-import { normalizeOverlay } from '../db/dbSchema.js';
+import { normalizeOverlay, sanitizeEntriesByDate } from '../db/dbSchema.js';
 import { saveOverlay } from './persistence.js';
 
 let baseDb = null;
@@ -45,6 +45,19 @@ export const notify = () => {
 export const initStore = async () => {
   baseDb = await loadBaseDb();
   overlay = loadOverlayFromDb();
+  if (overlay?.records?.entriesByDate) {
+    const childrenList = baseDb?.presetData?.childrenList || [];
+    const sanitized = sanitizeEntriesByDate(
+      overlay.records.entriesByDate,
+      childrenList,
+    );
+    const original = JSON.stringify(overlay.records.entriesByDate);
+    const updated = JSON.stringify(sanitized);
+    if (original !== updated) {
+      overlay.records.entriesByDate = sanitized;
+      saveOverlay(overlay);
+    }
+  }
   effectiveDb = buildEffectiveDb(baseDb, overlay);
   notify();
 };

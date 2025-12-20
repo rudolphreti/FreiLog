@@ -1,4 +1,5 @@
 import { updateEntry } from '../db/dbRepository.js';
+import { debounce } from '../utils/debounce.js';
 
 const updateObservation = (date, list, child) => {
   const card = list.querySelector(`[data-child="${child}"]`);
@@ -26,6 +27,17 @@ export const bindObservations = ({ list, date }) => {
     return;
   }
 
+  const debouncedByChild = new Map();
+  const getDebouncedUpdate = (child) => {
+    if (!debouncedByChild.has(child)) {
+      debouncedByChild.set(
+        child,
+        debounce(() => updateObservation(date, list, child)),
+      );
+    }
+    return debouncedByChild.get(child);
+  };
+
   list.addEventListener('input', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLInputElement)) {
@@ -37,6 +49,9 @@ export const bindObservations = ({ list, date }) => {
       return;
     }
 
-    updateObservation(date, list, card.dataset.child);
+    const debounced = getDebouncedUpdate(card.dataset.child);
+    if (debounced) {
+      debounced();
+    }
   });
 };
