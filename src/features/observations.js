@@ -134,7 +134,7 @@ const updatePresetButtonState = (card, value, presets) => {
     Boolean(trimmed) && !presets.includes(trimmed);
 
   button.disabled = !shouldShow;
-  button.classList.toggle('is-hidden', !shouldShow);
+  button.classList.toggle('d-none', !shouldShow);
 };
 
 export const bindObservations = ({ list, date }) => {
