@@ -142,29 +142,10 @@ const buildAccordionItem = ({
 };
 
 export const buildDrawerContent = ({
-  exportMode,
   drawerSections,
   attendanceSection,
   angebotSection,
 }) => {
-  const segmented = createEl('div', {
-    className: 'btn-group w-100',
-    attrs: { role: 'group', 'aria-label': 'Export-Modus' },
-  });
-  const exportDayButton = createEl('button', {
-    className: `btn btn-outline-primary${exportMode === 'day' ? ' active' : ''}`,
-    text: 'Export: Tag',
-    attrs: { type: 'button' },
-    dataset: { mode: 'day' },
-  });
-  const exportAllButton = createEl('button', {
-    className: `btn btn-outline-primary${exportMode === 'all' ? ' active' : ''}`,
-    text: 'Export: Alles',
-    attrs: { type: 'button' },
-    dataset: { mode: 'all' },
-  });
-  segmented.append(exportDayButton, exportAllButton);
-
   const exportButton = createEl('button', {
     className: 'btn btn-primary w-100',
     text: 'Exportieren',
@@ -172,22 +153,12 @@ export const buildDrawerContent = ({
   });
   const importButton = createEl('button', {
     className: 'btn btn-outline-primary w-100',
-    text: 'Importieren',
-    attrs: { type: 'button' },
-  });
-  const deleteButton = createEl('button', {
-    className: 'btn btn-outline-danger w-100',
-    text: 'Tag löschen',
-    attrs: { type: 'button' },
-  });
-  const resetButton = createEl('button', {
-    className: 'btn btn-outline-danger w-100',
-    text: 'Reset (db.json)',
+    text: 'Importieren (Alles)',
     attrs: { type: 'button' },
   });
   const actionsGroup = createEl('div', {
     className: 'd-grid gap-2',
-    children: [segmented, exportButton, importButton, deleteButton, resetButton],
+    children: [exportButton, importButton],
   });
 
   const accordionId = 'drawerAccordion';
@@ -239,11 +210,8 @@ export const buildDrawerContent = ({
   return {
     nodes: [accordion, importInput],
     refs: {
-      exportModeButtons: [exportDayButton, exportAllButton],
       exportButton,
       importButton,
-      deleteButton,
-      resetButton,
       importInput,
       sections: {
         actions: actionsSection,

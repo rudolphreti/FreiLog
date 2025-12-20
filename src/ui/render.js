@@ -76,10 +76,8 @@ const renderDrawerContent = (state, drawerBody, attendanceSection, angebotSectio
   }
 
   const scrollTop = drawerBody.scrollTop;
-  const exportMode = state?.ui?.exportMode === 'all' ? 'all' : 'day';
   const drawerSections = state?.ui?.drawer?.sections || {};
   const content = buildDrawerContent({
-    exportMode,
     drawerSections,
     attendanceSection: attendanceSection?.element,
     angebotSection: angebotSection?.element,
@@ -181,11 +179,8 @@ export const renderApp = (root, state) => {
 
   bindDateEntry(header.refs.dateInput);
   bindImportExport({
-    exportModeButtons: drawerContentRefs?.exportModeButtons || [],
     exportButton: drawerContentRefs?.exportButton,
     importButton: drawerContentRefs?.importButton,
-    deleteButton: drawerContentRefs?.deleteButton,
-    resetButton: drawerContentRefs?.resetButton,
     fileInput: drawerContentRefs?.importInput,
   });
   bindAbsentChildren({
