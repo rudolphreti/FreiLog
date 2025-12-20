@@ -51,6 +51,7 @@ const normalizeObservationEntries = (value, childrenSet) => {
     source = value.reduce((acc, item) => {
       if (item && item.child) {
         acc[item.child] = {
+          tags: Array.isArray(item.tags) ? item.tags : [],
           preset: item.preset || '',
           note: item.note || '',
         };
@@ -70,9 +71,13 @@ const normalizeObservationEntries = (value, childrenSet) => {
     const item = isPlainObject(source[child]) ? source[child] : {};
     const preset =
       typeof item.preset === 'string' ? item.preset.trim() : '';
+    const tags = ensureUniqueStrings(item.tags);
+    if (preset && !tags.includes(preset)) {
+      tags.push(preset);
+    }
     const note = typeof item.note === 'string' ? item.note : '';
 
-    result[child] = { preset, note };
+    result[child] = { tags, note };
   });
 
   return result;

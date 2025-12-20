@@ -376,6 +376,10 @@ body {
   gap: 12px;
 }
 
+.observation-search {
+  max-width: 320px;
+}
+
 .observation-card {
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -387,6 +391,31 @@ body {
 
 .observation-name {
   font-weight: 600;
+}
+
+.observation-combo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.observation-combo .button {
+  width: auto;
+}
+
+.observation-tags {
+  gap: 6px;
+}
+
+.is-hidden {
+  display: none;
+}
+
+@media (min-width: 560px) {
+  .observation-combo {
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+  }
 }
 
 @media (min-width: 768px) {

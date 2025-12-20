@@ -337,6 +337,28 @@ export const buildAngebotSection = ({
   };
 };
 
+const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
+  const list = createEl('div', { className: 'pill-list' });
+  items.forEach((item) => {
+    const label = getLabel(item);
+    const name = createEl('span', { text: label });
+    const removeButton = createEl('button', {
+      className: 'pill-remove',
+      text: '✕',
+      attrs: { type: 'button', 'aria-label': getRemoveLabel(label) },
+      dataset: { role: removeRole, value: label },
+    });
+    const pill = createEl('span', {
+      className: 'pill',
+      dataset: { value: label },
+      children: [name, removeButton],
+    });
+    list.appendChild(pill);
+  });
+
+  return list;
+};
+
 export const buildObservationsSection = ({
   children,
   observations,
@@ -344,6 +366,12 @@ export const buildObservationsSection = ({
 }) => {
   const section = createEl('section', { className: 'section' });
   const title = createEl('h2', { text: 'Beobachtungen' });
+
+  const searchInput = createEl('input', {
+    className: 'input observation-search',
+    attrs: { type: 'search', placeholder: 'Kind suchen…' },
+    dataset: { role: 'observation-search' },
+  });
 
   const datalistId = 'observations-list';
   const datalist = createEl('datalist', { attrs: { id: datalistId } });
@@ -358,16 +386,31 @@ export const buildObservationsSection = ({
       className: 'observation-name',
       text: child,
     });
-    const presetInput = createEl('input', {
+    const comboInput = createEl('input', {
       className: 'input',
       attrs: {
         type: 'text',
         list: datalistId,
-        placeholder: 'Beobachtung (Preset)',
+        placeholder: 'Beobachtung hinzufügen…',
       },
-      dataset: { role: 'observation-preset' },
+      dataset: { role: 'observation-input' },
     });
-    presetInput.value = data.preset || '';
+    comboInput.value = '';
+
+    const addButton = createEl('button', {
+      className: 'button',
+      text: 'Hinzufügen',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-add' },
+    });
+
+    const savePresetButton = createEl('button', {
+      className: 'button secondary is-hidden',
+      text: 'Als Preset speichern',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-save-preset' },
+    });
+    savePresetButton.disabled = true;
 
     const noteInput = createEl('input', {
       className: 'input',
@@ -376,16 +419,30 @@ export const buildObservationsSection = ({
     });
     noteInput.value = data.note || '';
 
+    const tags = Array.isArray(data.tags) ? data.tags : [];
+    const tagsList = buildPillList({
+      items: tags,
+      getLabel: (item) => item,
+      getRemoveLabel: (label) => `${label} entfernen`,
+      removeRole: 'observation-tag-remove',
+    });
+    tagsList.classList.add('observation-tags');
+
+    const comboRow = createEl('div', {
+      className: 'observation-combo',
+      children: [comboInput, addButton, savePresetButton],
+    });
+
     const card = createEl('div', {
       className: 'observation-card',
       dataset: { child },
-      children: [name, presetInput, noteInput],
+      children: [name, comboRow, tagsList, noteInput],
     });
 
     list.appendChild(card);
   });
 
-  section.append(title, datalist, list);
+  section.append(title, searchInput, datalist, list);
 
-  return { element: section, refs: { list } };
+  return { element: section, refs: { list, searchInput } };
 };
