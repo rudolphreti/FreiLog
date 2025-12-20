@@ -8,7 +8,7 @@ import {
 } from './dbSchema.js';
 
 export const loadBaseDb = async () => {
-  const response = await fetch('/data/db.json', { cache: 'no-store' });
+  const response = await fetch('data/db.json', { cache: 'no-store' });
   const text = await response.text();
   const data = JSON.parse(text);
   return normalizeBaseDb(data);
