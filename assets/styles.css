@@ -159,6 +159,7 @@ body {
   left: 0;
   bottom: 0;
   width: min(92vw, 420px);
+  height: 100dvh;
   background: var(--panel);
   box-shadow: 12px 0 24px rgba(15, 23, 42, 0.12);
   transform: translateX(-100%);
@@ -169,6 +170,7 @@ body {
   flex-direction: column;
   gap: 16px;
   overflow: hidden;
+  min-height: 0;
 }
 
 .drawer.is-open {
@@ -192,7 +194,9 @@ body {
   gap: 16px;
   overflow-y: auto;
   min-height: 0;
-  flex: 1;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 .drawer-close {
@@ -236,10 +240,15 @@ body {
   flex-direction: column;
   gap: 12px;
   padding: 0 14px 14px;
+  min-height: 0;
 }
 
 .drawer-section.is-open .drawer-section-content {
   display: flex;
+}
+
+.drawer-section-body {
+  min-height: 0;
 }
 
 .drawer-actions {

@@ -113,9 +113,13 @@ export const createCollapsibleSection = ({
 };
 
 export const buildDrawerShell = () => {
-  const drawer = createEl('aside', { className: 'drawer' });
+  const drawer = createEl('aside', {
+    className: 'drawer d-flex flex-column',
+  });
 
-  const drawerHeader = createEl('div', { className: 'drawer-header' });
+  const drawerHeader = createEl('div', {
+    className: 'drawer-header flex-shrink-0',
+  });
   const drawerTitle = createEl('h2', { text: 'Menü' });
   const closeButton = createEl('button', {
     className: 'icon-button drawer-close',
@@ -125,7 +129,7 @@ export const buildDrawerShell = () => {
   drawerHeader.append(drawerTitle, closeButton);
 
   const body = createEl('div', {
-    className: 'drawer__body',
+    className: 'drawer__body flex-grow-1 overflow-auto',
     dataset: { drawerScroll: '' },
   });
 
