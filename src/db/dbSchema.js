@@ -1,4 +1,4 @@
-import { DEFAULT_EXPORT_MODE } from '../config.js';
+import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import { isValidYmd } from '../utils/date.js';
 
 const isPlainObject = (value) =>
@@ -195,6 +195,8 @@ export const normalizeOverlay = (overlay) => {
     ? overlay.presetOverrides
     : {};
   const ui = isPlainObject(overlay.ui) ? overlay.ui : {};
+  const drawer = isPlainObject(ui.drawer) ? ui.drawer : {};
+  const drawerSections = isPlainObject(drawer.sections) ? drawer.sections : {};
 
   return {
     meta: {
@@ -217,6 +219,23 @@ export const normalizeOverlay = (overlay) => {
     ui: {
       selectedDate: typeof ui.selectedDate === 'string' ? ui.selectedDate : '',
       exportMode: typeof ui.exportMode === 'string' ? ui.exportMode : '',
+      drawer: {
+        open: typeof drawer.open === 'boolean' ? drawer.open : false,
+        sections: {
+          actions:
+            typeof drawerSections.actions === 'boolean'
+              ? drawerSections.actions
+              : DEFAULT_DRAWER_SECTIONS.actions,
+          attendance:
+            typeof drawerSections.attendance === 'boolean'
+              ? drawerSections.attendance
+              : DEFAULT_DRAWER_SECTIONS.attendance,
+          angebote:
+            typeof drawerSections.angebote === 'boolean'
+              ? drawerSections.angebote
+              : DEFAULT_DRAWER_SECTIONS.angebote,
+        },
+      },
     },
   };
 };

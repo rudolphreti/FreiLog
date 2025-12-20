@@ -59,8 +59,62 @@ export const buildMenuSection = ({ title, children }) => {
   return section;
 };
 
+export const createCollapsibleSection = ({
+  id,
+  title,
+  defaultOpen,
+  contentNode,
+}) => {
+  const section = createEl('section', {
+    className: 'drawer-section',
+    dataset: { sectionId: id },
+  });
+  const titleNode = createEl('span', {
+    className: 'drawer-section-title',
+    text: title,
+  });
+  const chevron = createEl('span', {
+    className: 'drawer-section-chevron',
+    text: defaultOpen ? '▾' : '▸',
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const toggleButton = createEl('button', {
+    className: 'drawer-section-toggle',
+    attrs: {
+      type: 'button',
+      'aria-expanded': defaultOpen ? 'true' : 'false',
+    },
+    children: [titleNode, chevron],
+  });
+  const content = createEl('div', {
+    className: 'drawer-section-content',
+    children: [contentNode],
+  });
+
+  section.append(toggleButton, content);
+
+  let isOpen = Boolean(defaultOpen);
+  section.classList.toggle('is-open', isOpen);
+
+  const setOpen = (open) => {
+    isOpen = Boolean(open);
+    section.classList.toggle('is-open', isOpen);
+    toggleButton.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    chevron.textContent = isOpen ? '▾' : '▸';
+  };
+
+  return {
+    element: section,
+    refs: { toggleButton },
+    setOpen,
+    toggle: () => setOpen(!isOpen),
+    isOpen: () => isOpen,
+  };
+};
+
 export const buildDrawer = ({
   exportMode,
+  drawerSections,
   attendanceSection,
   angebotSection,
 }) => {
@@ -121,45 +175,49 @@ export const buildDrawer = ({
     ],
   });
 
-  const actionsSection = buildMenuSection({
+  const actionsSection = createCollapsibleSection({
+    id: 'actions',
     title: 'Aktionen',
-    children: [actionsGroup],
+    defaultOpen: Boolean(drawerSections?.actions),
+    contentNode: actionsGroup,
   });
 
   const attendanceContent =
     attendanceSection ||
-    buildMenuSection({
-      title: 'Anwesenheit',
-      children: [
-        createEl('p', {
-          className: 'drawer-placeholder',
-          text: 'Platzhalter für spätere Funktionen.',
-        }),
-      ],
+    createEl('p', {
+      className: 'drawer-placeholder',
+      text: 'Platzhalter für spätere Funktionen.',
     });
-  const offersSection =
+  const attendanceCollapsible = createCollapsibleSection({
+    id: 'attendance',
+    title: 'Anwesenheit',
+    defaultOpen: Boolean(drawerSections?.attendance),
+    contentNode: attendanceContent,
+  });
+
+  const offersContent =
     angebotSection ||
-    buildMenuSection({
-      title: 'Angebote',
-      children: [
-        createEl('p', {
-          className: 'drawer-placeholder',
-          text: 'Platzhalter für spätere Funktionen.',
-        }),
-      ],
+    createEl('p', {
+      className: 'drawer-placeholder',
+      text: 'Platzhalter für spätere Funktionen.',
     });
+  const offersSection = createCollapsibleSection({
+    id: 'angebote',
+    title: 'Angebote',
+    defaultOpen: Boolean(drawerSections?.angebote),
+    contentNode: offersContent,
+  });
 
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
-    className: 'input',
+    className: 'input is-hidden',
   });
-  importInput.style.display = 'none';
 
   drawer.append(
     drawerHeader,
-    actionsSection,
-    attendanceContent,
-    offersSection,
+    actionsSection.element,
+    attendanceCollapsible.element,
+    offersSection.element,
     importInput,
   );
 
@@ -173,6 +231,11 @@ export const buildDrawer = ({
       resetButton,
       importInput,
       closeButton,
+      sections: {
+        actions: actionsSection,
+        attendance: attendanceCollapsible,
+        angebote: offersSection,
+      },
     },
   };
 };
@@ -235,12 +298,12 @@ export const buildAbsentChildrenSection = ({
     children: [allTitle, allList],
   });
 
-  const section = buildMenuSection({
-    title: 'Anwesenheit',
+  const content = createEl('div', {
+    className: 'drawer-section-body',
     children: [absentBlock, allBlock],
   });
 
-  return { element: section, refs: { absentList, allList } };
+  return { element: content, refs: { absentList, allList } };
 };
 
 export const buildAngebotSection = ({
@@ -321,13 +384,13 @@ export const buildAngebotSection = ({
     children: [addButton, savePresetLabel],
   });
 
-  const section = buildMenuSection({
-    title: 'Angebote',
+  const content = createEl('div', {
+    className: 'drawer-section-body',
     children: [comboRow, addRow, selectedTitle, selectedList],
   });
 
   return {
-    element: section,
+    element: content,
     refs: {
       comboInput,
       addButton,

@@ -1,11 +1,18 @@
-import { OVERLAY_STORAGE_KEY } from '../config.js';
+import { DEFAULT_DRAWER_SECTIONS, OVERLAY_STORAGE_KEY } from '../config.js';
 import { normalizeOverlay } from '../db/dbSchema.js';
 
 const createEmptyOverlay = () => ({
   meta: { savedAt: new Date().toISOString() },
   records: { entriesByDate: {} },
   presetOverrides: { angeboteAdded: [], observationsAdded: [] },
-  ui: { selectedDate: '', exportMode: '' },
+  ui: {
+    selectedDate: '',
+    exportMode: '',
+    drawer: {
+      open: false,
+      sections: { ...DEFAULT_DRAWER_SECTIONS },
+    },
+  },
 });
 
 export const loadOverlay = () => {
