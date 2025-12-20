@@ -112,12 +112,7 @@ export const createCollapsibleSection = ({
   };
 };
 
-export const buildDrawer = ({
-  exportMode,
-  drawerSections,
-  attendanceSection,
-  angebotSection,
-}) => {
+export const buildDrawerShell = () => {
   const drawer = createEl('aside', { className: 'drawer' });
 
   const drawerHeader = createEl('div', { className: 'drawer-header' });
@@ -129,6 +124,28 @@ export const buildDrawer = ({
   });
   drawerHeader.append(drawerTitle, closeButton);
 
+  const body = createEl('div', {
+    className: 'drawer__body',
+    dataset: { drawerScroll: '' },
+  });
+
+  drawer.append(drawerHeader, body);
+
+  return {
+    element: drawer,
+    refs: {
+      closeButton,
+      body,
+    },
+  };
+};
+
+export const buildDrawerContent = ({
+  exportMode,
+  drawerSections,
+  attendanceSection,
+  angebotSection,
+}) => {
   const segmented = createEl('div', { className: 'segmented' });
   const exportDayButton = createEl('button', {
     className: `segment-button${exportMode === 'day' ? ' active' : ''}`,
@@ -213,16 +230,13 @@ export const buildDrawer = ({
     className: 'input is-hidden',
   });
 
-  drawer.append(
-    drawerHeader,
-    actionsSection.element,
-    attendanceCollapsible.element,
-    offersSection.element,
-    importInput,
-  );
-
   return {
-    element: drawer,
+    nodes: [
+      actionsSection.element,
+      attendanceCollapsible.element,
+      offersSection.element,
+      importInput,
+    ],
     refs: {
       exportModeButtons: [exportDayButton, exportAllButton],
       exportButton,
@@ -230,7 +244,6 @@ export const buildDrawer = ({
       deleteButton,
       resetButton,
       importInput,
-      closeButton,
       sections: {
         actions: actionsSection,
         attendance: attendanceCollapsible,
