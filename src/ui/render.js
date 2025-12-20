@@ -117,6 +117,7 @@ export const renderApp = (root, state) => {
   );
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
+  const observationStats = db.observationStats || {};
 
   const absentChildren = Array.isArray(entry.absentChildIds)
     ? entry.absentChildIds
@@ -139,6 +140,7 @@ export const renderApp = (root, state) => {
     children: sortedChildren,
     observations,
     presets: observationPresets,
+    observationStats,
   });
 
   if (!drawerShell) {
