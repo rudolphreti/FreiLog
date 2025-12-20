@@ -1,4 +1,63 @@
 {
-  "children": [],
-  "observations": []
+  "meta": {
+    "schemaVersion": 1,
+    "app": "KidsObservations",
+    "updatedAt": "2025-12-20T00:00:00Z"
+  },
+  "presetData": {
+    "childrenList": [
+      "Angelo",
+      "Asel",
+      "Azade",
+      "Donya",
+      "Elif",
+      "Ella",
+      "Erica",
+      "Giti",
+      "Haidar",
+      "Hamza",
+      "Ilwad",
+      "Serita",
+      "Karelyn",
+      "Layen",
+      "Leon",
+      "Luna",
+      "Lynara",
+      "Mihaela",
+      "Milan",
+      "Mirac Nur",
+      "Natalia",
+      "Rayan",
+      "Sophie",
+      "Yasin",
+      "Daphne"
+    ],
+    "angebote": [
+      "Basteln",
+      "Sport",
+      "Freispiel",
+      "Lesen",
+      "Musik",
+      "Ausflug",
+      "Lernzeit",
+      "Spiele"
+    ],
+    "observations": [
+      "ruhig",
+      "Konflikt",
+      "hilfsbereit",
+      "konzentriert",
+      "müde",
+      "sehr aktiv",
+      "braucht Pause",
+      "streitet",
+      "arbeitet gut in Gruppe"
+    ]
+  },
+  "records": {
+    "entriesByDate": {}
+  },
+  "settings": {
+    "exportMode": "day"
+  }
 }
