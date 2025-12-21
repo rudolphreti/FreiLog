@@ -327,8 +327,10 @@ export const bindObservations = ({
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
     let activePanel = null;
     detailPanels.forEach((panel) => {
-      panel.hidden = panel.dataset.child !== child;
-      if (!panel.hidden) {
+      const isActive = panel.dataset.child === child;
+      panel.hidden = !isActive;
+      panel.classList.toggle('d-none', !isActive);
+      if (isActive) {
         activePanel = panel;
       }
     });

@@ -769,7 +769,7 @@ export const buildObservationsSection = ({
     });
 
     const detail = createEl('div', {
-      className: 'observation-detail d-flex flex-column gap-3',
+      className: 'observation-detail d-flex flex-column gap-3 d-none',
       dataset: { child, templateFilter: 'ALL', templateQuery: '' },
       children: [
         comboRow,
