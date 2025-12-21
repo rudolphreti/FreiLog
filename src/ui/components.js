@@ -1,4 +1,5 @@
 import { createEl } from './dom.js';
+import { todayYmd } from '../utils/date.js';
 
 export const buildHeader = ({ selectedDate }) => {
   const header = createEl('header', {
@@ -16,26 +17,28 @@ export const buildHeader = ({ selectedDate }) => {
       'aria-controls': 'mainDrawer',
     },
   });
-  const title = createEl('h1', {
-    className: 'h4 mb-0',
-    text: 'Beobachtungen',
-  });
-  const titleGroup = createEl('div', {
-    className: 'd-flex align-items-center gap-2',
-    children: [menuButton, title],
-  });
-
-  const dateLabel = createEl('label', {
-    className: 'form-label text-muted small mb-1',
-    text: 'Datum',
-  });
   const dateInput = createEl('input', {
     className: 'form-control',
-    attrs: { type: 'date', value: selectedDate },
+    attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
+  });
+  const dateLegend = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 small',
+    children: [
+      createEl('span', { className: 'text-primary', text: 'Heutiges Datum' }),
+      createEl('span', {
+        className: 'text-secondary',
+        text: 'Vergangenes Datum',
+      }),
+      createEl('span', { className: 'text-warning', text: 'Zukunftiges Datum!' }),
+    ],
   });
   const dateGroup = createEl('div', {
     className: 'd-flex flex-column',
-    children: [dateLabel, dateInput],
+    children: [dateInput, dateLegend],
+  });
+  const titleGroup = createEl('div', {
+    className: 'd-flex align-items-start gap-2',
+    children: [menuButton, dateGroup],
   });
 
   const headerContent = createEl('div', {
@@ -305,7 +308,6 @@ export const buildAngebotSection = ({
   angebote,
   selectedAngebote,
   newValue,
-  savePresetChecked,
 }) => {
   const activeAngebote = Array.isArray(selectedAngebote)
     ? selectedAngebote
@@ -331,21 +333,6 @@ export const buildAngebotSection = ({
     className: 'btn btn-outline-secondary btn-sm px-2',
     text: '+',
     attrs: { type: 'button', 'aria-label': 'Hinzufügen' },
-  });
-
-  const savePresetInput = createEl('input', {
-    className: 'form-check-input',
-    attrs: { type: 'checkbox' },
-    dataset: { role: 'angebot-save-preset' },
-  });
-  savePresetInput.checked = Boolean(savePresetChecked);
-  const savePresetLabel = createEl('label', {
-    className: 'form-check-label',
-    text: 'Als Preset speichern',
-  });
-  const savePresetWrapper = createEl('div', {
-    className: 'form-check',
-    children: [savePresetInput, savePresetLabel],
   });
 
   const selectedTitle = createEl('h4', {
@@ -374,7 +361,7 @@ export const buildAngebotSection = ({
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [comboRow, savePresetWrapper, selectedTitle, selectedList],
+    children: [comboRow, selectedTitle, selectedList],
   });
 
   return {
@@ -382,7 +369,6 @@ export const buildAngebotSection = ({
     refs: {
       comboInput,
       addButton,
-      savePresetInput,
       selectedList,
     },
   };
@@ -735,14 +721,6 @@ export const buildObservationsSection = ({
       dataset: { role: 'observation-add' },
     });
 
-    const savePresetButton = createEl('button', {
-      className: 'btn btn-outline-secondary d-none',
-      text: 'Als Preset speichern',
-      attrs: { type: 'button' },
-      dataset: { role: 'observation-save-preset' },
-    });
-    savePresetButton.disabled = true;
-
     const todayTitle = createEl('p', {
       className: 'text-muted small mb-0',
       text: 'Heutige Beobachtungen',
@@ -789,7 +767,6 @@ export const buildObservationsSection = ({
         comboInputLabel,
         comboInputRow,
         feedback,
-        savePresetButton,
       ],
     });
 
@@ -800,8 +777,8 @@ export const buildObservationsSection = ({
         topList,
         todayTitle,
         todayList,
-        comboRow,
         templatesButton,
+        comboRow,
       ],
     });
     detail.hidden = true;

@@ -19,7 +19,7 @@ const normalizeOffers = (value) => {
   });
 };
 
-const addOffer = ({ date, value, savePreset }) => {
+const addOffer = ({ date, value }) => {
   const trimmed = value.trim();
   if (!trimmed) {
     return;
@@ -33,7 +33,7 @@ const addOffer = ({ date, value, savePreset }) => {
   }
 
   const presets = getPresets('angebote');
-  if (savePreset && !presets.includes(trimmed)) {
+  if (!presets.includes(trimmed)) {
     addPreset('angebote', trimmed);
   }
 };
@@ -48,7 +48,6 @@ const removeOffer = (date, value) => {
 export const bindAngebot = ({
   comboInput,
   addButton,
-  savePresetInput,
   selectedList,
   date,
 }) => {
@@ -61,7 +60,6 @@ export const bindAngebot = ({
     addOffer({
       date,
       value,
-      savePreset: Boolean(savePresetInput?.checked),
     });
     comboInput.value = '';
   };

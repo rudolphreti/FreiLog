@@ -135,20 +135,6 @@ const findExistingPreset = (presets, value) => {
   );
 };
 
-const updatePresetButtonState = (card, value) => {
-  const button = card.querySelector('[data-role="observation-save-preset"]');
-  if (!(button instanceof HTMLButtonElement)) {
-    return;
-  }
-
-  const presets = getObservationPresets();
-  const trimmed = normalizeObservationInput(value);
-  const shouldShow = Boolean(trimmed) && !findExistingPreset(presets, trimmed);
-
-  button.disabled = !shouldShow;
-  button.classList.toggle('d-none', !shouldShow);
-};
-
 const normalizeTemplateQuery = (value) =>
   typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
 
@@ -295,7 +281,6 @@ const addObservationForChild = ({ date, card, input }) => {
   });
 
   input.value = '';
-  updatePresetButtonState(card, '');
 };
 
 const parseChildFromHash = () => {
@@ -439,22 +424,6 @@ export const bindObservations = ({
     closeOverlayInternal();
   };
 
-  overlayContent.addEventListener('input', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
-      return;
-    }
-
-    if (target.dataset.role === 'observation-input') {
-      const card = target.closest('[data-child]');
-      if (!card) {
-        return;
-      }
-      updatePresetButtonState(card, target.value);
-      return;
-    }
-  });
-
   overlayContent.addEventListener('submit', (event) => {
     const target = event.target;
     if (!(target instanceof HTMLFormElement)) {
@@ -486,22 +455,6 @@ export const bindObservations = ({
 
     const card = target.closest('[data-child]');
     if (!card || !card.dataset.child) {
-      return;
-    }
-
-    const savePresetButton = target.closest(
-      '[data-role="observation-save-preset"]',
-    );
-    if (savePresetButton) {
-      const input = card.querySelector('[data-role="observation-input"]');
-      if (!(input instanceof HTMLInputElement)) {
-        return;
-      }
-      const trimmed = normalizeObservationInput(input.value);
-      if (trimmed && !findExistingPreset(getObservationPresets(), trimmed)) {
-        addPreset('observations', trimmed);
-      }
-      updatePresetButtonState(card, input.value);
       return;
     }
 
