@@ -37,11 +37,30 @@ body {
   align-items: center;
   justify-content: center;
   padding: 0.5rem 0.95rem;
+  gap: 0.4rem;
   border-radius: 999px;
   font-size: 1rem;
   min-height: 44px;
   text-align: center;
   white-space: nowrap;
+}
+
+.observation-child-button.is-absent {
+  background: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: #fff;
+}
+
+.observation-child-button.is-absent:hover,
+.observation-child-button.is-absent:focus {
+  background: var(--bs-secondary);
+  border-color: var(--bs-secondary);
+  color: #fff;
+}
+
+.observation-absent-badge {
+  font-size: 0.7rem;
+  line-height: 1;
 }
 
 .observation-child-list {

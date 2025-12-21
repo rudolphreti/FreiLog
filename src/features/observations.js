@@ -1,4 +1,10 @@
-import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
+import {
+  addPreset,
+  getChildrenList,
+  getEntry,
+  getPresets,
+  updateEntry,
+} from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
 
 const normalizeObservationInput = (value) => {
@@ -41,6 +47,33 @@ const normalizeObservationList = (value) => {
   });
 
   return result;
+};
+
+const LONG_PRESS_MS = 600;
+
+const getAbsentChildren = (entry) =>
+  Array.isArray(entry?.absentChildIds) ? entry.absentChildIds : [];
+
+const orderAbsentChildren = (absentSet) => {
+  const children = getChildrenList();
+  if (Array.isArray(children) && children.length) {
+    return children.filter((child) => absentSet.has(child));
+  }
+  return Array.from(absentSet).sort((a, b) => a.localeCompare(b, 'de'));
+};
+
+const toggleAbsentChild = (date, child) => {
+  if (!child) {
+    return;
+  }
+  const entry = getEntry(date);
+  const absentSet = new Set(getAbsentChildren(entry));
+  if (absentSet.has(child)) {
+    absentSet.delete(child);
+  } else {
+    absentSet.add(child);
+  }
+  updateEntry(date, { absentChildIds: orderAbsentChildren(absentSet) });
 };
 
 const isHtmlElement = (value) => value instanceof HTMLElement;
@@ -335,6 +368,8 @@ export const bindObservations = ({
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
+  let longPressTimer = null;
+  let suppressNextClick = false;
 
   const setOverlayState = (child) => {
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
@@ -349,14 +384,18 @@ export const bindObservations = ({
     });
     overlayTitle.textContent = activePanel ? child : '';
     overlayContent.scrollTop = 0;
-    return Boolean(activePanel);
+    return activePanel;
   };
 
   const openOverlay = (child, { updateHistory = true } = {}) => {
     if (!child) {
       return false;
     }
-    if (!setOverlayState(child)) {
+    const activePanel = setOverlayState(child);
+    if (!activePanel) {
+      return false;
+    }
+    if (activePanel.dataset.absent === 'true') {
       return false;
     }
     activeChild = child;
@@ -440,6 +479,9 @@ export const bindObservations = ({
     if (!card || !getCardChild(card)) {
       return;
     }
+    if (card.dataset.absent === 'true') {
+      return;
+    }
 
     const input = target.querySelector('[data-role="observation-input"]');
     if (!isInputElement(input)) {
@@ -457,6 +499,9 @@ export const bindObservations = ({
 
     const card = target.closest('[data-child]');
     if (!card || !getCardChild(card)) {
+      return;
+    }
+    if (card.dataset.absent === 'true') {
       return;
     }
 
@@ -510,9 +555,15 @@ export const bindObservations = ({
     if (!isHtmlElement(target)) {
       return;
     }
+    if (suppressNextClick) {
+      return;
+    }
 
     const button = target.closest('[data-role="observation-child"]');
     if (!button) {
+      return;
+    }
+    if (button.dataset.absent === 'true') {
       return;
     }
 
@@ -581,9 +632,52 @@ export const bindObservations = ({
     }
   };
 
+  const clearLongPress = () => {
+    if (longPressTimer) {
+      window.clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+
+  const handleListPointerDown = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const button = target.closest('[data-role="observation-child"]');
+    if (!button) {
+      return;
+    }
+
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+
+    clearLongPress();
+    longPressTimer = window.setTimeout(() => {
+      suppressNextClick = true;
+      toggleAbsentChild(date, button.dataset.child);
+      longPressTimer = null;
+    }, LONG_PRESS_MS);
+  };
+
+  const handleListPointerEnd = () => {
+    clearLongPress();
+    if (suppressNextClick) {
+      window.setTimeout(() => {
+        suppressNextClick = false;
+      }, 0);
+    }
+  };
+
   overlayContent.addEventListener('submit', handleOverlaySubmit);
   overlayContent.addEventListener('click', handleOverlayClick);
   list.addEventListener('click', handleListClick);
+  list.addEventListener('pointerdown', handleListPointerDown);
+  list.addEventListener('pointerup', handleListPointerEnd);
+  list.addEventListener('pointerleave', handleListPointerEnd);
+  list.addEventListener('pointercancel', handleListPointerEnd);
   overlay.addEventListener('click', handleOverlayBackdropClick);
 
   if (closeButton) {
