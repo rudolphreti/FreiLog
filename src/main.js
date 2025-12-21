@@ -12,10 +12,9 @@ const startApp = async () => {
   });
 
   const state = getState();
-  const initialDate = state.ui.selectedDate || todayYmd();
-  if (initialDate !== state.ui.selectedDate) {
-    setSelectedDate(initialDate);
-  } else {
+  const initialDate = todayYmd();
+  setSelectedDate(initialDate);
+  if (initialDate === state.ui.selectedDate) {
     renderApp(app, state);
   }
 };
