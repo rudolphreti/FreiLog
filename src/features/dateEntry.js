@@ -25,6 +25,11 @@ export const bindDateEntry = (input, legend) => {
 
   updateDateLegend(legend, input.value);
 
+  input.addEventListener('input', () => {
+    const nextValue = input.value || todayYmd();
+    updateDateLegend(legend, nextValue);
+  });
+
   input.addEventListener('change', () => {
     const nextValue = input.value || todayYmd();
     input.value = nextValue;

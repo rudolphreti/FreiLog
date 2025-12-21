@@ -19,15 +19,14 @@ body {
 }
 
 .date-status {
+  display: none;
   color: #6c757d;
-  opacity: 0.45;
-  font-weight: 500;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  font-weight: 600;
+  transition: color 0.2s ease;
 }
 
 .date-status.is-active {
-  opacity: 1;
-  font-weight: 600;
+  display: inline-flex;
 }
 
 .date-status.is-active.date-status--today {
