@@ -97,8 +97,6 @@ export const renderApp = (root, state) => {
 
   const angebotInputValue =
     root.querySelector('[data-role="angebot-input"]')?.value;
-  const angebotPresetChecked =
-    root.querySelector('[data-role="angebot-save-preset"]')?.checked;
 
   clearElement(root);
 
@@ -134,7 +132,6 @@ export const renderApp = (root, state) => {
     angebote: angebotePresets,
     selectedAngebote,
     newValue: angebotInputValue || '',
-    savePresetChecked: angebotPresetChecked,
   });
   const observationsSection = buildObservationsSection({
     children: sortedChildren,
@@ -175,7 +172,6 @@ export const renderApp = (root, state) => {
   bindAngebot({
     comboInput: angebotSection.refs.comboInput,
     addButton: angebotSection.refs.addButton,
-    savePresetInput: angebotSection.refs.savePresetInput,
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
   });
