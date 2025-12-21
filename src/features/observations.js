@@ -119,12 +119,15 @@ const removeObservationForChild = (date, child, tag) => {
   });
 };
 
-const updatePresetButtonState = (card, value, presets) => {
+const getObservationPresets = () => getPresets('observations');
+
+const updatePresetButtonState = (card, value) => {
   const button = card.querySelector('[data-role="observation-save-preset"]');
   if (!(button instanceof HTMLButtonElement)) {
     return;
   }
 
+  const presets = getObservationPresets();
   const trimmed = normalizeObservationInput(value);
   const shouldShow = Boolean(trimmed) && !presets.includes(trimmed);
 
@@ -132,7 +135,8 @@ const updatePresetButtonState = (card, value, presets) => {
   button.classList.toggle('d-none', !shouldShow);
 };
 
-const normalizeTemplateQuery = (value) => value.trim().toLocaleLowerCase();
+const normalizeTemplateQuery = (value) =>
+  typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
 
 const applyTemplateFilters = (card) => {
   const selectedInitial = card.dataset.templateFilter || 'ALL';
@@ -213,7 +217,7 @@ const setTemplateFilter = (card, selected) => {
 };
 
 const setTemplateQuery = (card, query) => {
-  card.dataset.templateQuery = query;
+  card.dataset.templateQuery = typeof query === 'string' ? query : '';
   applyTemplateFilters(card);
 };
 
@@ -251,7 +255,7 @@ const addObservationForChild = ({ date, card, input }) => {
     return;
   }
 
-  const presets = getPresets('observations');
+  const presets = getObservationPresets();
   if (!presets.includes(normalized)) {
     addPreset('observations', normalized);
   }
@@ -275,7 +279,7 @@ const addObservationForChild = ({ date, card, input }) => {
   });
 
   input.value = '';
-  updatePresetButtonState(card, '', getPresets('observations'));
+  updatePresetButtonState(card, '');
 };
 
 const parseChildFromHash = () => {
@@ -313,7 +317,6 @@ export const bindObservations = ({
     return;
   }
 
-  const presets = getPresets('observations');
   let activeChild = null;
   let isOverlayOpen = false;
   const handleTemplateSearch = debounce((input, card) => {
@@ -329,20 +332,23 @@ export const bindObservations = ({
         activePanel = panel;
       }
     });
-    overlayTitle.textContent = child || '';
+    overlayTitle.textContent = activePanel ? child : '';
     overlayContent.scrollTop = 0;
     if (activePanel) {
       applyTemplateFilters(activePanel);
     }
+    return Boolean(activePanel);
   };
 
   const openOverlay = (child, { updateHistory = true } = {}) => {
     if (!child) {
-      return;
+      return false;
+    }
+    if (!setOverlayState(child)) {
+      return false;
     }
     activeChild = child;
     isOverlayOpen = true;
-    setOverlayState(child);
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
@@ -354,6 +360,7 @@ export const bindObservations = ({
         `#beobachtungen/${encoded}`,
       );
     }
+    return true;
   };
 
   const closeOverlayInternal = () => {
@@ -390,7 +397,7 @@ export const bindObservations = ({
     }
 
     if (target.dataset.role === 'observation-input') {
-      updatePresetButtonState(card, target.value, presets);
+      updatePresetButtonState(card, target.value);
       return;
     }
 
@@ -442,9 +449,10 @@ export const bindObservations = ({
         return;
       }
       const trimmed = normalizeObservationInput(input.value);
-      if (trimmed && !presets.includes(trimmed)) {
+      if (trimmed && !getObservationPresets().includes(trimmed)) {
         addPreset('observations', trimmed);
       }
+      updatePresetButtonState(card, input.value);
       return;
     }
 
@@ -464,7 +472,7 @@ export const bindObservations = ({
       const tag = topButton.dataset.value;
       if (tag) {
         addTagForChild(date, card.dataset.child, tag);
-        if (!presets.includes(tag)) {
+        if (!getObservationPresets().includes(tag)) {
           addPreset('observations', tag);
         }
       }
@@ -529,8 +537,9 @@ export const bindObservations = ({
     const hashChild = parseChildFromHash();
     const nextChild = stateChild || hashChild;
     if (nextChild) {
-      openOverlay(nextChild, { updateHistory: false });
-      return;
+      if (openOverlay(nextChild, { updateHistory: false })) {
+        return;
+      }
     }
     closeOverlayInternal();
   });
