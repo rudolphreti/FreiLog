@@ -1,5 +1,11 @@
 :root {
   color-scheme: light;
+  --topic-art: #e53935;
+  --topic-music: #1e88e5;
+  --topic-sport: #fb8c00;
+  --topic-tech: #43a047;
+  --topic-social: #8e24aa;
+  --topic-alarm: #000000;
 }
 
 body {
@@ -24,6 +30,84 @@ body {
 
 .tag-badge {
   gap: 0.35rem;
+}
+
+.topic-dots {
+  gap: 0.25rem;
+  margin-right: 0.4rem;
+}
+
+.topic-dot {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.topic-alarm {
+  background: var(--topic-alarm);
+}
+
+.topic-art {
+  background: var(--topic-art);
+}
+
+.topic-music {
+  background: var(--topic-music);
+}
+
+.topic-sport {
+  background: var(--topic-sport);
+}
+
+.topic-tech {
+  background: var(--topic-tech);
+}
+
+.topic-social {
+  background: var(--topic-social);
+}
+
+.topic-section {
+  background: #ffffff;
+  border-left: 4px solid var(--topic-border, #e2e8f0);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+}
+
+.topic-section__header {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--topic-border, #0f172a);
+  margin-bottom: 0.5rem;
+}
+
+.topic-section--alarm {
+  --topic-border: var(--topic-alarm);
+}
+
+.topic-section--art {
+  --topic-border: var(--topic-art);
+}
+
+.topic-section--music {
+  --topic-border: var(--topic-music);
+}
+
+.topic-section--sport {
+  --topic-border: var(--topic-sport);
+}
+
+.topic-section--tech {
+  --topic-border: var(--topic-tech);
+}
+
+.topic-section--social {
+  --topic-border: var(--topic-social);
+}
+
+.topic-checkbox {
+  margin-right: 0.5rem;
 }
 
 .observation-pill {

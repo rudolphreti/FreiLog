@@ -1,7 +1,12 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
+import {
+  normalizeTopicEntries,
+  normalizeTopicList,
+  resolvePrimaryTopic,
+} from '../utils/topics.js';
 import { isValidYmd } from '../utils/date.js';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -46,6 +51,36 @@ const ensureUniqueStrings = (arr) => {
   return result;
 };
 
+const normalizeObservationList = (value) => {
+  if (Array.isArray(value) || typeof value === 'string') {
+    return normalizeTopicEntries(value);
+  }
+
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    if (typeof value.text === 'string') {
+      return normalizeTopicEntries([value]);
+    }
+
+    const tags =
+      Array.isArray(value.tags) || typeof value.tags === 'string'
+        ? value.tags
+        : Array.isArray(value.items) || typeof value.items === 'string'
+          ? value.items
+          : [];
+
+    const preset =
+      typeof value.preset === 'string' ? value.preset.trim() : '';
+    const items = Array.isArray(tags) ? [...tags] : tags ? [tags] : [];
+    if (preset && !items.includes(preset)) {
+      items.push(preset);
+    }
+
+    return normalizeTopicEntries(items);
+  }
+
+  return [];
+};
+
 const normalizeObservationEntries = (value, childrenSet) => {
   let source = {};
 
@@ -67,28 +102,25 @@ const normalizeObservationEntries = (value, childrenSet) => {
     }
 
     const entry = source[child];
-    if (Array.isArray(entry)) {
-      result[child] = ensureUniqueStrings(entry);
-      return;
-    }
-
-    if (typeof entry === 'string') {
-      result[child] = ensureUniqueStrings([entry]);
-      return;
-    }
-
-    const item = isPlainObject(entry) ? entry : {};
-    const preset =
-      typeof item.preset === 'string' ? item.preset.trim() : '';
-    const tags = ensureUniqueStrings(item.tags);
-    if (preset && !tags.includes(preset)) {
-      tags.push(preset);
-    }
-
-    result[child] = tags;
+    result[child] = normalizeObservationList(entry);
   });
 
   return result;
+};
+
+const normalizeTopicEntryList = (value) => {
+  const normalized = normalizeTopicEntries(value);
+  return normalized.map((entry) => {
+    const topics = normalizeTopicList(entry.topics);
+    const primaryTopic = resolvePrimaryTopic(entry.primaryTopic, topics);
+    const isAlarm = primaryTopic === 'alarm' || topics.includes('alarm');
+    return {
+      text: entry.text,
+      topics,
+      primaryTopic,
+      isAlarm,
+    };
+  });
 };
 
 const normalizeDayEntry = (entry, date, childrenSet) => {
@@ -103,7 +135,7 @@ const normalizeDayEntry = (entry, date, childrenSet) => {
   if (legacyAngebot && !angebotList.includes(legacyAngebot)) {
     angebotList.push(legacyAngebot);
   }
-  const angebote = ensureUniqueStrings(angebotList);
+  const angebote = normalizeTopicEntryList(angebotList);
   const absentChildren = ensureUniqueStrings(
     source.absentChildIds || source.absentChildren,
   );
@@ -188,13 +220,8 @@ export const buildObservationStats = (days) => {
     }
 
     Object.entries(entry.observations).forEach(([child, data]) => {
-      const list = Array.isArray(data)
-        ? data
-        : isPlainObject(data)
-          ? data.tags
-          : [];
-      const tags = ensureUniqueStrings(list);
-      if (!tags.length) {
+      const list = normalizeObservationList(data);
+      if (!list.length) {
         return;
       }
 
@@ -202,8 +229,8 @@ export const buildObservationStats = (days) => {
         stats[child] = {};
       }
 
-      tags.forEach((tag) => {
-        stats[child][tag] = (stats[child][tag] || 0) + 1;
+      list.forEach((item) => {
+        stats[child][item.text] = (stats[child][item.text] || 0) + 1;
       });
     });
   });
@@ -232,11 +259,11 @@ export const normalizeAppData = (source, fallback = {}) => {
     Array.isArray(base.children) ? base.children : fallbackData.children,
   );
 
-  const angebote = ensureUniqueSortedStrings(
+  const angebote = normalizeTopicEntryList(
     Array.isArray(base.angebote) ? base.angebote : fallbackData.angebote,
   );
 
-  const observationTemplates = ensureUniqueSortedStrings(
+  const observationTemplates = normalizeTopicEntryList(
     Array.isArray(base.observationTemplates)
       ? base.observationTemplates
       : fallbackData.observationTemplates,
@@ -303,11 +330,11 @@ export const migrateLegacyData = (source, defaults) => {
       ...fallback,
       days: base.records.entriesByDate,
       ui: base.ui || fallback.ui,
-      observationTemplates: ensureUniqueSortedStrings([
+      observationTemplates: normalizeTopicEntryList([
         ...(fallback.observationTemplates || []),
         ...(base.presetOverrides.observationsAdded || []),
       ]),
-      angebote: ensureUniqueSortedStrings([
+      angebote: normalizeTopicEntryList([
         ...(fallback.angebote || []),
         ...(base.presetOverrides.angeboteAdded || []),
       ]),
