@@ -20,8 +20,3 @@ const startApp = async () => {
 };
 
 startApp();
-
-// Manuelle Tests:
-// - appData.default.json tauschen: Defaults werden geladen.
-// - Import: Full JSON & Day-Payload prüfen.
-// - Suche/Combobox tippen: keine Ruckler, keine Console Errors.

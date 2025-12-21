@@ -1,5 +1,6 @@
 import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
+
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
     return '';
@@ -41,6 +42,11 @@ const normalizeObservationList = (value) => {
 
   return result;
 };
+
+const isHtmlElement = (value) => value instanceof HTMLElement;
+const isInputElement = (value) => value instanceof HTMLInputElement;
+const isFormElement = (value) => value instanceof HTMLFormElement;
+const getCardChild = (card) => card?.dataset?.child || null;
 
 export const getInitialLetters = (children) => {
   if (!Array.isArray(children)) {
@@ -89,6 +95,11 @@ export const applyInitialFilter = (children, selectedInitial) => {
   });
 };
 
+const getObservationTags = (entry, child) =>
+  entry.observations && entry.observations[child]
+    ? entry.observations[child]
+    : [];
+
 const addTagForChild = (date, child, value) => {
   const trimmed = normalizeObservationInput(value);
   if (!trimmed) {
@@ -104,11 +115,7 @@ const addTagForChild = (date, child, value) => {
 
 const removeObservationForChild = (date, child, tag) => {
   const entry = getEntry(date);
-  const current =
-    entry.observations && entry.observations[child]
-      ? entry.observations[child]
-      : [];
-  const updatedTags = normalizeObservationList(current).filter(
+  const updatedTags = normalizeObservationList(getObservationTags(entry, child)).filter(
     (item) => item !== tag,
   );
 
@@ -140,8 +147,7 @@ const normalizeTemplateQuery = (value) =>
 
 const applyTemplateFilters = (container) => {
   const selectedInitial = container.dataset.templateFilter || 'ALL';
-  const query = container.dataset.templateQuery || '';
-  const normalizedQuery = normalizeTemplateQuery(query);
+  const normalizedQuery = normalizeTemplateQuery(container.dataset.templateQuery || '');
   const templateButtons = container.querySelectorAll(
     '[data-role="observation-template-add"]',
   );
@@ -154,7 +160,7 @@ const applyTemplateFilters = (container) => {
   const hasTemplates = templateButtons.length > 0;
 
   if (!hasTemplates) {
-    if (emptyMessage instanceof HTMLElement) {
+    if (isHtmlElement(emptyMessage)) {
       emptyMessage.hidden = false;
       emptyMessage.textContent = 'Keine gespeicherten Beobachtungen vorhanden.';
     }
@@ -190,7 +196,7 @@ const applyTemplateFilters = (container) => {
     }
   });
 
-  if (emptyMessage instanceof HTMLElement) {
+  if (isHtmlElement(emptyMessage)) {
     emptyMessage.hidden = visibleCount > 0;
     emptyMessage.textContent =
       visibleCount > 0
@@ -225,7 +231,7 @@ const feedbackTimeouts = new WeakMap();
 
 const showFeedback = (card, message) => {
   const feedback = card.querySelector('[data-role="observation-feedback"]');
-  if (!(feedback instanceof HTMLElement)) {
+  if (!isHtmlElement(feedback)) {
     return;
   }
 
@@ -245,7 +251,7 @@ const showFeedback = (card, message) => {
 };
 
 const addObservationForChild = ({ date, card, input }) => {
-  const child = card.dataset.child;
+  const child = getCardChild(card);
   if (!child) {
     return;
   }
@@ -263,11 +269,7 @@ const addObservationForChild = ({ date, card, input }) => {
   }
 
   const entry = getEntry(date);
-  const current =
-    entry.observations && entry.observations[child]
-      ? entry.observations[child]
-      : [];
-  const existing = normalizeObservationList(current);
+  const existing = normalizeObservationList(getObservationTags(entry, child));
 
   if (existing.includes(observationValue)) {
     showFeedback(card, 'Bereits für heute erfasst.');
@@ -398,7 +400,7 @@ export const bindObservations = ({
     const searchInput = templatesOverlay.querySelector(
       '[data-role="observation-template-search"]',
     );
-    if (searchInput instanceof HTMLInputElement) {
+    if (isInputElement(searchInput)) {
       searchInput.focus();
     }
   };
@@ -424,9 +426,9 @@ export const bindObservations = ({
     closeOverlayInternal();
   };
 
-  overlayContent.addEventListener('submit', (event) => {
+  const handleOverlaySubmit = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLFormElement)) {
+    if (!isFormElement(target)) {
       return;
     }
     if (target.dataset.role !== 'observation-form') {
@@ -435,26 +437,26 @@ export const bindObservations = ({
 
     event.preventDefault();
     const card = target.closest('[data-child]');
-    if (!card || !card.dataset.child) {
+    if (!card || !getCardChild(card)) {
       return;
     }
 
     const input = target.querySelector('[data-role="observation-input"]');
-    if (!(input instanceof HTMLInputElement)) {
+    if (!isInputElement(input)) {
       return;
     }
 
     addObservationForChild({ date, card, input });
-  });
+  };
 
-  overlayContent.addEventListener('click', (event) => {
+  const handleOverlayClick = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
+    if (!isHtmlElement(target)) {
       return;
     }
 
     const card = target.closest('[data-child]');
-    if (!card || !card.dataset.child) {
+    if (!card || !getCardChild(card)) {
       return;
     }
 
@@ -501,11 +503,11 @@ export const bindObservations = ({
     if (templateOpenButton) {
       openTemplateOverlay(card.dataset.child);
     }
-  });
+  };
 
-  list.addEventListener('click', (event) => {
+  const handleListClick = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
+    if (!isHtmlElement(target)) {
       return;
     }
 
@@ -518,39 +520,29 @@ export const bindObservations = ({
     if (child) {
       openOverlay(child);
     }
-  });
+  };
 
-  overlay.addEventListener('click', (event) => {
+  const handleOverlayBackdropClick = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
-      return;
-    }
-
-    if (target === overlay) {
+    if (isHtmlElement(target) && target === overlay) {
       closeOverlay();
     }
-  });
+  };
 
-  if (closeButton) {
-    closeButton.addEventListener('click', () => {
-      closeOverlay();
-    });
-  }
-
-  templatesOverlay.addEventListener('input', (event) => {
+  const handleTemplateInput = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
+    if (!isInputElement(target)) {
       return;
     }
 
     if (target.dataset.role === 'observation-template-search') {
       handleTemplateSearch(target);
     }
-  });
+  };
 
-  templatesOverlay.addEventListener('click', (event) => {
+  const handleTemplateClick = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
+    if (!isHtmlElement(target)) {
       return;
     }
 
@@ -587,7 +579,21 @@ export const bindObservations = ({
         templateFilterButton.dataset.value || 'ALL',
       );
     }
-  });
+  };
+
+  overlayContent.addEventListener('submit', handleOverlaySubmit);
+  overlayContent.addEventListener('click', handleOverlayClick);
+  list.addEventListener('click', handleListClick);
+  overlay.addEventListener('click', handleOverlayBackdropClick);
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => {
+      closeOverlay();
+    });
+  }
+
+  templatesOverlay.addEventListener('input', handleTemplateInput);
+  templatesOverlay.addEventListener('click', handleTemplateClick);
 
   window.addEventListener('popstate', () => {
     const stateChild = history.state?.observationChild;

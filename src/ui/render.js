@@ -66,6 +66,22 @@ const normalizeObservations = (value) => {
   return {};
 };
 
+const getPreservedUiState = (root) => ({
+  angebotInputValue: root.querySelector('[data-role="angebot-input"]')?.value || '',
+  drawerScrollTop: root.querySelector('[data-drawer-scroll]')?.scrollTop,
+});
+
+const getSelectedDate = (state) => state?.ui?.selectedDate || todayYmd();
+
+const getEntryForDate = (db, selectedDate) =>
+  db.days?.[selectedDate] || createFallbackEntry(selectedDate);
+
+const getSortedChildren = (children) =>
+  [...children].sort((a, b) => a.localeCompare(b, 'de'));
+
+const getAbsentChildren = (entry) =>
+  Array.isArray(entry.absentChildIds) ? entry.absentChildIds : [];
+
 let drawerShell = null;
 
 const renderDrawerContent = (
@@ -102,37 +118,27 @@ export const renderApp = (root, state) => {
     return;
   }
 
-  const angebotInputValue =
-    root.querySelector('[data-role="angebot-input"]')?.value;
-  const preservedDrawerScrollTop =
-    root.querySelector('[data-drawer-scroll]')?.scrollTop;
+  const preservedUi = getPreservedUiState(root);
 
   clearElement(root);
 
   const container = document.createElement('div');
   container.className = 'app';
 
-  const selectedDate = state?.ui?.selectedDate || todayYmd();
+  const selectedDate = getSelectedDate(state);
   const db = state?.db || {};
-  const entry =
-    db.days?.[selectedDate] ||
-    createFallbackEntry(selectedDate);
+  const entry = getEntryForDate(db, selectedDate);
+  const children = db.children || [];
+  const sortedChildren = getSortedChildren(children);
 
-  const childrenList = db.children || [];
-  const sortedChildren = [...childrenList].sort((a, b) =>
-    a.localeCompare(b, 'de'),
-  );
+  const absentChildren = getAbsentChildren(entry);
+  const observations = normalizeObservations(entry.observations);
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const observationStats = db.observationStats || {};
 
-  const absentChildren = Array.isArray(entry.absentChildIds)
-    ? entry.absentChildIds
-    : [];
-
-  const observations = normalizeObservations(entry.observations);
   const absentSection = buildAbsentChildrenSection({
-    children: childrenList,
+    children,
     absentChildren,
   });
   const header = buildHeader({ selectedDate });
@@ -140,7 +146,7 @@ export const renderApp = (root, state) => {
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
     selectedAngebote,
-    newValue: angebotInputValue || '',
+    newValue: preservedUi.angebotInputValue,
   });
   const observationsSection = buildObservationsSection({
     children: sortedChildren,
@@ -158,7 +164,7 @@ export const renderApp = (root, state) => {
     drawerShell.refs.body,
     absentSection,
     angebotSection,
-    preservedDrawerScrollTop,
+    preservedUi.drawerScrollTop,
   );
 
   const contentWrap = document.createElement('div');
