@@ -328,7 +328,7 @@ export const buildAngebotSection = ({
   });
 
   const addButton = createEl('button', {
-    className: 'btn btn-primary btn-sm px-2',
+    className: 'btn btn-outline-secondary btn-sm px-2',
     text: '+',
     attrs: { type: 'button', 'aria-label': 'Hinzufügen' },
   });
@@ -717,7 +717,7 @@ export const buildObservationsSection = ({
       attrs: { for: comboInputId },
     });
     const comboInput = createEl('input', {
-      className: 'form-control',
+      className: 'form-control flex-grow-1',
       attrs: {
         type: 'text',
         id: comboInputId,
@@ -729,9 +729,9 @@ export const buildObservationsSection = ({
     comboInput.value = '';
 
     const addButton = createEl('button', {
-      className: 'btn btn-primary',
-      text: 'Hinzufügen',
-      attrs: { type: 'submit' },
+      className: 'btn btn-outline-secondary btn-sm',
+      text: '+',
+      attrs: { type: 'submit', 'aria-label': 'Hinzufügen' },
       dataset: { role: 'observation-add' },
     });
 
@@ -764,7 +764,7 @@ export const buildObservationsSection = ({
 
     const templatesButton = createEl('button', {
       className:
-        'btn btn-outline-secondary btn-sm observation-template-open align-self-start',
+        'btn btn-primary btn-sm observation-template-open align-self-start',
       text: 'Gespeicherte Beobachtungen',
       attrs: { type: 'button' },
       dataset: { role: 'observation-template-open' },
@@ -777,14 +777,18 @@ export const buildObservationsSection = ({
     });
     feedback.hidden = true;
 
+    const comboInputRow = createEl('div', {
+      className: 'd-flex gap-2 align-items-start',
+      children: [comboInput, addButton],
+    });
+
     const comboRow = createEl('form', {
       className: 'd-flex flex-column gap-2',
       dataset: { role: 'observation-form' },
       children: [
         comboInputLabel,
-        comboInput,
+        comboInputRow,
         feedback,
-        addButton,
         savePresetButton,
       ],
     });
