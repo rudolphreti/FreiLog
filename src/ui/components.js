@@ -328,9 +328,9 @@ export const buildAngebotSection = ({
   });
 
   const addButton = createEl('button', {
-    className: 'btn btn-primary',
-    text: 'Hinzufügen',
-    attrs: { type: 'button' },
+    className: 'btn btn-primary btn-sm px-2',
+    text: '+',
+    attrs: { type: 'button', 'aria-label': 'Hinzufügen' },
   });
 
   const savePresetInput = createEl('input', {
@@ -368,17 +368,13 @@ export const buildAngebotSection = ({
   });
 
   const comboRow = createEl('div', {
-    className: 'd-flex flex-column gap-2',
-    children: [comboInput, datalist],
-  });
-  const addRow = createEl('div', {
-    className: 'd-flex flex-column gap-2',
-    children: [addButton, savePresetWrapper],
+    className: 'd-flex align-items-center gap-2',
+    children: [comboInput, addButton, datalist],
   });
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [comboRow, addRow, selectedTitle, selectedList],
+    children: [comboRow, savePresetWrapper, selectedTitle, selectedList],
   });
 
   return {
