@@ -1,3 +1,6 @@
+// Client-side date logic: user system time can be incorrect.
+// This is a prototype-only solution. In a production environment, the current date
+// must be provided by the backend to avoid issues with incorrect client system time.
 const pad = (value) => String(value).padStart(2, '0');
 
 export const todayYmd = () => {
