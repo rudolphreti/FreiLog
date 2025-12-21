@@ -135,7 +135,6 @@ const buildAccordionItem = ({
 
 export const buildDrawerContent = ({
   drawerSections,
-  attendanceSection,
   angebotSection,
 }) => {
   const exportButton = createEl('button', {
@@ -164,20 +163,6 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  const attendanceContent =
-    attendanceSection ||
-    createEl('p', {
-      className: 'text-muted mb-0',
-      text: 'Platzhalter für spätere Funktionen.',
-    });
-  const attendanceSectionItem = buildAccordionItem({
-    id: 'attendance',
-    title: 'Anwesenheit',
-    defaultOpen: Boolean(drawerSections?.attendance),
-    contentNode: attendanceContent,
-    accordionId,
-  });
-
   const offersContent =
     angebotSection ||
     createEl('p', {
@@ -192,7 +177,7 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSection.element, attendanceSectionItem.element, offersSectionItem.element);
+  accordion.append(actionsSection.element, offersSectionItem.element);
 
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
@@ -207,7 +192,6 @@ export const buildDrawerContent = ({
       importInput,
       sections: {
         actions: actionsSection,
-        attendance: attendanceSectionItem,
         angebote: offersSectionItem,
       },
     },
@@ -227,70 +211,6 @@ const buildPill = ({ label, removeLabel, removeRole, value }) => {
     children: [labelSpan, removeButton],
     dataset: { value },
   });
-};
-
-export const buildAbsentChildrenSection = ({ children, absentChildren }) => {
-  const absentTitle = createEl('h4', {
-    className: 'h6 text-muted mb-2',
-    text: 'Abwesend',
-  });
-  const absentList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
-  absentChildren.forEach((child) => {
-    const pill = buildPill({
-      label: child,
-      removeLabel: `${child} wieder anwesend`,
-      removeRole: 'absent-remove',
-      value: child,
-    });
-    pill.dataset.child = child;
-    const removeButton = pill.querySelector('[data-role="absent-remove"]');
-    if (removeButton) {
-      removeButton.dataset.child = child;
-    }
-    absentList.appendChild(pill);
-  });
-
-  const absentBlock = createEl('div', {
-    className: 'd-flex flex-column',
-    children: [absentTitle, absentList],
-  });
-
-  const allTitle = createEl('h4', {
-    className: 'h6 text-muted mt-3 mb-2',
-    text: 'Alle Kinder',
-  });
-  const allList = createEl('div', { className: 'list-group' });
-  children.forEach((child) => {
-    const isAbsent = absentChildren.includes(child);
-    const name = createEl('span', { text: child });
-    const status = isAbsent
-      ? createEl('span', { className: 'badge text-bg-danger', text: 'abwesend' })
-      : null;
-    const row = createEl('button', {
-      className: `list-group-item list-group-item-action d-flex align-items-center justify-content-between${
-        isAbsent ? ' list-group-item-secondary is-absent' : ''
-      }`,
-      attrs: {
-        type: 'button',
-        'aria-pressed': isAbsent ? 'true' : 'false',
-      },
-      dataset: { role: 'attendance-row', child },
-      children: status ? [name, status] : [name],
-    });
-    allList.appendChild(row);
-  });
-
-  const allBlock = createEl('div', {
-    className: 'd-flex flex-column',
-    children: [allTitle, allList],
-  });
-
-  const content = createEl('div', {
-    className: 'd-flex flex-column gap-3',
-    children: [absentBlock, allBlock],
-  });
-
-  return { element: content, refs: { absentList, allList } };
 };
 
 export const buildAngebotSection = ({
@@ -622,26 +542,36 @@ export const buildObservationsSection = ({
   observations,
   presets,
   observationStats,
+  absentChildren,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
   });
   const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
-  const title = createEl('h2', {
-    className: 'h5 mb-0 section-title',
-    text: 'Beobachtungen',
-  });
+  const absentSet = new Set(absentChildren || []);
 
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-child-list',
   });
   children.forEach((child) => {
+    const isAbsent = absentSet.has(child);
+    const badge = isAbsent
+      ? createEl('span', {
+          className: 'badge text-bg-light text-secondary observation-absent-badge',
+          text: 'Abwesend',
+        })
+      : null;
     const button = createEl('button', {
       className:
-        'btn btn-outline-primary observation-child-button',
+        `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
       attrs: { type: 'button' },
-      dataset: { role: 'observation-child', child },
-      children: [createEl('span', { className: 'fw-semibold', text: child })],
+      dataset: { role: 'observation-child', child, absent: isAbsent ? 'true' : 'false' },
+      children: badge
+        ? [
+            createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+            badge,
+          ]
+        : [createEl('span', { className: 'fw-semibold observation-child-label', text: child })],
     });
     list.appendChild(button);
   });
@@ -684,6 +614,7 @@ export const buildObservationsSection = ({
   children.forEach((child) => {
     const data = observations[child] || {};
     const topItems = buildTopItems(observationStats?.[child]);
+    const isAbsent = absentSet.has(child);
     const safeId = child.toLocaleLowerCase().replace(/[^a-z0-9]+/gi, '-');
     const comboInputId = `observation-input-${safeId}`;
     const comboInputLabel = createEl('label', {
@@ -761,7 +692,12 @@ export const buildObservationsSection = ({
 
     const detail = createEl('div', {
       className: 'observation-detail d-flex flex-column gap-3 d-none',
-      dataset: { child, templateFilter: 'ALL', templateQuery: '' },
+      dataset: {
+        child,
+        templateFilter: 'ALL',
+        templateQuery: '',
+        absent: isAbsent ? 'true' : 'false',
+      },
       children: [
         topList,
         todayTitle,
@@ -770,6 +706,18 @@ export const buildObservationsSection = ({
         comboRow,
       ],
     });
+    if (isAbsent) {
+      const absentNotice = createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Abwesend – Beobachtungen deaktiviert.',
+      });
+      topList.hidden = true;
+      todayTitle.hidden = true;
+      todayList.hidden = true;
+      templatesButton.hidden = true;
+      comboRow.hidden = true;
+      detail.append(absentNotice);
+    }
     detail.hidden = true;
     overlayContent.appendChild(detail);
   });
@@ -781,7 +729,7 @@ export const buildObservationsSection = ({
   );
   overlay.appendChild(overlayPanel);
 
-  body.append(title, list, overlay);
+  body.append(list, overlay);
   section.appendChild(body);
 
   return {

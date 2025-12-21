@@ -20,6 +20,5 @@ export const bindDrawerSections = (sections) => {
   }
 
   bindDrawerSection('actions', sections.actions);
-  bindDrawerSection('attendance', sections.attendance);
   bindDrawerSection('angebote', sections.angebote);
 };

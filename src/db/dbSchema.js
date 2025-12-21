@@ -166,10 +166,6 @@ const normalizeUi = (ui) => {
           typeof drawerSections.actions === 'boolean'
             ? drawerSections.actions
             : DEFAULT_DRAWER_SECTIONS.actions,
-        attendance:
-          typeof drawerSections.attendance === 'boolean'
-            ? drawerSections.attendance
-            : DEFAULT_DRAWER_SECTIONS.attendance,
         angebote:
           typeof drawerSections.angebote === 'boolean'
             ? drawerSections.angebote

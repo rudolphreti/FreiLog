@@ -4,12 +4,10 @@ import {
   buildHeader,
   buildDrawerShell,
   buildDrawerContent,
-  buildAbsentChildrenSection,
   buildAngebotSection,
   buildObservationsSection,
 } from './components.js';
 import { bindDateEntry } from '../features/dateEntry.js';
-import { bindAbsentChildren } from '../features/absentChildren.js';
 import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
@@ -87,7 +85,6 @@ let drawerShell = null;
 const renderDrawerContent = (
   state,
   drawerBody,
-  attendanceSection,
   angebotSection,
   preservedScrollTop,
 ) => {
@@ -100,7 +97,6 @@ const renderDrawerContent = (
   const drawerSections = state?.ui?.drawer?.sections || {};
   const content = buildDrawerContent({
     drawerSections,
-    attendanceSection: attendanceSection?.element,
     angebotSection: angebotSection?.element,
   });
 
@@ -137,10 +133,6 @@ export const renderApp = (root, state) => {
   const observationPresets = db.observationTemplates || [];
   const observationStats = db.observationStats || {};
 
-  const absentSection = buildAbsentChildrenSection({
-    children,
-    absentChildren,
-  });
   const header = buildHeader({ selectedDate });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const angebotSection = buildAngebotSection({
@@ -153,6 +145,7 @@ export const renderApp = (root, state) => {
     observations,
     presets: observationPresets,
     observationStats,
+    absentChildren,
   });
 
   if (!drawerShell) {
@@ -162,7 +155,6 @@ export const renderApp = (root, state) => {
   const drawerContentRefs = renderDrawerContent(
     state,
     drawerShell.refs.body,
-    absentSection,
     angebotSection,
     preservedUi.drawerScrollTop,
   );
@@ -179,11 +171,6 @@ export const renderApp = (root, state) => {
     exportButton: drawerContentRefs?.exportButton,
     importButton: drawerContentRefs?.importButton,
     fileInput: drawerContentRefs?.importInput,
-  });
-  bindAbsentChildren({
-    absentList: absentSection.refs.absentList,
-    allList: absentSection.refs.allList,
-    date: selectedDate,
   });
   bindAngebot({
     comboInput: angebotSection.refs.comboInput,
