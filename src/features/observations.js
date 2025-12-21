@@ -138,17 +138,17 @@ const updatePresetButtonState = (card, value) => {
 const normalizeTemplateQuery = (value) =>
   typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
 
-const applyTemplateFilters = (card) => {
-  const selectedInitial = card.dataset.templateFilter || 'ALL';
-  const query = card.dataset.templateQuery || '';
+const applyTemplateFilters = (container) => {
+  const selectedInitial = container.dataset.templateFilter || 'ALL';
+  const query = container.dataset.templateQuery || '';
   const normalizedQuery = normalizeTemplateQuery(query);
-  const templateButtons = card.querySelectorAll(
+  const templateButtons = container.querySelectorAll(
     '[data-role="observation-template-add"]',
   );
-  const templateGroups = card.querySelectorAll(
+  const templateGroups = container.querySelectorAll(
     '[data-role="observation-template-group"]',
   );
-  const emptyMessage = card.querySelector(
+  const emptyMessage = container.querySelector(
     '[data-role="observation-template-empty"]',
   );
   const hasTemplates = templateButtons.length > 0;
@@ -199,13 +199,13 @@ const applyTemplateFilters = (card) => {
   }
 };
 
-const setTemplateFilter = (card, selected) => {
+const setTemplateFilter = (container, selected) => {
   const next =
     selected && selected !== 'ALL'
       ? selected.toLocaleUpperCase()
       : 'ALL';
-  card.dataset.templateFilter = next;
-  const buttons = card.querySelectorAll(
+  container.dataset.templateFilter = next;
+  const buttons = container.querySelectorAll(
     '[data-role="observation-template-letter"]',
   );
   buttons.forEach((button) => {
@@ -213,12 +213,12 @@ const setTemplateFilter = (card, selected) => {
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
-  applyTemplateFilters(card);
+  applyTemplateFilters(container);
 };
 
-const setTemplateQuery = (card, query) => {
-  card.dataset.templateQuery = typeof query === 'string' ? query : '';
-  applyTemplateFilters(card);
+const setTemplateQuery = (container, query) => {
+  container.dataset.templateQuery = typeof query === 'string' ? query : '';
+  applyTemplateFilters(container);
 };
 
 const feedbackTimeouts = new WeakMap();
@@ -308,19 +308,29 @@ const parseChildFromHash = () => {
 export const bindObservations = ({
   list,
   overlay,
+  overlayPanel,
   overlayContent,
   overlayTitle,
   closeButton,
+  templatesOverlay,
   date,
 }) => {
-  if (!list || !overlay || !overlayContent || !overlayTitle) {
+  if (
+    !list ||
+    !overlay ||
+    !overlayPanel ||
+    !overlayContent ||
+    !overlayTitle ||
+    !templatesOverlay
+  ) {
     return;
   }
 
   let activeChild = null;
   let isOverlayOpen = false;
-  const handleTemplateSearch = debounce((input, card) => {
-    setTemplateQuery(card, input.value);
+  let isTemplateOverlayOpen = false;
+  const handleTemplateSearch = debounce((input) => {
+    setTemplateQuery(templatesOverlay, input.value);
   }, 200);
 
   const setOverlayState = (child) => {
@@ -336,9 +346,6 @@ export const bindObservations = ({
     });
     overlayTitle.textContent = activePanel ? child : '';
     overlayContent.scrollTop = 0;
-    if (activePanel) {
-      applyTemplateFilters(activePanel);
-    }
     return Boolean(activePanel);
   };
 
@@ -369,11 +376,40 @@ export const bindObservations = ({
     if (!isOverlayOpen) {
       return;
     }
+    closeTemplateOverlay();
     isOverlayOpen = false;
     activeChild = null;
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('observation-overlay-open');
+  };
+
+  const openTemplateOverlay = (child) => {
+    if (!child) {
+      return;
+    }
+    activeChild = child;
+    isTemplateOverlayOpen = true;
+    templatesOverlay.classList.add('is-open');
+    templatesOverlay.setAttribute('aria-hidden', 'false');
+    overlayPanel.classList.add('is-template-open');
+    applyTemplateFilters(templatesOverlay);
+    const searchInput = templatesOverlay.querySelector(
+      '[data-role="observation-template-search"]',
+    );
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.focus();
+    }
+  };
+
+  const closeTemplateOverlay = () => {
+    if (!isTemplateOverlayOpen) {
+      return;
+    }
+    isTemplateOverlayOpen = false;
+    templatesOverlay.classList.remove('is-open');
+    templatesOverlay.setAttribute('aria-hidden', 'true');
+    overlayPanel.classList.remove('is-template-open');
   };
 
   const closeOverlay = ({ updateHistory = true } = {}) => {
@@ -393,18 +429,13 @@ export const bindObservations = ({
       return;
     }
 
-    const card = target.closest('[data-child]');
-    if (!card) {
-      return;
-    }
-
     if (target.dataset.role === 'observation-input') {
+      const card = target.closest('[data-child]');
+      if (!card) {
+        return;
+      }
       updatePresetButtonState(card, target.value);
       return;
-    }
-
-    if (target.dataset.role === 'observation-template-search') {
-      handleTemplateSearch(target, card);
     }
   });
 
@@ -485,10 +516,6 @@ export const bindObservations = ({
       '[data-role="observation-template-add"]',
     );
     if (templateButton) {
-      const tag = templateButton.dataset.value;
-      if (tag) {
-        addTagForChild(date, card.dataset.child, tag);
-      }
       return;
     }
 
@@ -496,7 +523,14 @@ export const bindObservations = ({
       '[data-role="observation-template-letter"]',
     );
     if (templateFilterButton) {
-      setTemplateFilter(card, templateFilterButton.dataset.value || 'ALL');
+      return;
+    }
+
+    const templateOpenButton = target.closest(
+      '[data-role="observation-template-open"]',
+    );
+    if (templateOpenButton) {
+      openTemplateOverlay(card.dataset.child);
     }
   });
 
@@ -533,6 +567,58 @@ export const bindObservations = ({
       closeOverlay();
     });
   }
+
+  templatesOverlay.addEventListener('input', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-search') {
+      handleTemplateSearch(target);
+    }
+  });
+
+  templatesOverlay.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target === templatesOverlay) {
+      closeTemplateOverlay();
+      return;
+    }
+
+    const closeTemplateButton = target.closest(
+      '[data-role="observation-template-close"]',
+    );
+    if (closeTemplateButton) {
+      closeTemplateOverlay();
+      return;
+    }
+
+    const templateButton = target.closest(
+      '[data-role="observation-template-add"]',
+    );
+    if (templateButton) {
+      const tag = templateButton.dataset.value;
+      if (tag && activeChild) {
+        addTagForChild(date, activeChild, tag);
+      }
+      return;
+    }
+
+    const templateFilterButton = target.closest(
+      '[data-role="observation-template-letter"]',
+    );
+    if (templateFilterButton) {
+      setTemplateFilter(
+        templatesOverlay,
+        templateFilterButton.dataset.value || 'ALL',
+      );
+    }
+  });
 
   window.addEventListener('popstate', () => {
     const stateChild = history.state?.observationChild;

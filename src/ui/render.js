@@ -182,9 +182,11 @@ export const renderApp = (root, state) => {
   bindObservations({
     list: observationsSection.refs.list,
     overlay: observationsSection.refs.overlay,
+    overlayPanel: observationsSection.refs.overlayPanel,
     overlayContent: observationsSection.refs.overlayContent,
     overlayTitle: observationsSection.refs.overlayTitle,
     closeButton: observationsSection.refs.closeButton,
+    templatesOverlay: observationsSection.refs.templatesOverlay,
     date: selectedDate,
   });
 

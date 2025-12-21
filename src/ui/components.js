@@ -397,7 +397,8 @@ const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
   items.forEach((item) => {
     const label = getLabel(item);
     const pill = createEl('span', {
-      className: 'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge',
+      className:
+        'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
       dataset: { value: label },
       children: [
         createEl('span', { text: label }),
@@ -420,7 +421,7 @@ const buildTopList = (items) => {
   items.forEach(({ label, count }) => {
     const button = createEl('button', {
       className:
-        'btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2',
+        'btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2',
       attrs: { type: 'button' },
       dataset: { role: 'observation-top-add', value: label },
       children: [
@@ -508,18 +509,40 @@ const buildTemplateGroups = (templates) => {
   };
 };
 
-const buildObservationTemplatesSection = ({ templates }) => {
-  const details = createEl('details', {
-    className: 'observation-templates',
-    dataset: { role: 'observation-templates' },
-  });
-  const summary = createEl('summary', {
-    className: 'fw-semibold',
-    text: 'Gespeicherte Beobachtungen',
-  });
-
+const buildObservationTemplatesOverlay = ({ templates }) => {
   const { groups, initials } = buildTemplateGroups(templates);
   const hasTemplates = groups.size > 0;
+  const overlay = createEl('div', {
+    className: 'observation-templates-overlay',
+    dataset: {
+      role: 'observation-templates-overlay',
+      templateFilter: 'ALL',
+      templateQuery: '',
+    },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const overlayPanel = createEl('div', {
+    className: 'observation-templates-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-templates-overlay__header',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn btn-link p-0 observation-templates-overlay__close',
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-template-close' },
+    children: [
+      createEl('span', { className: 'me-2', text: '×' }),
+      createEl('span', { text: 'Zurück' }),
+    ],
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Gespeicherte Beobachtungen',
+  });
+  header.append(closeButton, title);
+
   const filterBar = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-templates__filters',
   });
@@ -570,13 +593,13 @@ const buildObservationTemplatesSection = ({ templates }) => {
       text: initial,
     });
     const buttons = createEl('div', {
-      className: 'd-flex flex-column gap-2',
+      className: 'd-flex flex-wrap gap-2 observation-templates__group-buttons',
       dataset: { role: 'observation-template-group' },
     });
     items.forEach((label) => {
       const button = createEl('button', {
         className:
-          'btn btn-outline-secondary text-start observation-template-button',
+          'btn btn-outline-secondary observation-chip observation-template-button',
         text: label,
         attrs: { type: 'button' },
         dataset: {
@@ -603,15 +626,22 @@ const buildObservationTemplatesSection = ({ templates }) => {
     children: hasTemplates ? [controls, list, empty] : [empty],
   });
 
-  details.append(summary, content);
+  const scrollContent = createEl('div', {
+    className: 'observation-templates-overlay__content',
+    children: [content],
+  });
+
+  overlayPanel.append(header, scrollContent);
+  overlay.appendChild(overlayPanel);
 
   return {
-    element: details,
+    element: overlay,
     refs: {
       list,
       filterBar,
       searchInput,
       empty,
+      closeButton,
     },
   };
 };
@@ -683,6 +713,9 @@ export const buildObservationsSection = ({
     className: 'observation-overlay__content',
     dataset: { role: 'observation-detail-scroll' },
   });
+  const templatesOverlay = buildObservationTemplatesOverlay({
+    templates: presets,
+  });
   children.forEach((child) => {
     const data = observations[child] || {};
     const topItems = buildTopItems(observationStats?.[child]);
@@ -744,8 +777,12 @@ export const buildObservationsSection = ({
           text: 'Noch keine Daten',
         });
 
-    const templatesSection = buildObservationTemplatesSection({
-      templates: presets,
+    const templatesButton = createEl('button', {
+      className:
+        'btn btn-outline-secondary btn-sm observation-template-open align-self-start',
+      text: 'Gespeicherte Beobachtungen',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-template-open' },
     });
 
     const feedback = createEl('p', {
@@ -776,14 +813,19 @@ export const buildObservationsSection = ({
         todayList,
         topTitle,
         topList,
-        templatesSection.element,
+        templatesButton,
       ],
     });
     detail.hidden = true;
     overlayContent.appendChild(detail);
   });
 
-  overlayPanel.append(overlayHeader, datalist, overlayContent);
+  overlayPanel.append(
+    overlayHeader,
+    datalist,
+    overlayContent,
+    templatesOverlay.element,
+  );
   overlay.appendChild(overlayPanel);
 
   body.append(title, list, overlay);
@@ -794,9 +836,11 @@ export const buildObservationsSection = ({
     refs: {
       list,
       overlay,
+      overlayPanel,
       overlayContent,
       overlayTitle,
       closeButton,
+      templatesOverlay: templatesOverlay.element,
     },
   };
 };
