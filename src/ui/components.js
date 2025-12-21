@@ -24,12 +24,21 @@ export const buildHeader = ({ selectedDate }) => {
   const dateLegend = createEl('div', {
     className: 'd-flex flex-wrap gap-2 small',
     children: [
-      createEl('span', { className: 'text-primary', text: 'Heutiges Datum' }),
       createEl('span', {
-        className: 'text-secondary',
+        className: 'date-status date-status--today',
+        dataset: { dateStatus: 'today' },
+        text: 'Heutiges Datum',
+      }),
+      createEl('span', {
+        className: 'date-status date-status--past',
+        dataset: { dateStatus: 'past' },
         text: 'Vergangenes Datum',
       }),
-      createEl('span', { className: 'text-warning', text: 'Zukunftiges Datum!' }),
+      createEl('span', {
+        className: 'date-status date-status--future',
+        dataset: { dateStatus: 'future' },
+        text: 'Zukunftiges Datum!',
+      }),
     ],
   });
   const dateGroup = createEl('div', {
@@ -53,6 +62,7 @@ export const buildHeader = ({ selectedDate }) => {
     element: header,
     refs: {
       dateInput,
+      dateLegend,
       menuButton,
     },
   };

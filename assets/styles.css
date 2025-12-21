@@ -18,6 +18,30 @@ body {
   letter-spacing: 0.02em;
 }
 
+.date-status {
+  color: #6c757d;
+  opacity: 0.45;
+  font-weight: 500;
+  transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.date-status.is-active {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.date-status.is-active.date-status--today {
+  color: #0d6efd;
+}
+
+.date-status.is-active.date-status--past {
+  color: #6c757d;
+}
+
+.date-status.is-active.date-status--future {
+  color: #f59e0b;
+}
+
 .badge-pill {
   font-size: 0.85rem;
 }

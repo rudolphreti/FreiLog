@@ -36,3 +36,14 @@ export const ensureYmd = (value, fallback) => {
 
   return todayYmd();
 };
+
+export const getDateRelation = (value, reference = todayYmd()) => {
+  const normalized = ensureYmd(value, reference);
+  const normalizedReference = ensureYmd(reference, todayYmd());
+
+  if (normalized === normalizedReference) {
+    return 'today';
+  }
+
+  return normalized < normalizedReference ? 'past' : 'future';
+};

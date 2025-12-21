@@ -158,7 +158,7 @@ export const renderApp = (root, state) => {
   container.append(contentWrap, drawerShell.element);
   root.appendChild(container);
 
-  bindDateEntry(header.refs.dateInput);
+  bindDateEntry(header.refs.dateInput, header.refs.dateLegend);
   bindImportExport({
     exportButton: drawerContentRefs?.exportButton,
     importButton: drawerContentRefs?.importButton,
