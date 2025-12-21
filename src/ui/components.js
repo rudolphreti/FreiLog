@@ -675,12 +675,6 @@ export const buildObservationsSection = ({
     list.appendChild(button);
   });
 
-  const datalistId = 'observations-list';
-  const datalist = createEl('datalist', { attrs: { id: datalistId } });
-  presets.forEach((item) => {
-    datalist.appendChild(createEl('option', { attrs: { value: item } }));
-  });
-
   const overlay = createEl('div', {
     className: 'observation-overlay',
     dataset: { role: 'observation-overlay' },
@@ -731,7 +725,7 @@ export const buildObservationsSection = ({
       attrs: {
         type: 'text',
         id: comboInputId,
-        list: datalistId,
+        autocomplete: 'off',
         placeholder: 'Neue Beobachtung',
       },
       dataset: { role: 'observation-input' },
@@ -755,7 +749,7 @@ export const buildObservationsSection = ({
 
     const todayTitle = createEl('p', {
       className: 'text-muted small mb-0',
-      text: 'Heute',
+      text: 'Heutige Beobachtungen',
     });
 
     const todayList = buildPillList({
@@ -763,11 +757,6 @@ export const buildObservationsSection = ({
       getLabel: (item) => item,
       getRemoveLabel: (label) => `${label} entfernen`,
       removeRole: 'observation-today-remove',
-    });
-
-    const topTitle = createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Top 10',
     });
 
     const topList = topItems.length
@@ -808,11 +797,10 @@ export const buildObservationsSection = ({
       className: 'observation-detail d-flex flex-column gap-3 d-none',
       dataset: { child, templateFilter: 'ALL', templateQuery: '' },
       children: [
-        comboRow,
+        topList,
         todayTitle,
         todayList,
-        topTitle,
-        topList,
+        comboRow,
         templatesButton,
       ],
     });
@@ -822,7 +810,6 @@ export const buildObservationsSection = ({
 
   overlayPanel.append(
     overlayHeader,
-    datalist,
     overlayContent,
     templatesOverlay.element,
   );

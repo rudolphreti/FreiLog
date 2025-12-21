@@ -8,6 +8,9 @@ const normalizeObservationInput = (value) => {
   return value.trim().replace(/\s+/g, ' ');
 };
 
+const normalizeObservationKey = (value) =>
+  normalizeObservationInput(value).toLocaleLowerCase();
+
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
     const trimmed = normalizeObservationInput(value);
@@ -121,6 +124,17 @@ const removeObservationForChild = (date, child, tag) => {
 
 const getObservationPresets = () => getPresets('observations');
 
+const findExistingPreset = (presets, value) => {
+  const normalized = normalizeObservationKey(value);
+  if (!normalized) {
+    return null;
+  }
+
+  return presets.find(
+    (preset) => normalizeObservationKey(preset) === normalized,
+  );
+};
+
 const updatePresetButtonState = (card, value) => {
   const button = card.querySelector('[data-role="observation-save-preset"]');
   if (!(button instanceof HTMLButtonElement)) {
@@ -129,7 +143,7 @@ const updatePresetButtonState = (card, value) => {
 
   const presets = getObservationPresets();
   const trimmed = normalizeObservationInput(value);
-  const shouldShow = Boolean(trimmed) && !presets.includes(trimmed);
+  const shouldShow = Boolean(trimmed) && !findExistingPreset(presets, trimmed);
 
   button.disabled = !shouldShow;
   button.classList.toggle('d-none', !shouldShow);
@@ -256,8 +270,10 @@ const addObservationForChild = ({ date, card, input }) => {
   }
 
   const presets = getObservationPresets();
-  if (!presets.includes(normalized)) {
-    addPreset('observations', normalized);
+  const existingPreset = findExistingPreset(presets, normalized);
+  const observationValue = existingPreset || normalized;
+  if (!existingPreset) {
+    addPreset('observations', observationValue);
   }
 
   const entry = getEntry(date);
@@ -267,14 +283,14 @@ const addObservationForChild = ({ date, card, input }) => {
       : [];
   const existing = normalizeObservationList(current);
 
-  if (existing.includes(normalized)) {
+  if (existing.includes(observationValue)) {
     showFeedback(card, 'Bereits für heute erfasst.');
     return;
   }
 
   updateEntry(date, {
     observations: {
-      [child]: [normalized],
+      [child]: [observationValue],
     },
   });
 
@@ -482,7 +498,7 @@ export const bindObservations = ({
         return;
       }
       const trimmed = normalizeObservationInput(input.value);
-      if (trimmed && !getObservationPresets().includes(trimmed)) {
+      if (trimmed && !findExistingPreset(getObservationPresets(), trimmed)) {
         addPreset('observations', trimmed);
       }
       updatePresetButtonState(card, input.value);
@@ -505,7 +521,7 @@ export const bindObservations = ({
       const tag = topButton.dataset.value;
       if (tag) {
         addTagForChild(date, card.dataset.child, tag);
-        if (!getObservationPresets().includes(tag)) {
+        if (!findExistingPreset(getObservationPresets(), tag)) {
           addPreset('observations', tag);
         }
       }
