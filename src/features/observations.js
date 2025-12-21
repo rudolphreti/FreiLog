@@ -1,8 +1,16 @@
 import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
+const normalizeObservationInput = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim().replace(/\s+/g, ' ');
+};
+
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
-    const trimmed = value.trim();
+    const trimmed = normalizeObservationInput(value);
     return trimmed ? [trimmed] : [];
   }
 
@@ -20,7 +28,7 @@ const normalizeObservationList = (value) => {
     if (typeof item !== 'string') {
       return;
     }
-    const trimmed = item.trim();
+    const trimmed = normalizeObservationInput(item);
     if (!trimmed || unique.has(trimmed)) {
       return;
     }
@@ -79,7 +87,7 @@ export const applyInitialFilter = (children, selectedInitial) => {
 };
 
 const addTagForChild = (date, child, value) => {
-  const trimmed = value.trim();
+  const trimmed = normalizeObservationInput(value);
   if (!trimmed) {
     return;
   }
@@ -117,9 +125,8 @@ const updatePresetButtonState = (card, value, presets) => {
     return;
   }
 
-  const trimmed = value.trim();
-  const shouldShow =
-    Boolean(trimmed) && !presets.includes(trimmed);
+  const trimmed = normalizeObservationInput(value);
+  const shouldShow = Boolean(trimmed) && !presets.includes(trimmed);
 
   button.disabled = !shouldShow;
   button.classList.toggle('d-none', !shouldShow);
@@ -208,6 +215,67 @@ const setTemplateFilter = (card, selected) => {
 const setTemplateQuery = (card, query) => {
   card.dataset.templateQuery = query;
   applyTemplateFilters(card);
+};
+
+const feedbackTimeouts = new WeakMap();
+
+const showFeedback = (card, message) => {
+  const feedback = card.querySelector('[data-role="observation-feedback"]');
+  if (!(feedback instanceof HTMLElement)) {
+    return;
+  }
+
+  feedback.textContent = message;
+  feedback.hidden = false;
+
+  const existingTimeout = feedbackTimeouts.get(feedback);
+  if (existingTimeout) {
+    window.clearTimeout(existingTimeout);
+  }
+
+  const timeoutId = window.setTimeout(() => {
+    feedback.hidden = true;
+  }, 1800);
+
+  feedbackTimeouts.set(feedback, timeoutId);
+};
+
+const addObservationForChild = ({ date, card, input }) => {
+  const child = card.dataset.child;
+  if (!child) {
+    return;
+  }
+
+  const normalized = normalizeObservationInput(input.value);
+  if (!normalized) {
+    return;
+  }
+
+  const presets = getPresets('observations');
+  if (!presets.includes(normalized)) {
+    addPreset('observations', normalized);
+  }
+
+  const entry = getEntry(date);
+  const current =
+    entry.observations && entry.observations[child]
+      ? entry.observations[child]
+      : [];
+  const existing = normalizeObservationList(current);
+
+  if (existing.includes(normalized)) {
+    showFeedback(card, 'Bereits für heute erfasst.');
+    return;
+  }
+
+  updateEntry(date, {
+    observations: {
+      [child]: [normalized],
+    },
+  });
+
+  input.value = '';
+  updatePresetButtonState(card, '', getPresets('observations'));
 };
 
 const parseChildFromHash = () => {
@@ -331,12 +399,12 @@ export const bindObservations = ({
     }
   });
 
-  overlayContent.addEventListener('keydown', (event) => {
+  overlayContent.addEventListener('submit', (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLInputElement)) {
+    if (!(target instanceof HTMLFormElement)) {
       return;
     }
-    if (event.key !== 'Enter' || target.dataset.role !== 'observation-input') {
+    if (target.dataset.role !== 'observation-form') {
       return;
     }
 
@@ -346,9 +414,12 @@ export const bindObservations = ({
       return;
     }
 
-    addTagForChild(date, card.dataset.child, target.value);
-    target.value = '';
-    updatePresetButtonState(card, '', presets);
+    const input = target.querySelector('[data-role="observation-input"]');
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+
+    addObservationForChild({ date, card, input });
   });
 
   overlayContent.addEventListener('click', (event) => {
@@ -362,18 +433,6 @@ export const bindObservations = ({
       return;
     }
 
-    const addButton = target.closest('[data-role="observation-add"]');
-    if (addButton) {
-      const input = card.querySelector('[data-role="observation-input"]');
-      if (!(input instanceof HTMLInputElement)) {
-        return;
-      }
-      addTagForChild(date, card.dataset.child, input.value);
-      input.value = '';
-      updatePresetButtonState(card, '', presets);
-      return;
-    }
-
     const savePresetButton = target.closest(
       '[data-role="observation-save-preset"]',
     );
@@ -382,7 +441,7 @@ export const bindObservations = ({
       if (!(input instanceof HTMLInputElement)) {
         return;
       }
-      const trimmed = input.value.trim();
+      const trimmed = normalizeObservationInput(input.value);
       if (trimmed && !presets.includes(trimmed)) {
         addPreset('observations', trimmed);
       }

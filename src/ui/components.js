@@ -687,12 +687,20 @@ export const buildObservationsSection = ({
   children.forEach((child) => {
     const data = observations[child] || {};
     const topItems = buildTopItems(observationStats?.[child]);
+    const safeId = child.toLocaleLowerCase().replace(/[^a-z0-9]+/gi, '-');
+    const comboInputId = `observation-input-${safeId}`;
+    const comboInputLabel = createEl('label', {
+      className: 'form-label text-muted small mb-0',
+      text: 'Neue Beobachtung',
+      attrs: { for: comboInputId },
+    });
     const comboInput = createEl('input', {
       className: 'form-control',
       attrs: {
         type: 'text',
+        id: comboInputId,
         list: datalistId,
-        placeholder: 'Beobachtung hinzufügen…',
+        placeholder: 'Neue Beobachtung',
       },
       dataset: { role: 'observation-input' },
     });
@@ -701,7 +709,7 @@ export const buildObservationsSection = ({
     const addButton = createEl('button', {
       className: 'btn btn-primary',
       text: 'Hinzufügen',
-      attrs: { type: 'button' },
+      attrs: { type: 'submit' },
       dataset: { role: 'observation-add' },
     });
 
@@ -741,9 +749,23 @@ export const buildObservationsSection = ({
       templates: presets,
     });
 
-    const comboRow = createEl('div', {
+    const feedback = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: '',
+      dataset: { role: 'observation-feedback' },
+    });
+    feedback.hidden = true;
+
+    const comboRow = createEl('form', {
       className: 'd-flex flex-column gap-2',
-      children: [comboInput, addButton, savePresetButton],
+      dataset: { role: 'observation-form' },
+      children: [
+        comboInputLabel,
+        comboInput,
+        feedback,
+        addButton,
+        savePresetButton,
+      ],
     });
 
     const detail = createEl('div', {
