@@ -18,29 +18,6 @@ body {
   letter-spacing: 0.02em;
 }
 
-.date-status {
-  display: none;
-  color: #6c757d;
-  font-weight: 600;
-  transition: color 0.2s ease;
-}
-
-.date-status.is-active {
-  display: inline-flex;
-}
-
-.date-status.is-active.date-status--today {
-  color: #0d6efd;
-}
-
-.date-status.is-active.date-status--past {
-  color: #6c757d;
-}
-
-.date-status.is-active.date-status--future {
-  color: #f59e0b;
-}
-
 .badge-pill {
   font-size: 0.85rem;
 }

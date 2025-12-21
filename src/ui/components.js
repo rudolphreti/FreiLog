@@ -21,29 +21,9 @@ export const buildHeader = ({ selectedDate }) => {
     className: 'form-control',
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
   });
-  const dateLegend = createEl('div', {
-    className: 'd-flex flex-wrap gap-2 small',
-    children: [
-      createEl('span', {
-        className: 'date-status date-status--today',
-        dataset: { dateStatus: 'today' },
-        text: 'Heutiges Datum',
-      }),
-      createEl('span', {
-        className: 'date-status date-status--past',
-        dataset: { dateStatus: 'past' },
-        text: 'Vergangenes Datum',
-      }),
-      createEl('span', {
-        className: 'date-status date-status--future',
-        dataset: { dateStatus: 'future' },
-        text: 'Zukunftiges Datum!',
-      }),
-    ],
-  });
   const dateGroup = createEl('div', {
     className: 'd-flex flex-column',
-    children: [dateInput, dateLegend],
+    children: [dateInput],
   });
   const titleGroup = createEl('div', {
     className: 'd-flex align-items-start gap-2',
@@ -62,7 +42,6 @@ export const buildHeader = ({ selectedDate }) => {
     element: header,
     refs: {
       dateInput,
-      dateLegend,
       menuButton,
     },
   };
