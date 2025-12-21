@@ -68,12 +68,19 @@ const normalizeObservations = (value) => {
 
 let drawerShell = null;
 
-const renderDrawerContent = (state, drawerBody, attendanceSection, angebotSection) => {
+const renderDrawerContent = (
+  state,
+  drawerBody,
+  attendanceSection,
+  angebotSection,
+  preservedScrollTop,
+) => {
   if (!drawerBody) {
     return null;
   }
 
-  const scrollTop = drawerBody.scrollTop;
+  const scrollTop =
+    typeof preservedScrollTop === 'number' ? preservedScrollTop : drawerBody.scrollTop;
   const drawerSections = state?.ui?.drawer?.sections || {};
   const content = buildDrawerContent({
     drawerSections,
@@ -97,6 +104,8 @@ export const renderApp = (root, state) => {
 
   const angebotInputValue =
     root.querySelector('[data-role="angebot-input"]')?.value;
+  const preservedDrawerScrollTop =
+    root.querySelector('[data-drawer-scroll]')?.scrollTop;
 
   clearElement(root);
 
@@ -149,6 +158,7 @@ export const renderApp = (root, state) => {
     drawerShell.refs.body,
     absentSection,
     angebotSection,
+    preservedDrawerScrollTop,
   );
 
   const contentWrap = document.createElement('div');
