@@ -27,9 +27,19 @@ body {
 }
 
 .observation-child-button {
-  padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  font-size: 1.05rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  font-size: 1rem;
+  min-height: 44px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.observation-child-list {
+  align-items: flex-start;
 }
 
 .observation-overlay {
