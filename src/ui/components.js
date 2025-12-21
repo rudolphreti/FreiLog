@@ -631,17 +631,16 @@ export const buildObservationsSection = ({
     text: 'Beobachtungen',
   });
 
-  const list = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const list = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-child-list',
+  });
   children.forEach((child) => {
     const button = createEl('button', {
       className:
-        'btn btn-outline-primary d-flex align-items-center justify-content-between observation-child-button',
+        'btn btn-outline-primary observation-child-button',
       attrs: { type: 'button' },
       dataset: { role: 'observation-child', child },
-      children: [
-        createEl('span', { className: 'fw-semibold', text: child }),
-        createEl('span', { className: 'text-muted small', text: 'Details' }),
-      ],
+      children: [createEl('span', { className: 'fw-semibold', text: child })],
     });
     list.appendChild(button);
   });
