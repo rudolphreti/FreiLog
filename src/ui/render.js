@@ -13,7 +13,7 @@ import { bindAbsentChildren } from '../features/absentChildren.js';
 import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
-import { setDrawerSectionState } from '../state/store.js';
+import { bindDrawerSections } from '../features/drawerSections.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -188,24 +188,5 @@ export const renderApp = (root, state) => {
     date: selectedDate,
   });
 
-  const drawerButtons = drawerShell.refs.drawerButtons;
-  if (drawerButtons?.actionsToggle) {
-    drawerButtons.actionsToggle.addEventListener('click', () => {
-      const isOpen = drawerContentRefs?.actionsCollapse?.classList.contains('show');
-      setDrawerSectionState('actions', !isOpen);
-    });
-  }
-  if (drawerButtons?.attendanceToggle) {
-    drawerButtons.attendanceToggle.addEventListener('click', () => {
-      const isOpen = drawerContentRefs?.attendanceCollapse?.classList.contains('show');
-      setDrawerSectionState('attendance', !isOpen);
-    });
-  }
-  if (drawerButtons?.angeboteToggle) {
-    drawerButtons.angeboteToggle.addEventListener('click', () => {
-      const isOpen = drawerContentRefs?.angeboteCollapse?.classList.contains('show');
-      setDrawerSectionState('angebote', !isOpen);
-    });
-  }
-
+  bindDrawerSections(drawerContentRefs?.sections);
 };
