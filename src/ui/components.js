@@ -484,6 +484,138 @@ export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
   return { element: wrapper, buttons };
 };
 
+const buildTemplateGroups = (templates) => {
+  const normalized = Array.isArray(templates) ? templates : [];
+  const sorted = [...normalized]
+    .filter((item) => typeof item === 'string' && item.trim())
+    .map((item) => item.trim())
+    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+
+  const groups = new Map();
+  sorted.forEach((label) => {
+    const initial = label[0].toLocaleUpperCase();
+    if (!groups.has(initial)) {
+      groups.set(initial, []);
+    }
+    groups.get(initial).push(label);
+  });
+
+  return {
+    groups,
+    initials: Array.from(groups.keys())
+      .filter((letter) => /^[A-Z]$/i.test(letter))
+      .sort((a, b) => a.localeCompare(b, 'de')),
+  };
+};
+
+const buildObservationTemplatesSection = ({ templates }) => {
+  const details = createEl('details', {
+    className: 'observation-templates',
+    dataset: { role: 'observation-templates' },
+  });
+  const summary = createEl('summary', {
+    className: 'fw-semibold',
+    text: 'Gespeicherte Beobachtungen',
+  });
+
+  const { groups, initials } = buildTemplateGroups(templates);
+  const hasTemplates = groups.size > 0;
+  const filterBar = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-templates__filters',
+  });
+
+  const addFilterButton = (label, value, isActive = false) => {
+    const button = createEl('button', {
+      className: `btn btn-outline-secondary btn-sm${isActive ? ' active' : ''}`,
+      text: label,
+      attrs: {
+        type: 'button',
+        'aria-pressed': isActive ? 'true' : 'false',
+      },
+      dataset: { role: 'observation-template-letter', value },
+    });
+    filterBar.appendChild(button);
+  };
+
+  addFilterButton('Alle', 'ALL', true);
+  initials.forEach((letter) => addFilterButton(letter, letter));
+
+  const searchInput = createEl('input', {
+    className: 'form-control form-control-sm observation-templates__search',
+    attrs: {
+      type: 'search',
+      placeholder: 'Suchen…',
+      'aria-label': 'Gespeicherte Beobachtungen durchsuchen',
+    },
+    dataset: { role: 'observation-template-search' },
+  });
+
+  const controls = createEl('div', {
+    className: 'd-flex flex-column flex-md-row gap-2 align-items-start',
+    children: [filterBar, searchInput],
+  });
+
+  const list = createEl('div', {
+    className: 'd-flex flex-column gap-3 observation-templates__list',
+    dataset: { role: 'observation-template-list' },
+  });
+
+  groups.forEach((items, initial) => {
+    const group = createEl('div', {
+      className: 'observation-templates__group',
+      dataset: { initial },
+    });
+    const heading = createEl('p', {
+      className: 'text-muted small mb-1 fw-semibold',
+      text: initial,
+    });
+    const buttons = createEl('div', {
+      className: 'd-flex flex-column gap-2',
+      dataset: { role: 'observation-template-group' },
+    });
+    items.forEach((label) => {
+      const button = createEl('button', {
+        className:
+          'btn btn-outline-secondary text-start observation-template-button',
+        text: label,
+        attrs: { type: 'button' },
+        dataset: {
+          role: 'observation-template-add',
+          value: label,
+          initial,
+        },
+      });
+      buttons.appendChild(button);
+    });
+    group.append(heading, buttons);
+    list.appendChild(group);
+  });
+
+  const empty = createEl('p', {
+    className: 'text-muted small mb-0 observation-templates__empty',
+    text: 'Keine gespeicherten Beobachtungen vorhanden.',
+  });
+  empty.hidden = hasTemplates;
+  empty.dataset.role = 'observation-template-empty';
+
+  const content = createEl('div', {
+    className: 'mt-3 d-flex flex-column gap-3',
+    children: hasTemplates ? [controls, list, empty] : [empty],
+  });
+
+  details.append(summary, content);
+
+  return {
+    element: details,
+    refs: {
+      list,
+      filterBar,
+      searchInput,
+      empty,
+    },
+  };
+};
+
 export const buildObservationsSection = ({
   children,
   observations,
@@ -605,6 +737,10 @@ export const buildObservationsSection = ({
           text: 'Noch keine Daten',
         });
 
+    const templatesSection = buildObservationTemplatesSection({
+      templates: presets,
+    });
+
     const comboRow = createEl('div', {
       className: 'd-flex flex-column gap-2',
       children: [comboInput, addButton, savePresetButton],
@@ -612,8 +748,15 @@ export const buildObservationsSection = ({
 
     const detail = createEl('div', {
       className: 'observation-detail d-flex flex-column gap-3',
-      dataset: { child },
-      children: [comboRow, todayTitle, todayList, topTitle, topList],
+      dataset: { child, templateFilter: 'ALL', templateQuery: '' },
+      children: [
+        comboRow,
+        todayTitle,
+        todayList,
+        topTitle,
+        topList,
+        templatesSection.element,
+      ],
     });
     detail.hidden = true;
     overlayContent.appendChild(detail);

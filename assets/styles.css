@@ -83,6 +83,41 @@ body {
   min-height: 100%;
 }
 
+.observation-templates {
+  border: 1px solid #e2e8f0;
+  border-radius: 0.85rem;
+  padding: 0.75rem 1rem 1rem;
+  background: #ffffff;
+}
+
+.observation-templates summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.observation-templates summary::-webkit-details-marker {
+  display: none;
+}
+
+.observation-templates__filters {
+  flex: 1;
+}
+
+.observation-templates__search {
+  max-width: 240px;
+}
+
+.observation-templates__list {
+  max-height: 240px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.observation-template-button {
+  border-radius: 0.75rem;
+}
+
 body.observation-overlay-open {
   overflow: hidden;
 }
