@@ -1,4 +1,5 @@
 import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
+import { debounce } from '../utils/debounce.js';
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
     const trimmed = value.trim();
@@ -124,6 +125,91 @@ const updatePresetButtonState = (card, value, presets) => {
   button.classList.toggle('d-none', !shouldShow);
 };
 
+const normalizeTemplateQuery = (value) => value.trim().toLocaleLowerCase();
+
+const applyTemplateFilters = (card) => {
+  const selectedInitial = card.dataset.templateFilter || 'ALL';
+  const query = card.dataset.templateQuery || '';
+  const normalizedQuery = normalizeTemplateQuery(query);
+  const templateButtons = card.querySelectorAll(
+    '[data-role="observation-template-add"]',
+  );
+  const templateGroups = card.querySelectorAll(
+    '[data-role="observation-template-group"]',
+  );
+  const emptyMessage = card.querySelector(
+    '[data-role="observation-template-empty"]',
+  );
+  const hasTemplates = templateButtons.length > 0;
+
+  if (!hasTemplates) {
+    if (emptyMessage instanceof HTMLElement) {
+      emptyMessage.hidden = false;
+      emptyMessage.textContent = 'Keine gespeicherten Beobachtungen vorhanden.';
+    }
+    return;
+  }
+
+  templateButtons.forEach((button) => {
+    const initial = button.dataset.initial || '';
+    const label = button.dataset.value || '';
+    const matchesInitial =
+      selectedInitial === 'ALL' || initial === selectedInitial;
+    const matchesQuery = normalizedQuery
+      ? label.toLocaleLowerCase().includes(normalizedQuery)
+      : true;
+    button.hidden = !(matchesInitial && matchesQuery);
+  });
+
+  let visibleCount = 0;
+  templateGroups.forEach((group) => {
+    const buttons = group.querySelectorAll(
+      '[data-role="observation-template-add"]',
+    );
+    let hasVisible = false;
+    buttons.forEach((button) => {
+      if (!button.hidden) {
+        hasVisible = true;
+        visibleCount += 1;
+      }
+    });
+    const groupWrapper = group.closest('[data-initial]');
+    if (groupWrapper) {
+      groupWrapper.hidden = !hasVisible;
+    }
+  });
+
+  if (emptyMessage instanceof HTMLElement) {
+    emptyMessage.hidden = visibleCount > 0;
+    emptyMessage.textContent =
+      visibleCount > 0
+        ? 'Keine gespeicherten Beobachtungen vorhanden.'
+        : 'Keine passenden Beobachtungen gefunden.';
+  }
+};
+
+const setTemplateFilter = (card, selected) => {
+  const next =
+    selected && selected !== 'ALL'
+      ? selected.toLocaleUpperCase()
+      : 'ALL';
+  card.dataset.templateFilter = next;
+  const buttons = card.querySelectorAll(
+    '[data-role="observation-template-letter"]',
+  );
+  buttons.forEach((button) => {
+    const isActive = button.dataset.value === next;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  applyTemplateFilters(card);
+};
+
+const setTemplateQuery = (card, query) => {
+  card.dataset.templateQuery = query;
+  applyTemplateFilters(card);
+};
+
 const parseChildFromHash = () => {
   if (!window.location.hash) {
     return null;
@@ -162,14 +248,24 @@ export const bindObservations = ({
   const presets = getPresets('observations');
   let activeChild = null;
   let isOverlayOpen = false;
+  const handleTemplateSearch = debounce((input, card) => {
+    setTemplateQuery(card, input.value);
+  }, 200);
 
   const setOverlayState = (child) => {
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
+    let activePanel = null;
     detailPanels.forEach((panel) => {
       panel.hidden = panel.dataset.child !== child;
+      if (!panel.hidden) {
+        activePanel = panel;
+      }
     });
     overlayTitle.textContent = child || '';
     overlayContent.scrollTop = 0;
+    if (activePanel) {
+      applyTemplateFilters(activePanel);
+    }
   };
 
   const openOverlay = (child, { updateHistory = true } = {}) => {
@@ -228,6 +324,10 @@ export const bindObservations = ({
     if (target.dataset.role === 'observation-input') {
       updatePresetButtonState(card, target.value, presets);
       return;
+    }
+
+    if (target.dataset.role === 'observation-template-search') {
+      handleTemplateSearch(target, card);
     }
   });
 
@@ -309,6 +409,25 @@ export const bindObservations = ({
           addPreset('observations', tag);
         }
       }
+      return;
+    }
+
+    const templateButton = target.closest(
+      '[data-role="observation-template-add"]',
+    );
+    if (templateButton) {
+      const tag = templateButton.dataset.value;
+      if (tag) {
+        addTagForChild(date, card.dataset.child, tag);
+      }
+      return;
+    }
+
+    const templateFilterButton = target.closest(
+      '[data-role="observation-template-letter"]',
+    );
+    if (templateFilterButton) {
+      setTemplateFilter(card, templateFilterButton.dataset.value || 'ALL');
     }
   });
 
