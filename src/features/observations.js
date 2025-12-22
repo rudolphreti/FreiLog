@@ -4,6 +4,7 @@ import {
   getEntry,
   getPresets,
   upsertObservationCatalogEntry,
+  updateObservationCatalogEntry,
   updateEntry,
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
@@ -52,6 +53,7 @@ const normalizeObservationList = (value) => {
 };
 
 const LONG_PRESS_MS = 600;
+let pendingTemplateRestore = null;
 
 const getAbsentChildren = (entry) =>
   Array.isArray(entry?.absentChildIds) ? entry.absentChildIds : [];
@@ -440,6 +442,7 @@ export const bindObservations = ({
   overlayTitle,
   closeButton,
   templatesOverlay,
+  editOverlay,
   createOverlay,
   date,
   observationGroups,
@@ -451,6 +454,7 @@ export const bindObservations = ({
     !overlayContent ||
     !overlayTitle ||
     !templatesOverlay ||
+    !editOverlay ||
     !createOverlay
   ) {
     return;
@@ -460,11 +464,15 @@ export const bindObservations = ({
   let isOverlayOpen = false;
   let isTemplateOverlayOpen = false;
   let isCreateOverlayOpen = false;
+  let isEditOverlayOpen = false;
+  let editingObservation = null;
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
   let longPressTimer = null;
   let suppressNextClick = false;
+  let templateLongPressTimer = null;
+  let suppressTemplateClick = false;
 
   const setOverlayState = (child) => {
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
@@ -544,6 +552,7 @@ export const bindObservations = ({
     if (!isTemplateOverlayOpen) {
       return;
     }
+    closeEditOverlay();
     isTemplateOverlayOpen = false;
     templatesOverlay.classList.remove('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'true');
@@ -649,6 +658,57 @@ export const bindObservations = ({
     createOverlay.classList.remove('is-open');
     createOverlay.setAttribute('aria-hidden', 'true');
     overlayPanel.classList.remove('is-create-open');
+  };
+
+  const setEditGroups = (groups) => {
+    const normalized = normalizeObservationGroups(groups);
+    editOverlay.dataset.selectedGroups = normalized.join(',');
+    const buttons = editOverlay.querySelectorAll(
+      '[data-role="observation-edit-group"]',
+    );
+    buttons.forEach((button) => {
+      const isActive = normalized.includes(button.dataset.value || '');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  const getEditGroups = () =>
+    normalizeObservationGroups(
+      typeof editOverlay.dataset.selectedGroups === 'string'
+        ? editOverlay.dataset.selectedGroups.split(',')
+        : [],
+    );
+
+  const openEditOverlay = ({ text, groups }) => {
+    if (!text) {
+      return;
+    }
+    editingObservation = { text };
+    isEditOverlayOpen = true;
+    editOverlay.classList.add('is-open');
+    editOverlay.setAttribute('aria-hidden', 'false');
+    overlayPanel.classList.add('is-edit-open');
+    setEditGroups(groups || []);
+    const input = editOverlay.querySelector(
+      '[data-role="observation-edit-input"]',
+    );
+    if (isInputElement(input)) {
+      input.value = text;
+      input.focus();
+      input.select();
+    }
+  };
+
+  const closeEditOverlay = () => {
+    if (!isEditOverlayOpen) {
+      return;
+    }
+    isEditOverlayOpen = false;
+    editingObservation = null;
+    editOverlay.classList.remove('is-open');
+    editOverlay.setAttribute('aria-hidden', 'true');
+    overlayPanel.classList.remove('is-edit-open');
   };
 
   const closeOverlay = ({ updateHistory = true } = {}) => {
@@ -828,6 +888,49 @@ export const bindObservations = ({
     closeCreateOverlay();
   };
 
+  const getTemplateScrollTop = () => {
+    const scroll = templatesOverlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    return scroll ? scroll.scrollTop : 0;
+  };
+
+  const handleEditSubmit = (event) => {
+    const target = event.target;
+    if (!isFormElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-edit-form') {
+      return;
+    }
+    event.preventDefault();
+    if (!editingObservation) {
+      closeEditOverlay();
+      return;
+    }
+    const input = target.querySelector('[data-role="observation-edit-input"]');
+    if (!isInputElement(input)) {
+      return;
+    }
+    const normalized = normalizeObservationInput(input.value);
+    if (!normalized) {
+      return;
+    }
+    const groups = getEditGroups();
+    if (isTemplateOverlayOpen && activeChild) {
+      pendingTemplateRestore = {
+        child: activeChild,
+        scrollTop: getTemplateScrollTop(),
+      };
+    }
+    updateObservationCatalogEntry({
+      currentText: editingObservation.text,
+      nextText: normalized,
+      groups,
+    });
+    closeEditOverlay();
+  };
+
   const handleCreateInput = (event) => {
     const target = event.target;
     if (!isInputElement(target)) {
@@ -884,6 +987,10 @@ export const bindObservations = ({
       return;
     }
 
+    if (isEditOverlayOpen) {
+      return;
+    }
+
     if (target === templatesOverlay) {
       closeTemplateOverlay();
       return;
@@ -897,10 +1004,29 @@ export const bindObservations = ({
       return;
     }
 
+    const editButton = target.closest(
+      '[data-role="observation-template-edit"]',
+    );
+    if (editButton) {
+      const text = editButton.dataset.value;
+      const groups = normalizeObservationGroups(
+        typeof editButton.dataset.groups === 'string'
+          ? editButton.dataset.groups.split(',')
+          : [],
+      );
+      if (text) {
+        openEditOverlay({ text, groups });
+      }
+      return;
+    }
+
     const templateButton = target.closest(
       '[data-role="observation-template-add"]',
     );
     if (templateButton) {
+      if (suppressTemplateClick) {
+        return;
+      }
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
         addTagForChild(date, activeChild, tag);
@@ -938,6 +1064,83 @@ export const bindObservations = ({
         templatesOverlay,
         templateFilterButton.dataset.value || 'ALL',
       );
+    }
+  };
+
+  const handleTemplatePointerDown = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+    const button = target.closest('[data-role="observation-template-add"]');
+    if (!button) {
+      return;
+    }
+    if (event.pointerType === 'mouse' && event.button !== 0) {
+      return;
+    }
+    if (isEditOverlayOpen) {
+      return;
+    }
+    if (templateLongPressTimer) {
+      window.clearTimeout(templateLongPressTimer);
+      templateLongPressTimer = null;
+    }
+    templateLongPressTimer = window.setTimeout(() => {
+      suppressTemplateClick = true;
+      const text = button.dataset.value;
+      const groups = normalizeObservationGroups(
+        typeof button.dataset.groups === 'string'
+          ? button.dataset.groups.split(',')
+          : [],
+      );
+      if (text) {
+        openEditOverlay({ text, groups });
+      }
+      templateLongPressTimer = null;
+    }, LONG_PRESS_MS);
+  };
+
+  const handleTemplatePointerEnd = () => {
+    if (templateLongPressTimer) {
+      window.clearTimeout(templateLongPressTimer);
+      templateLongPressTimer = null;
+    }
+    if (suppressTemplateClick) {
+      window.setTimeout(() => {
+        suppressTemplateClick = false;
+      }, 0);
+    }
+  };
+
+  const handleEditClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const cancelButton = target.closest(
+      '[data-role="observation-edit-cancel"]',
+    );
+    if (cancelButton) {
+      closeEditOverlay();
+      return;
+    }
+
+    const groupButton = target.closest(
+      '[data-role="observation-edit-group"]',
+    );
+    if (groupButton) {
+      const selected = new Set(getEditGroups());
+      const value = groupButton.dataset.value;
+      if (value) {
+        if (selected.has(value)) {
+          selected.delete(value);
+        } else {
+          selected.add(value);
+        }
+        setEditGroups(Array.from(selected));
+      }
     }
   };
 
@@ -996,9 +1199,15 @@ export const bindObservations = ({
 
   templatesOverlay.addEventListener('input', handleTemplateInput);
   templatesOverlay.addEventListener('click', handleTemplateClick);
+  templatesOverlay.addEventListener('pointerdown', handleTemplatePointerDown);
+  templatesOverlay.addEventListener('pointerup', handleTemplatePointerEnd);
+  templatesOverlay.addEventListener('pointerleave', handleTemplatePointerEnd);
+  templatesOverlay.addEventListener('pointercancel', handleTemplatePointerEnd);
   createOverlay.addEventListener('submit', handleCreateSubmit);
   createOverlay.addEventListener('input', handleCreateInput);
   createOverlay.addEventListener('click', handleCreateClick);
+  editOverlay.addEventListener('submit', handleEditSubmit);
+  editOverlay.addEventListener('click', handleEditClick);
 
   window.addEventListener('popstate', () => {
     const stateChild = history.state?.observationChild;
@@ -1015,5 +1224,21 @@ export const bindObservations = ({
   const initialChild = parseChildFromHash();
   if (initialChild) {
     openOverlay(initialChild, { updateHistory: false });
+  }
+
+  if (pendingTemplateRestore?.child) {
+    const { child, scrollTop } = pendingTemplateRestore;
+    pendingTemplateRestore = null;
+    if (openOverlay(child, { updateHistory: false })) {
+      openTemplateOverlay(child);
+    }
+    requestAnimationFrame(() => {
+      const scroll = templatesOverlay.querySelector(
+        '.observation-templates-overlay__content',
+      );
+      if (scroll) {
+        scroll.scrollTop = scrollTop || 0;
+      }
+    });
   }
 };

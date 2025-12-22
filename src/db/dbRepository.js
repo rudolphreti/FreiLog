@@ -44,6 +44,46 @@ const normalizeObservationList = (value) => {
   return result;
 };
 
+const replaceObservationReferences = (days, fromKey, toText) => {
+  if (!days || typeof days !== 'object') {
+    return;
+  }
+  const normalizedTarget = normalizeObservationText(toText);
+  if (!normalizedTarget) {
+    return;
+  }
+  Object.values(days).forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+    if (!entry.observations || typeof entry.observations !== 'object') {
+      return;
+    }
+    Object.keys(entry.observations).forEach((child) => {
+      const list = normalizeObservationList(entry.observations[child]);
+      if (!list.length) {
+        return;
+      }
+      const updated = [];
+      const seen = new Set();
+      list.forEach((item) => {
+        const normalizedItem = normalizeObservationText(item);
+        const nextText =
+          normalizeObservationKey(normalizedItem) === fromKey
+            ? normalizedTarget
+            : normalizedItem;
+        const nextKey = normalizeObservationKey(nextText);
+        if (!nextKey || seen.has(nextKey)) {
+          return;
+        }
+        seen.add(nextKey);
+        updated.push(nextText);
+      });
+      entry.observations[child] = updated;
+    });
+  });
+};
+
 const buildDefaultObservations = (childrenList) => {
   if (!Array.isArray(childrenList)) {
     return {};
@@ -232,6 +272,117 @@ export const upsertObservationCatalogEntry = (value, groups = []) => {
   });
 
   return resolvedText;
+};
+
+export const updateObservationCatalogEntry = ({
+  currentText,
+  nextText,
+  groups = [],
+}) => {
+  const normalizedCurrent = normalizeObservationText(currentText);
+  const normalizedNext = normalizeObservationText(nextText);
+  if (!normalizedCurrent || !normalizedNext) {
+    return { status: 'invalid', value: normalizedNext || '' };
+  }
+
+  const normalizedGroups = normalizeObservationGroups(groups);
+  const currentKey = normalizeObservationKey(normalizedCurrent);
+  const nextKey = normalizeObservationKey(normalizedNext);
+  let result = { status: 'updated', value: normalizedNext };
+
+  updateAppData((data) => {
+    const catalog = Array.isArray(data.observationCatalog)
+      ? [...data.observationCatalog]
+      : [];
+    const currentIndex = catalog.findIndex(
+      (entry) =>
+        normalizeObservationKey(entry?.text || entry || '') === currentKey,
+    );
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const targetIndex = catalog.findIndex(
+      (entry) =>
+        normalizeObservationKey(entry?.text || entry || '') === nextKey,
+    );
+
+    if (targetIndex !== -1 && targetIndex !== currentIndex) {
+      const currentEntry = catalog[currentIndex];
+      const targetEntry = catalog[targetIndex];
+      const targetText =
+        typeof targetEntry === 'string'
+          ? normalizeObservationText(targetEntry)
+          : normalizeObservationText(targetEntry?.text);
+      const currentGroups =
+        typeof currentEntry === 'string'
+          ? []
+          : normalizeObservationGroups(currentEntry?.groups);
+      const targetGroups =
+        typeof targetEntry === 'string'
+          ? []
+          : normalizeObservationGroups(targetEntry?.groups);
+      const mergedGroups = normalizeObservationGroups([
+        ...targetGroups,
+        ...currentGroups,
+        ...normalizedGroups,
+      ]);
+      catalog[targetIndex] =
+        typeof targetEntry === 'string'
+          ? {
+              id: buildObservationId(targetText || normalizedNext),
+              text: targetText || normalizedNext,
+              groups: mergedGroups,
+              createdAt: new Date().toISOString(),
+            }
+          : {
+              ...targetEntry,
+              text: targetText || normalizedNext,
+              groups: mergedGroups,
+            };
+      catalog.splice(currentIndex, 1);
+      if (data.days) {
+        replaceObservationReferences(
+          data.days,
+          currentKey,
+          targetText || normalizedNext,
+        );
+      }
+      result = {
+        status: 'merged',
+        value: targetText || normalizedNext,
+      };
+      data.observationCatalog = catalog;
+      return;
+    }
+
+    const existing = catalog[currentIndex];
+    const existingText =
+      typeof existing === 'string'
+        ? normalizeObservationText(existing)
+        : normalizeObservationText(existing?.text);
+    if (existingText !== normalizedNext && data.days) {
+      replaceObservationReferences(data.days, currentKey, normalizedNext);
+    }
+    catalog[currentIndex] =
+      typeof existing === 'string'
+        ? {
+            id: buildObservationId(normalizedNext),
+            text: normalizedNext,
+            groups: normalizedGroups,
+            createdAt: new Date().toISOString(),
+          }
+        : {
+            ...existing,
+            id: buildObservationId(normalizedNext),
+            text: normalizedNext,
+            groups: normalizedGroups,
+          };
+    data.observationCatalog = catalog;
+    result = { status: 'updated', value: normalizedNext };
+  });
+
+  return result;
 };
 
 export const addPreset = (type, value) => {
