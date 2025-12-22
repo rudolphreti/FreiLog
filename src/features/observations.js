@@ -1320,7 +1320,7 @@ export const bindObservations = ({
   });
 
   const initialChild = parseChildFromHash();
-  if (initialChild) {
+  if (initialChild && !pendingTemplateRestore?.child) {
     openOverlay(initialChild, { updateHistory: false });
   }
 
