@@ -3,9 +3,11 @@ import {
   getChildrenList,
   getEntry,
   getPresets,
+  upsertObservationCatalogEntry,
   updateEntry,
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
+import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -366,39 +368,45 @@ const showFeedback = (card, message) => {
   feedbackTimeouts.set(feedback, timeoutId);
 };
 
-const addObservationForChild = ({ date, card, input }) => {
-  const child = getCardChild(card);
-  if (!child) {
-    return;
+const getOrderedObservationGroups = (groups) => {
+  const normalized = normalizeObservationGroups(groups);
+  if (!normalized.length) {
+    return [];
   }
-
-  const normalized = normalizeObservationInput(input.value);
-  if (!normalized) {
-    return;
+  if (!normalized.includes('SCHWARZ')) {
+    return normalized;
   }
+  return ['SCHWARZ', ...normalized.filter((group) => group !== 'SCHWARZ')];
+};
 
-  const presets = getObservationPresets();
-  const existingPreset = findExistingPreset(presets, normalized);
-  const observationValue = existingPreset || normalized;
-  if (!existingPreset) {
-    addPreset('observations', observationValue);
-  }
+const buildGroupDots = (groups, observationGroups) => {
+  const ordered = getOrderedObservationGroups(groups);
+  const maxDots = 3;
+  const showOverflow = ordered.length > maxDots;
+  const visible = showOverflow ? ordered.slice(0, maxDots - 1) : ordered;
+  const wrapper = document.createDocumentFragment();
 
-  const entry = getEntry(date);
-  const existing = normalizeObservationList(getObservationTags(entry, child));
-
-  if (existing.includes(observationValue)) {
-    showFeedback(card, 'Bereits für heute erfasst.');
-    return;
-  }
-
-  updateEntry(date, {
-    observations: {
-      [child]: [observationValue],
-    },
+  visible.forEach((group) => {
+    const dot = document.createElement('span');
+    const color =
+      observationGroups && observationGroups[group]?.color
+        ? observationGroups[group].color
+        : '#6c757d';
+    dot.className = 'observation-group-dot';
+    dot.style.setProperty('--group-color', color);
+    dot.setAttribute('aria-hidden', 'true');
+    wrapper.appendChild(dot);
   });
 
-  input.value = '';
+  if (showOverflow) {
+    const overflow = document.createElement('span');
+    overflow.className = 'observation-group-dot observation-group-dot--overflow';
+    overflow.textContent = '+';
+    overflow.setAttribute('aria-hidden', 'true');
+    wrapper.appendChild(overflow);
+  }
+
+  return wrapper;
 };
 
 const parseChildFromHash = () => {
@@ -432,7 +440,9 @@ export const bindObservations = ({
   overlayTitle,
   closeButton,
   templatesOverlay,
+  createOverlay,
   date,
+  observationGroups,
 }) => {
   if (
     !list ||
@@ -440,7 +450,8 @@ export const bindObservations = ({
     !overlayPanel ||
     !overlayContent ||
     !overlayTitle ||
-    !templatesOverlay
+    !templatesOverlay ||
+    !createOverlay
   ) {
     return;
   }
@@ -448,6 +459,7 @@ export const bindObservations = ({
   let activeChild = null;
   let isOverlayOpen = false;
   let isTemplateOverlayOpen = false;
+  let isCreateOverlayOpen = false;
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
@@ -502,6 +514,7 @@ export const bindObservations = ({
       return;
     }
     closeTemplateOverlay();
+    closeCreateOverlay();
     isOverlayOpen = false;
     activeChild = null;
     overlay.classList.remove('is-open');
@@ -537,6 +550,107 @@ export const bindObservations = ({
     overlayPanel.classList.remove('is-template-open');
   };
 
+  const setCreateGroups = (groups) => {
+    const normalized = normalizeObservationGroups(groups);
+    createOverlay.dataset.selectedGroups = normalized.join(',');
+    const buttons = createOverlay.querySelectorAll(
+      '[data-role="observation-create-group"]',
+    );
+    buttons.forEach((button) => {
+      const isActive = normalized.includes(button.dataset.value || '');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  const getCreateGroups = () =>
+    normalizeObservationGroups(
+      typeof createOverlay.dataset.selectedGroups === 'string'
+        ? createOverlay.dataset.selectedGroups.split(',')
+        : [],
+    );
+
+  const updateCreatePreview = () => {
+    const input = createOverlay.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    const previewPill = createOverlay.querySelector(
+      '[data-role="observation-create-preview-pill"]',
+    );
+    const previewText = createOverlay.querySelector(
+      '[data-role="observation-create-preview-text"]',
+    );
+    const previewDots = createOverlay.querySelector(
+      '[data-role="observation-create-preview-dots"]',
+    );
+    const previewEmpty = createOverlay.querySelector(
+      '[data-role="observation-create-preview-empty"]',
+    );
+    if (!isInputElement(input) || !isHtmlElement(previewPill)) {
+      return;
+    }
+
+    const text = normalizeObservationInput(input.value);
+    const groups = getCreateGroups();
+    const hasText = Boolean(text);
+    previewPill.hidden = !hasText;
+    if (isHtmlElement(previewEmpty)) {
+      previewEmpty.hidden = hasText;
+    }
+    if (!hasText) {
+      if (isHtmlElement(previewText)) {
+        previewText.textContent = '';
+      }
+      if (isHtmlElement(previewDots)) {
+        previewDots.textContent = '';
+      }
+      previewPill.classList.remove('observation-group-outline');
+      return;
+    }
+
+    if (isHtmlElement(previewText)) {
+      previewText.textContent = text;
+    }
+    if (isHtmlElement(previewDots)) {
+      previewDots.textContent = '';
+      previewDots.appendChild(buildGroupDots(groups, observationGroups));
+    }
+    previewPill.classList.toggle(
+      'observation-group-outline',
+      groups.includes('SCHWARZ'),
+    );
+  };
+
+  const openCreateOverlay = (child) => {
+    if (!child) {
+      return;
+    }
+    activeChild = child;
+    isCreateOverlayOpen = true;
+    createOverlay.classList.add('is-open');
+    createOverlay.setAttribute('aria-hidden', 'false');
+    overlayPanel.classList.add('is-create-open');
+    setCreateGroups([]);
+    const input = createOverlay.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    if (isInputElement(input)) {
+      input.value = '';
+      input.focus();
+    }
+    updateCreatePreview();
+  };
+
+  const closeCreateOverlay = () => {
+    if (!isCreateOverlayOpen) {
+      return;
+    }
+    isCreateOverlayOpen = false;
+    createOverlay.classList.remove('is-open');
+    createOverlay.setAttribute('aria-hidden', 'true');
+    overlayPanel.classList.remove('is-create-open');
+  };
+
   const closeOverlay = ({ updateHistory = true } = {}) => {
     if (!isOverlayOpen) {
       return;
@@ -546,32 +660,6 @@ export const bindObservations = ({
       return;
     }
     closeOverlayInternal();
-  };
-
-  const handleOverlaySubmit = (event) => {
-    const target = event.target;
-    if (!isFormElement(target)) {
-      return;
-    }
-    if (target.dataset.role !== 'observation-form') {
-      return;
-    }
-
-    event.preventDefault();
-    const card = target.closest('[data-child]');
-    if (!card || !getCardChild(card)) {
-      return;
-    }
-    if (card.dataset.absent === 'true') {
-      return;
-    }
-
-    const input = target.querySelector('[data-role="observation-input"]');
-    if (!isInputElement(input)) {
-      return;
-    }
-
-    addObservationForChild({ date, card, input });
   };
 
   const handleOverlayClick = (event) => {
@@ -631,6 +719,14 @@ export const bindObservations = ({
     if (templateOpenButton) {
       openTemplateOverlay(card.dataset.child);
     }
+
+    const createOpenButton = target.closest(
+      '[data-role="observation-create-open"]',
+    );
+    if (createOpenButton) {
+      closeTemplateOverlay();
+      openCreateOverlay(card.dataset.child);
+    }
   };
 
   const handleListClick = (event) => {
@@ -671,6 +767,114 @@ export const bindObservations = ({
 
     if (target.dataset.role === 'observation-template-search') {
       handleTemplateSearch(target);
+    }
+  };
+
+  const getActiveCard = () => {
+    if (!activeChild) {
+      return null;
+    }
+    const selector =
+      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? `[data-child="${CSS.escape(activeChild)}"]`
+        : `[data-child="${activeChild}"]`;
+    return overlayContent.querySelector(selector);
+  };
+
+  const handleCreateSubmit = (event) => {
+    const target = event.target;
+    if (!isFormElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-create-form') {
+      return;
+    }
+    event.preventDefault();
+    const input = target.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    if (!isInputElement(input)) {
+      return;
+    }
+    const normalized = normalizeObservationInput(input.value);
+    if (!normalized) {
+      return;
+    }
+    const groups = getCreateGroups();
+    const resolved = upsertObservationCatalogEntry(normalized, groups);
+    if (!resolved || !activeChild) {
+      closeCreateOverlay();
+      return;
+    }
+
+    const entry = getEntry(date);
+    const existing = normalizeObservationList(
+      getObservationTags(entry, activeChild),
+    );
+    if (existing.includes(resolved)) {
+      const card = getActiveCard();
+      if (card) {
+        showFeedback(card, 'Bereits für heute erfasst.');
+      }
+      closeCreateOverlay();
+      return;
+    }
+
+    updateEntry(date, {
+      observations: {
+        [activeChild]: [resolved],
+      },
+    });
+    closeCreateOverlay();
+  };
+
+  const handleCreateInput = (event) => {
+    const target = event.target;
+    if (!isInputElement(target)) {
+      return;
+    }
+    if (target.dataset.role === 'observation-create-input') {
+      updateCreatePreview();
+    }
+  };
+
+  const handleCreateClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const closeButton = target.closest(
+      '[data-role="observation-create-close"]',
+    );
+    if (closeButton) {
+      closeCreateOverlay();
+      return;
+    }
+
+    const cancelButton = target.closest(
+      '[data-role="observation-create-cancel"]',
+    );
+    if (cancelButton) {
+      closeCreateOverlay();
+      return;
+    }
+
+    const groupButton = target.closest(
+      '[data-role="observation-create-group"]',
+    );
+    if (groupButton) {
+      const selected = new Set(getCreateGroups());
+      const value = groupButton.dataset.value;
+      if (value) {
+        if (selected.has(value)) {
+          selected.delete(value);
+        } else {
+          selected.add(value);
+        }
+        setCreateGroups(Array.from(selected));
+        updateCreatePreview();
+      }
     }
   };
 
@@ -776,7 +980,6 @@ export const bindObservations = ({
     }
   };
 
-  overlayContent.addEventListener('submit', handleOverlaySubmit);
   overlayContent.addEventListener('click', handleOverlayClick);
   list.addEventListener('click', handleListClick);
   list.addEventListener('pointerdown', handleListPointerDown);
@@ -793,6 +996,9 @@ export const bindObservations = ({
 
   templatesOverlay.addEventListener('input', handleTemplateInput);
   templatesOverlay.addEventListener('click', handleTemplateClick);
+  createOverlay.addEventListener('submit', handleCreateSubmit);
+  createOverlay.addEventListener('input', handleCreateInput);
+  createOverlay.addEventListener('click', handleCreateClick);
 
   window.addEventListener('popstate', () => {
     const stateChild = history.state?.observationChild;

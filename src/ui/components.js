@@ -746,6 +746,140 @@ const buildObservationTemplatesOverlay = ({
   };
 };
 
+const buildObservationCreateOverlay = ({ observationGroups }) => {
+  const overlay = createEl('div', {
+    className: 'observation-create-overlay',
+    dataset: { role: 'observation-create-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const panel = createEl('div', {
+    className: 'observation-create-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-create-overlay__header',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn btn-link p-0 observation-create-overlay__close',
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-create-close' },
+    children: [
+      createEl('span', { className: 'me-2', text: '←' }),
+      createEl('span', { text: 'Zurück' }),
+    ],
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Neue Beobachtung',
+  });
+  header.append(closeButton, title);
+
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Beobachtung',
+  });
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      placeholder: 'Neue Beobachtung…',
+      autocomplete: 'off',
+    },
+    dataset: { role: 'observation-create-input' },
+  });
+
+  const groupsTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Gruppen',
+  });
+  const groupButtons = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-create-groups',
+    dataset: { role: 'observation-create-groups' },
+  });
+
+  OBSERVATION_GROUP_CODES.forEach((code) => {
+    const entry = observationGroups?.[code];
+    const label = entry?.label || code;
+    const color = entry?.color || '#6c757d';
+    const button = createEl('button', {
+      className: 'btn observation-create-group-toggle',
+      attrs: { type: 'button', style: `--group-color: ${color};` },
+      dataset: { role: 'observation-create-group', value: code },
+      text: label,
+    });
+    groupButtons.appendChild(button);
+  });
+
+  const previewTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Vorschau',
+  });
+  const previewDots = createEl('span', {
+    className: 'observation-group-dots',
+    dataset: { role: 'observation-create-preview-dots' },
+  });
+  const previewText = createEl('span', {
+    dataset: { role: 'observation-create-preview-text' },
+  });
+  const previewPill = createEl('span', {
+    className:
+      'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
+    dataset: { role: 'observation-create-preview-pill' },
+    children: [previewDots, previewText],
+  });
+  const previewEmpty = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Vorschau erscheint hier.',
+    dataset: { role: 'observation-create-preview-empty' },
+  });
+  previewPill.hidden = true;
+
+  const actions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    children: [
+      createEl('button', {
+        className: 'btn btn-primary',
+        text: 'Speichern',
+        attrs: { type: 'submit' },
+        dataset: { role: 'observation-create-save' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'observation-create-cancel' },
+      }),
+    ],
+  });
+
+  const form = createEl('form', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'observation-create-form' },
+    children: [
+      inputLabel,
+      input,
+      groupsTitle,
+      groupButtons,
+      previewTitle,
+      previewPill,
+      previewEmpty,
+      actions,
+    ],
+  });
+
+  const content = createEl('div', {
+    className: 'observation-create-overlay__content',
+    children: [form],
+  });
+
+  panel.append(header, content);
+  overlay.appendChild(panel);
+
+  return {
+    element: overlay,
+  };
+};
+
 export const buildObservationsSection = ({
   children,
   observations,
@@ -827,35 +961,11 @@ export const buildObservationsSection = ({
     observationCatalog,
     observationGroups,
   });
+  const createOverlay = buildObservationCreateOverlay({ observationGroups });
   children.forEach((child) => {
     const data = observations[child] || {};
     const topItems = buildTopItems(observationStats?.[child]);
     const isAbsent = absentSet.has(child);
-    const safeId = child.toLocaleLowerCase().replace(/[^a-z0-9]+/gi, '-');
-    const comboInputId = `observation-input-${safeId}`;
-    const comboInputLabel = createEl('label', {
-      className: 'form-label text-muted small mb-0',
-      text: 'Neue Beobachtung',
-      attrs: { for: comboInputId },
-    });
-    const comboInput = createEl('input', {
-      className: 'form-control flex-grow-1',
-      attrs: {
-        type: 'text',
-        id: comboInputId,
-        autocomplete: 'off',
-        placeholder: 'Neue Beobachtung',
-      },
-      dataset: { role: 'observation-input' },
-    });
-    comboInput.value = '';
-
-    const addButton = createEl('button', {
-      className: 'btn btn-outline-secondary btn-sm',
-      text: '+',
-      attrs: { type: 'submit', 'aria-label': 'Hinzufügen' },
-      dataset: { role: 'observation-add' },
-    });
 
     const todayTitle = createEl('p', {
       className: 'text-muted small mb-0',
@@ -886,27 +996,19 @@ export const buildObservationsSection = ({
       dataset: { role: 'observation-template-open' },
     });
 
+    const createButton = createEl('button', {
+      className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
+      text: '+ Neue Beobachtung',
+      attrs: { type: 'button' },
+      dataset: { role: 'observation-create-open' },
+    });
+
     const feedback = createEl('p', {
       className: 'text-muted small mb-0',
       text: '',
       dataset: { role: 'observation-feedback' },
     });
     feedback.hidden = true;
-
-    const comboInputRow = createEl('div', {
-      className: 'd-flex gap-2 align-items-start',
-      children: [comboInput, addButton],
-    });
-
-    const comboRow = createEl('form', {
-      className: 'd-flex flex-column gap-2',
-      dataset: { role: 'observation-form' },
-      children: [
-        comboInputLabel,
-        comboInputRow,
-        feedback,
-      ],
-    });
 
     const detail = createEl('div', {
       className: 'observation-detail d-flex flex-column gap-3 d-none',
@@ -921,7 +1023,8 @@ export const buildObservationsSection = ({
         todayTitle,
         todayList,
         templatesButton,
-        comboRow,
+        createButton,
+        feedback,
       ],
     });
     if (isAbsent) {
@@ -933,7 +1036,8 @@ export const buildObservationsSection = ({
       todayTitle.hidden = true;
       todayList.hidden = true;
       templatesButton.hidden = true;
-      comboRow.hidden = true;
+      createButton.hidden = true;
+      feedback.hidden = true;
       detail.append(absentNotice);
     }
     detail.hidden = true;
@@ -944,6 +1048,7 @@ export const buildObservationsSection = ({
     overlayHeader,
     overlayContent,
     templatesOverlay.element,
+    createOverlay.element,
   );
   overlay.appendChild(overlayPanel);
 
@@ -960,6 +1065,7 @@ export const buildObservationsSection = ({
       overlayTitle,
       closeButton,
       templatesOverlay: templatesOverlay.element,
+      createOverlay: createOverlay.element,
     },
   };
 };

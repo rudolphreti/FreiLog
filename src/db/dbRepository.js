@@ -8,6 +8,7 @@ import { getState, initStore, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 import {
   buildObservationId,
+  normalizeObservationGroups,
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
@@ -165,6 +166,72 @@ export const updateEntry = (date, patch) => {
     merged.date = ymd;
     data.days[ymd] = merged;
   });
+};
+
+export const upsertObservationCatalogEntry = (value, groups = []) => {
+  const normalizedText = normalizeObservationText(value);
+  if (!normalizedText) {
+    return '';
+  }
+
+  const normalizedGroups = normalizeObservationGroups(groups);
+  let resolvedText = normalizedText;
+
+  updateAppData((data) => {
+    const catalog = Array.isArray(data.observationCatalog)
+      ? [...data.observationCatalog]
+      : [];
+    const normalizedKey = normalizeObservationKey(normalizedText);
+    const index = catalog.findIndex(
+      (entry) => normalizeObservationKey(entry?.text || entry || '') === normalizedKey,
+    );
+
+    if (index >= 0) {
+      const existing = catalog[index];
+      const existingText =
+        typeof existing === 'string'
+          ? normalizeObservationText(existing)
+          : normalizeObservationText(existing?.text);
+      resolvedText = existingText || normalizedText;
+      const existingGroups =
+        typeof existing === 'string' ? [] : normalizeObservationGroups(existing?.groups);
+      const mergedGroups = normalizeObservationGroups([
+        ...existingGroups,
+        ...normalizedGroups,
+      ]);
+      if (typeof existing === 'string') {
+        if (mergedGroups.length) {
+          catalog[index] = {
+            id: buildObservationId(resolvedText),
+            text: resolvedText,
+            groups: mergedGroups,
+            createdAt: new Date().toISOString(),
+          };
+        }
+      } else if (mergedGroups.length) {
+        catalog[index] = {
+          ...existing,
+          text: resolvedText,
+          groups: mergedGroups,
+        };
+      }
+    } else {
+      catalog.push({
+        id: buildObservationId(normalizedText),
+        text: normalizedText,
+        groups: normalizedGroups,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    data.observationCatalog = catalog;
+    data.observationTemplates = ensureUniqueSortedStrings([
+      ...(data.observationTemplates || []),
+      resolvedText,
+    ]);
+  });
+
+  return resolvedText;
 };
 
 export const addPreset = (type, value) => {
