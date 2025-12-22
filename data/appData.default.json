@@ -38,19 +38,285 @@
     "Spiele"
   ],
   "observationTemplates": [
-    "ruhig",
-    "Konflikt",
-    "hilfsbereit",
-    "konzentriert",
-    "müde",
-    "sehr aktiv",
-    "braucht Pause",
-    "streitet",
-    "arbeitet gut in Gruppe"
+    "Aggression",
+    "App gemeinsam bauen",
+    "Bewegung zu Musik",
+    "Eigene Figuren erfinden",
+    "Eigenständiges Bauen",
+    "Empathisches Verhalten",
+    "Experimentieren und Zeichnen",
+    "Fragen stellen",
+    "Freies Basteln",
+    "Freudiges Laufen",
+    "Gerechtigkeitssinn",
+    "Hoher Bewegungsdrang",
+    "Hysterie Anfall",
+    "Klettern ohne Angst",
+    "Konflikte vermitteln",
+    "Kreatives Konstruieren",
+    "Körperliche Grenze Übertretung",
+    "Lieder singen",
+    "Melodien nachsingen",
+    "Respektlosigkeit",
+    "Rhythm wiederholen",
+    "Schimpfwörter",
+    "Stabilität testen",
+    "Tanzen",
+    "Theater spielen",
+    "Zeichnen"
   ],
   "days": {},
   "observationStats": {},
   "settings": {
     "exportMode": "day"
+  },
+  "observationCatalog": [
+    {
+      "id": "zeichnen",
+      "text": "Zeichnen",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "freies-basteln",
+      "text": "Freies Basteln",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "eigene-figuren-erfinden",
+      "text": "Eigene Figuren erfinden",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "rhythm-wiederholen",
+      "text": "Rhythm wiederholen",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "melodien-nachsingen",
+      "text": "Melodien nachsingen",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "lieder-singen",
+      "text": "Lieder singen",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "hoher-bewegungsdrang",
+      "text": "Hoher Bewegungsdrang",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "freudiges-laufen",
+      "text": "Freudiges Laufen",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "klettern-ohne-angst",
+      "text": "Klettern ohne Angst",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "eigenständiges-bauen",
+      "text": "Eigenständiges Bauen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "stabilität-testen",
+      "text": "Stabilität testen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "fragen-stellen",
+      "text": "Fragen stellen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "gerechtigkeitssinn",
+      "text": "Gerechtigkeitssinn",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "empathisches-verhalten",
+      "text": "Empathisches Verhalten",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "konflikte-vermitteln",
+      "text": "Konflikte vermitteln",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "schimpfwörter",
+      "text": "Schimpfwörter",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "körperliche-grenze-übertretung",
+      "text": "Körperliche Grenze Übertretung",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "hysterie-anfall",
+      "text": "Hysterie Anfall",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "aggression",
+      "text": "Aggression",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "respektlosigkeit",
+      "text": "Respektlosigkeit",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "kreatives-konstruieren",
+      "text": "Kreatives Konstruieren",
+      "groups": [
+        "ROT",
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "tanzen",
+      "text": "Tanzen",
+      "groups": [
+        "BLAU",
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "app-gemeinsam-bauen",
+      "text": "App gemeinsam bauen",
+      "groups": [
+        "ROT",
+        "GRUEN",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "theater-spielen",
+      "text": "Theater spielen",
+      "groups": [
+        "ROT",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "bewegung-zu-musik",
+      "text": "Bewegung zu Musik",
+      "groups": [
+        "BLAU",
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "experimentieren-und-zeichnen",
+      "text": "Experimentieren und Zeichnen",
+      "groups": [
+        "GRUEN",
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "observationGroups": {
+    "ROT": {
+      "code": "ROT",
+      "label": "künstlerisch, kreativ",
+      "color": "#d32f2f"
+    },
+    "BLAU": {
+      "code": "BLAU",
+      "label": "musikalisch",
+      "color": "#1976d2"
+    },
+    "ORANGE": {
+      "code": "ORANGE",
+      "label": "sportlich",
+      "color": "#f57c00"
+    },
+    "GRUEN": {
+      "code": "GRUEN",
+      "label": "technisch, forschend",
+      "color": "#388e3c"
+    },
+    "LILA": {
+      "code": "LILA",
+      "label": "Gesellschaft, Verhalten, Politik",
+      "color": "#7b1fa2"
+    },
+    "SCHWARZ": {
+      "code": "SCHWARZ",
+      "label": "Alarm",
+      "color": "#212121"
+    }
   }
 }

@@ -6,6 +6,11 @@ import {
 import { clearAppData } from '../state/persistence.js';
 import { getState, initStore, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
+import {
+  buildObservationId,
+  normalizeObservationKey,
+  normalizeObservationText,
+} from '../utils/observationCatalog.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -163,13 +168,18 @@ export const updateEntry = (date, patch) => {
 };
 
 export const addPreset = (type, value) => {
-  const trimmed = typeof value === 'string' ? value.trim() : '';
+  const trimmed =
+    type === 'observations'
+      ? normalizeObservationText(value)
+      : typeof value === 'string'
+        ? value.trim()
+        : '';
   if (!trimmed) {
     return;
   }
 
   const presets = getPresets(type);
-  if (presets.includes(trimmed)) {
+  if (type !== 'observations' && presets.includes(trimmed)) {
     return;
   }
 
@@ -183,6 +193,23 @@ export const addPreset = (type, value) => {
     }
 
     if (type === 'observations') {
+      const catalog = Array.isArray(data.observationCatalog)
+        ? data.observationCatalog
+        : [];
+      const normalizedKey = normalizeObservationKey(trimmed);
+      const existing = catalog.find(
+        (entry) =>
+          normalizeObservationKey(entry?.text || '') === normalizedKey,
+      );
+      if (!existing) {
+        catalog.push({
+          id: buildObservationId(trimmed),
+          text: trimmed,
+          groups: [],
+          createdAt: new Date().toISOString(),
+        });
+      }
+      data.observationCatalog = catalog;
       data.observationTemplates = ensureUniqueSortedStrings([
         ...(data.observationTemplates || []),
         trimmed,

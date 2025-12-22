@@ -1,7 +1,49 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import { isValidYmd } from '../utils/date.js';
+import {
+  OBSERVATION_GROUP_CODES,
+  buildObservationId,
+  getObservationCatalogLabels,
+  normalizeObservationGroups,
+  normalizeObservationKey,
+  normalizeObservationText,
+} from '../utils/observationCatalog.js';
 
 export const SCHEMA_VERSION = 2;
+
+const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
+const DEFAULT_OBSERVATION_GROUPS = {
+  ROT: {
+    code: 'ROT',
+    label: 'künstlerisch, kreativ',
+    color: '#d32f2f',
+  },
+  BLAU: {
+    code: 'BLAU',
+    label: 'musikalisch',
+    color: '#1976d2',
+  },
+  ORANGE: {
+    code: 'ORANGE',
+    label: 'sportlich',
+    color: '#f57c00',
+  },
+  GRUEN: {
+    code: 'GRUEN',
+    label: 'technisch, forschend',
+    color: '#388e3c',
+  },
+  LILA: {
+    code: 'LILA',
+    label: 'Gesellschaft, Verhalten, Politik',
+    color: '#7b1fa2',
+  },
+  SCHWARZ: {
+    code: 'SCHWARZ',
+    label: 'Alarm',
+    color: '#212121',
+  },
+};
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -175,6 +217,83 @@ const normalizeUi = (ui) => {
   };
 };
 
+const normalizeObservationGroupsDictionary = (value, fallback) => {
+  const source = isPlainObject(value) ? value : {};
+  const fallbackSource = isPlainObject(fallback) ? fallback : {};
+  const result = {};
+
+  OBSERVATION_GROUP_CODES.forEach((code) => {
+    const entry =
+      (isPlainObject(source[code]) && source[code]) ||
+      (isPlainObject(fallbackSource[code]) && fallbackSource[code]) ||
+      DEFAULT_OBSERVATION_GROUPS[code] ||
+      {};
+    const label =
+      typeof entry.label === 'string' && entry.label.trim()
+        ? entry.label.trim()
+        : DEFAULT_OBSERVATION_GROUPS[code].label;
+    const color =
+      typeof entry.color === 'string' && entry.color.trim()
+        ? entry.color.trim()
+        : DEFAULT_OBSERVATION_GROUPS[code].color;
+
+    result[code] = {
+      code,
+      label,
+      color,
+    };
+  });
+
+  return result;
+};
+
+const normalizeObservationCatalog = (value, fallback = []) => {
+  const source = Array.isArray(value)
+    ? value
+    : Array.isArray(fallback)
+      ? fallback
+      : [];
+  const seen = new Set();
+  const result = [];
+
+  source.forEach((item) => {
+    const rawText =
+      typeof item === 'string'
+        ? item
+        : item && typeof item === 'object'
+          ? item.text
+          : '';
+    const text = normalizeObservationText(rawText);
+    if (!text) {
+      return;
+    }
+    const key = normalizeObservationKey(text);
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+
+    const groups = normalizeObservationGroups(item?.groups);
+    const createdAt =
+      typeof item?.createdAt === 'string' && item.createdAt.trim()
+        ? item.createdAt.trim()
+        : DEFAULT_OBSERVATION_CREATED_AT;
+    const id =
+      typeof item?.id === 'string' && item.id.trim()
+        ? item.id.trim()
+        : buildObservationId(text);
+
+    result.push({
+      id,
+      text,
+      groups,
+      createdAt,
+    });
+  });
+
+  return result;
+};
+
 export const buildObservationStats = (days) => {
   if (!isPlainObject(days)) {
     return {};
@@ -216,6 +335,8 @@ export const createEmptyAppData = () => ({
   children: [],
   angebote: [],
   observationTemplates: [],
+  observationCatalog: [],
+  observationGroups: { ...DEFAULT_OBSERVATION_GROUPS },
   days: {},
   observationStats: {},
   settings: {
@@ -242,6 +363,18 @@ export const normalizeAppData = (source, fallback = {}) => {
       : fallbackData.observationTemplates,
   );
 
+  const observationCatalog = normalizeObservationCatalog(
+    Array.isArray(base.observationCatalog)
+      ? base.observationCatalog
+      : observationTemplates,
+    fallbackData.observationCatalog || fallbackData.observationTemplates,
+  );
+
+  const observationGroups = normalizeObservationGroupsDictionary(
+    base.observationGroups,
+    fallbackData.observationGroups,
+  );
+
   const daysSource =
     base.days || base.records?.entriesByDate || fallbackData.days || {};
   const days = sanitizeDaysByDate(daysSource, children);
@@ -262,7 +395,9 @@ export const normalizeAppData = (source, fallback = {}) => {
         : SCHEMA_VERSION,
     children,
     angebote,
-    observationTemplates,
+    observationTemplates: getObservationCatalogLabels(observationCatalog),
+    observationCatalog,
+    observationGroups,
     days,
     observationStats: buildObservationStats(days),
     settings: {
