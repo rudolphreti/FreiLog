@@ -8,10 +8,7 @@ import {
   updateEntry,
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
-import {
-  normalizeObservationGroups,
-  normalizeObservationKey,
-} from '../utils/observationCatalog.js';
+import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
