@@ -3,6 +3,7 @@ import { todayYmd } from '../utils/date.js';
 import {
   OBSERVATION_GROUP_CODES,
   normalizeObservationKey,
+  normalizeObservationGroups,
 } from '../utils/observationCatalog.js';
 
 export const buildHeader = ({ selectedDate }) => {
@@ -217,6 +218,76 @@ const buildPill = ({ label, removeLabel, removeRole, value }) => {
   });
 };
 
+const buildObservationCatalogGroupMap = (catalog) => {
+  const entries = Array.isArray(catalog) ? catalog : [];
+  const groups = new Map();
+
+  entries.forEach((entry) => {
+    const text =
+      typeof entry === 'string'
+        ? entry.trim()
+        : typeof entry?.text === 'string'
+          ? entry.text.trim()
+          : '';
+    if (!text) {
+      return;
+    }
+    const normalizedGroups = normalizeObservationGroups(entry?.groups || []);
+    groups.set(normalizeObservationKey(text), normalizedGroups);
+  });
+
+  return groups;
+};
+
+const getOrderedObservationGroups = (groups) => {
+  const normalized = normalizeObservationGroups(groups);
+  if (!normalized.length) {
+    return [];
+  }
+  if (!normalized.includes('SCHWARZ')) {
+    return normalized;
+  }
+  return ['SCHWARZ', ...normalized.filter((group) => group !== 'SCHWARZ')];
+};
+
+const buildObservationGroupDots = (groups, observationGroups) => {
+  const ordered = getOrderedObservationGroups(groups);
+  if (!ordered.length) {
+    return null;
+  }
+
+  const maxDots = 3;
+  const showOverflow = ordered.length > maxDots;
+  const visible = showOverflow ? ordered.slice(0, maxDots - 1) : ordered;
+
+  const wrapper = createEl('span', { className: 'observation-group-dots' });
+
+  visible.forEach((group) => {
+    const color =
+      observationGroups && observationGroups[group]?.color
+        ? observationGroups[group].color
+        : '#6c757d';
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot',
+        attrs: { style: `--group-color: ${color};`, 'aria-hidden': 'true' },
+      }),
+    );
+  });
+
+  if (showOverflow) {
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot observation-group-dot--overflow',
+        text: '+',
+        attrs: { 'aria-hidden': 'true' },
+      }),
+    );
+  }
+
+  return wrapper;
+};
+
 export const buildAngebotSection = ({
   angebote,
   selectedAngebote,
@@ -287,15 +358,28 @@ export const buildAngebotSection = ({
   };
 };
 
-const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
+const buildPillList = ({
+  items,
+  getLabel,
+  getRemoveLabel,
+  removeRole,
+  getGroups,
+  observationGroups,
+}) => {
   const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
   items.forEach((item) => {
     const label = getLabel(item);
+    const groups = getGroups ? getGroups(item) : [];
+    const groupDots = buildObservationGroupDots(groups, observationGroups);
+    const hasBlackGroup = normalizeObservationGroups(groups).includes('SCHWARZ');
     const pill = createEl('span', {
       className:
-        'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
+        `badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill${
+          hasBlackGroup ? ' observation-group-outline' : ''
+        }`,
       dataset: { value: label },
       children: [
+        groupDots,
         createEl('span', { text: label }),
         createEl('button', {
           className: 'btn btn-link btn-sm text-white p-0 ms-2',
@@ -311,15 +395,21 @@ const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
   return list;
 };
 
-const buildTopList = (items) => {
+const buildTopList = (items, getGroups, observationGroups) => {
   const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
   items.forEach(({ label, count }) => {
+    const groups = getGroups ? getGroups(label) : [];
+    const groupDots = buildObservationGroupDots(groups, observationGroups);
+    const hasBlackGroup = normalizeObservationGroups(groups).includes('SCHWARZ');
     const button = createEl('button', {
       className:
-        'btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2',
+        `btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2${
+          hasBlackGroup ? ' observation-group-outline' : ''
+        }`,
       attrs: { type: 'button' },
       dataset: { role: 'observation-top-add', value: label },
       children: [
+        groupDots,
         createEl('span', { text: label }),
         createEl('span', {
           className: 'badge text-bg-light border',
@@ -390,7 +480,10 @@ const buildObservationTemplateEntries = (templates, catalog) => {
     if (!text) {
       return;
     }
-    catalogGroups.set(normalizeObservationKey(text), entry?.groups || []);
+    catalogGroups.set(
+      normalizeObservationKey(text),
+      normalizeObservationGroups(entry?.groups || []),
+    );
   });
 
   return normalized
@@ -419,7 +512,7 @@ const buildTemplateGroups = (templates) => {
         }
         return {
           text,
-          groups: Array.isArray(item.groups) ? item.groups : [],
+          groups: normalizeObservationGroups(item.groups),
         };
       }
       return null;
@@ -596,10 +689,13 @@ const buildObservationTemplatesOverlay = ({
     });
     items.forEach((item) => {
       const groupsValue = Array.isArray(item.groups) ? item.groups.join(',') : '';
+      const groupDots = buildObservationGroupDots(item.groups, observationGroups);
+      const hasBlackGroup = normalizeObservationGroups(item.groups).includes('SCHWARZ');
       const button = createEl('button', {
         className:
-          'btn btn-outline-secondary observation-chip observation-template-button',
-        text: item.text,
+          `btn btn-outline-secondary observation-chip observation-template-button${
+            hasBlackGroup ? ' observation-group-outline' : ''
+          }`,
         attrs: { type: 'button' },
         dataset: {
           role: 'observation-template-add',
@@ -607,6 +703,10 @@ const buildObservationTemplatesOverlay = ({
           initial,
           groups: groupsValue,
         },
+        children: [
+          groupDots,
+          createEl('span', { text: item.text }),
+        ],
       });
       buttons.appendChild(button);
     });
@@ -660,6 +760,9 @@ export const buildObservationsSection = ({
   });
   const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   const absentSet = new Set(absentChildren || []);
+  const observationGroupMap = buildObservationCatalogGroupMap(observationCatalog);
+  const getGroupsForLabel = (label) =>
+    observationGroupMap.get(normalizeObservationKey(label)) || [];
 
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-child-list',
@@ -764,10 +867,12 @@ export const buildObservationsSection = ({
       getLabel: (item) => item,
       getRemoveLabel: (label) => `${label} entfernen`,
       removeRole: 'observation-today-remove',
+      getGroups: (item) => getGroupsForLabel(item),
+      observationGroups,
     });
 
     const topList = topItems.length
-      ? buildTopList(topItems)
+      ? buildTopList(topItems, getGroupsForLabel, observationGroups)
       : createEl('p', {
           className: 'text-muted small mb-0',
           text: 'Noch keine Daten',
