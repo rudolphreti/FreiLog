@@ -190,6 +190,7 @@ export const renderApp = (root, state) => {
     overlayTitle: observationsSection.refs.overlayTitle,
     closeButton: observationsSection.refs.closeButton,
     templatesOverlay: observationsSection.refs.templatesOverlay,
+    editOverlay: observationsSection.refs.editOverlay,
     createOverlay: observationsSection.refs.createOverlay,
     date: selectedDate,
     observationGroups,
