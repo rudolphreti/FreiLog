@@ -384,6 +384,68 @@ const updateTemplateSelectionState = (templatesOverlay, date, child) => {
   });
 };
 
+const getTemplateUiState = (templatesOverlay) => {
+  if (!templatesOverlay) {
+    return null;
+  }
+  return {
+    templateFilter: templatesOverlay.dataset.templateFilter || 'ALL',
+    templateQuery: templatesOverlay.dataset.templateQuery || '',
+    templateGroups: templatesOverlay.dataset.templateGroups || '',
+    templateGroupMode: templatesOverlay.dataset.templateGroupMode || 'AND',
+  };
+};
+
+const restoreTemplateUiState = (templatesOverlay, state) => {
+  if (!templatesOverlay || !state) {
+    return;
+  }
+  templatesOverlay.dataset.templateFilter = state.templateFilter || 'ALL';
+  templatesOverlay.dataset.templateQuery = state.templateQuery || '';
+  templatesOverlay.dataset.templateGroups = state.templateGroups || '';
+  templatesOverlay.dataset.templateGroupMode =
+    state.templateGroupMode === 'OR' ? 'OR' : 'AND';
+
+  const filterButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-letter"]',
+  );
+  filterButtons.forEach((button) => {
+    const isActive = button.dataset.value === templatesOverlay.dataset.templateFilter;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const groupButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-group-filter"]',
+  );
+  const selectedGroups = normalizeTemplateGroups(
+    templatesOverlay.dataset.templateGroups || '',
+  );
+  groupButtons.forEach((button) => {
+    const isActive = selectedGroups.includes(button.dataset.value || '');
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const groupModeButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-group-mode"]',
+  );
+  groupModeButtons.forEach((button) => {
+    const isActive = button.dataset.value === templatesOverlay.dataset.templateGroupMode;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const searchInput = templatesOverlay.querySelector(
+    '[data-role="observation-template-search"]',
+  );
+  if (isInputElement(searchInput)) {
+    searchInput.value = templatesOverlay.dataset.templateQuery || '';
+  }
+
+  applyTemplateFilters(templatesOverlay);
+};
+
 const showFeedback = (card, message) => {
   const feedback = card.querySelector('[data-role="observation-feedback"]');
   if (!isHtmlElement(feedback)) {
@@ -957,6 +1019,7 @@ export const bindObservations = ({
       pendingTemplateRestore = {
         child: activeChild,
         scrollTop: getTemplateScrollTop(),
+        templateState: getTemplateUiState(templatesOverlay),
       };
     }
     updateObservationCatalogEntry({
@@ -1057,6 +1120,7 @@ export const bindObservations = ({
           child: activeChild,
           scrollTop,
           focusSearch: false,
+          templateState: getTemplateUiState(templatesOverlay),
         };
         updateTemplateButtonState(templateButton, !isSelected);
         if (isSelected) {
@@ -1261,9 +1325,15 @@ export const bindObservations = ({
   }
 
   if (pendingTemplateRestore?.child) {
-    const { child, scrollTop, focusSearch = true } = pendingTemplateRestore;
+    const {
+      child,
+      scrollTop,
+      focusSearch = true,
+      templateState = null,
+    } = pendingTemplateRestore;
     pendingTemplateRestore = null;
     if (openOverlay(child, { updateHistory: false })) {
+      restoreTemplateUiState(templatesOverlay, templateState);
       openTemplateOverlay(child, { focusSearch });
     }
     requestAnimationFrame(() => {
