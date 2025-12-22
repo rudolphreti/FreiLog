@@ -308,9 +308,13 @@ export const exportJson = (mode) => {
   }
 
   if (exportMode === 'all') {
+    const payload = {
+      ...db,
+      groupDictionary: db.observationGroups,
+    };
     return {
       filename: `freilog-${todayYmd()}-all.json`,
-      jsonString: JSON.stringify(db, null, 2),
+      jsonString: JSON.stringify(payload, null, 2),
     };
   }
 
@@ -331,12 +335,39 @@ export const importJson = (obj) => {
   }
 
   const childrenList = getState().db?.children || [];
-  const isFullDb =
-    typeof obj.schemaVersion === 'number' &&
-    (Array.isArray(obj.children) || obj.days);
+  const hasSchemaVersion = typeof obj.schemaVersion === 'number';
+  const hasCatalog = Array.isArray(obj.observationCatalog);
+  const hasValidCatalog =
+    hasCatalog &&
+    obj.observationCatalog.every(
+      (item) =>
+        item &&
+        typeof item === 'object' &&
+        typeof item.text === 'string' &&
+        item.text.trim(),
+    );
 
-  if (isFullDb) {
-    const normalized = normalizeAppData(obj, getState().db || {});
+  if (hasSchemaVersion && hasCatalog) {
+    if (!hasValidCatalog) {
+      return;
+    }
+
+    const sanitizedCatalog = obj.observationCatalog.map((item) => ({
+      ...item,
+      groups: Array.isArray(item.groups) ? item.groups : [],
+    }));
+    const importedGroups =
+      obj.groupDictionary && typeof obj.groupDictionary === 'object'
+        ? obj.groupDictionary
+        : obj.observationGroups;
+    const normalized = normalizeAppData(
+      {
+        ...obj,
+        observationCatalog: sanitizedCatalog,
+        observationGroups: importedGroups,
+      },
+      getState().db || {},
+    );
 
     updateAppData((data) => {
       const merged = normalizeAppData(normalized, data);
