@@ -8,7 +8,10 @@ import {
   updateEntry,
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
-import { normalizeObservationGroups } from '../utils/observationCatalog.js';
+import {
+  normalizeObservationGroups,
+  normalizeObservationKey,
+} from '../utils/observationCatalog.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -190,6 +193,14 @@ const normalizeTemplateGroups = (value) =>
         .filter(Boolean)
     : [];
 
+const updateTemplateButtonState = (button, isSelected) => {
+  if (!isHtmlElement(button)) {
+    return;
+  }
+  button.classList.toggle('is-selected', isSelected);
+  button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+};
+
 const matchesTemplateGroups = ({ selectedGroups, buttonGroups, mode }) => {
   if (!selectedGroups.length) {
     return true;
@@ -348,6 +359,33 @@ const setTemplateQuery = (container, query) => {
 };
 
 const feedbackTimeouts = new WeakMap();
+
+const getSelectedObservationKeys = (date, child) => {
+  if (!child) {
+    return new Set();
+  }
+  const entry = getEntry(date);
+  const tags = normalizeObservationList(getObservationTags(entry, child));
+  return new Set(
+    tags
+      .map((tag) => normalizeObservationKey(tag))
+      .filter(Boolean),
+  );
+};
+
+const updateTemplateSelectionState = (templatesOverlay, date, child) => {
+  if (!templatesOverlay || !child) {
+    return;
+  }
+  const selectedKeys = getSelectedObservationKeys(date, child);
+  const buttons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-add"]',
+  );
+  buttons.forEach((button) => {
+    const key = normalizeObservationKey(button.dataset.value || '');
+    updateTemplateButtonState(button, key && selectedKeys.has(key));
+  });
+};
 
 const showFeedback = (card, message) => {
   const feedback = card.querySelector('[data-role="observation-feedback"]');
@@ -530,7 +568,7 @@ export const bindObservations = ({
     document.body.classList.remove('observation-overlay-open');
   };
 
-  const openTemplateOverlay = (child) => {
+  const openTemplateOverlay = (child, { focusSearch = true } = {}) => {
     if (!child) {
       return;
     }
@@ -540,10 +578,11 @@ export const bindObservations = ({
     templatesOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-template-open');
     applyTemplateFilters(templatesOverlay);
+    updateTemplateSelectionState(templatesOverlay, date, child);
     const searchInput = templatesOverlay.querySelector(
       '[data-role="observation-template-search"]',
     );
-    if (isInputElement(searchInput)) {
+    if (focusSearch && isInputElement(searchInput)) {
       searchInput.focus();
     }
   };
@@ -1013,7 +1052,21 @@ export const bindObservations = ({
       }
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
-        addTagForChild(date, activeChild, tag);
+        const selectedKeys = getSelectedObservationKeys(date, activeChild);
+        const tagKey = normalizeObservationKey(tag);
+        const isSelected = tagKey && selectedKeys.has(tagKey);
+        const scrollTop = getTemplateScrollTop();
+        pendingTemplateRestore = {
+          child: activeChild,
+          scrollTop,
+          focusSearch: false,
+        };
+        updateTemplateButtonState(templateButton, !isSelected);
+        if (isSelected) {
+          removeObservationForChild(date, activeChild, tag);
+        } else {
+          addTagForChild(date, activeChild, tag);
+        }
       }
       return;
     }
@@ -1211,10 +1264,10 @@ export const bindObservations = ({
   }
 
   if (pendingTemplateRestore?.child) {
-    const { child, scrollTop } = pendingTemplateRestore;
+    const { child, scrollTop, focusSearch = true } = pendingTemplateRestore;
     pendingTemplateRestore = null;
     if (openOverlay(child, { updateHistory: false })) {
-      openTemplateOverlay(child);
+      openTemplateOverlay(child, { focusSearch });
     }
     requestAnimationFrame(() => {
       const scroll = templatesOverlay.querySelector(
