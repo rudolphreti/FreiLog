@@ -132,6 +132,8 @@ export const renderApp = (root, state) => {
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const observationStats = db.observationStats || {};
+  const observationCatalog = db.observationCatalog || [];
+  const observationGroups = db.observationGroups || {};
 
   const header = buildHeader({ selectedDate });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
@@ -146,6 +148,8 @@ export const renderApp = (root, state) => {
     presets: observationPresets,
     observationStats,
     absentChildren,
+    observationCatalog,
+    observationGroups,
   });
 
   if (!drawerShell) {

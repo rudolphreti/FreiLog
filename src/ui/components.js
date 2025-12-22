@@ -1,5 +1,9 @@
 import { createEl } from './dom.js';
 import { todayYmd } from '../utils/date.js';
+import {
+  OBSERVATION_GROUP_CODES,
+  normalizeObservationKey,
+} from '../utils/observationCatalog.js';
 
 export const buildHeader = ({ selectedDate }) => {
   const header = createEl('header', {
@@ -376,20 +380,62 @@ export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
   return { element: wrapper, buttons };
 };
 
+const buildObservationTemplateEntries = (templates, catalog) => {
+  const normalized = Array.isArray(templates) ? templates : [];
+  const catalogEntries = Array.isArray(catalog) ? catalog : [];
+  const catalogGroups = new Map();
+
+  catalogEntries.forEach((entry) => {
+    const text = typeof entry?.text === 'string' ? entry.text.trim() : '';
+    if (!text) {
+      return;
+    }
+    catalogGroups.set(normalizeObservationKey(text), entry?.groups || []);
+  });
+
+  return normalized
+    .filter((item) => typeof item === 'string' && item.trim())
+    .map((item) => {
+      const text = item.trim();
+      return {
+        text,
+        groups: catalogGroups.get(normalizeObservationKey(text)) || [],
+      };
+    });
+};
+
 const buildTemplateGroups = (templates) => {
   const normalized = Array.isArray(templates) ? templates : [];
-  const sorted = [...normalized]
-    .filter((item) => typeof item === 'string' && item.trim())
-    .map((item) => item.trim())
-    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+  const entries = normalized
+    .map((item) => {
+      if (typeof item === 'string') {
+        const text = item.trim();
+        return text ? { text, groups: [] } : null;
+      }
+      if (item && typeof item === 'object') {
+        const text = typeof item.text === 'string' ? item.text.trim() : '';
+        if (!text) {
+          return null;
+        }
+        return {
+          text,
+          groups: Array.isArray(item.groups) ? item.groups : [],
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
+  const sorted = [...entries].sort((a, b) =>
+    a.text.localeCompare(b.text, 'de', { sensitivity: 'base' }),
+  );
 
   const groups = new Map();
-  sorted.forEach((label) => {
-    const initial = label[0].toLocaleUpperCase();
+  sorted.forEach((entry) => {
+    const initial = entry.text[0].toLocaleUpperCase();
     if (!groups.has(initial)) {
       groups.set(initial, []);
     }
-    groups.get(initial).push(label);
+    groups.get(initial).push(entry);
   });
 
   return {
@@ -400,8 +446,16 @@ const buildTemplateGroups = (templates) => {
   };
 };
 
-const buildObservationTemplatesOverlay = ({ templates }) => {
-  const { groups, initials } = buildTemplateGroups(templates);
+const buildObservationTemplatesOverlay = ({
+  templates,
+  observationCatalog,
+  observationGroups,
+}) => {
+  const templateEntries = buildObservationTemplateEntries(
+    templates,
+    observationCatalog,
+  );
+  const { groups, initials } = buildTemplateGroups(templateEntries);
   const hasTemplates = groups.size > 0;
   const overlay = createEl('div', {
     className: 'observation-templates-overlay',
@@ -409,6 +463,8 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
       role: 'observation-templates-overlay',
       templateFilter: 'ALL',
       templateQuery: '',
+      templateGroups: '',
+      templateGroupMode: 'AND',
     },
     attrs: { 'aria-hidden': 'true' },
   });
@@ -433,6 +489,57 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
     text: 'Gespeicherte Beobachtungen',
   });
   header.append(closeButton, title);
+
+  const groupFilterBar = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-templates__group-filters',
+  });
+
+  const addGroupButton = (code) => {
+    const color =
+      observationGroups && observationGroups[code]?.color
+        ? observationGroups[code].color
+        : '#6c757d';
+    const button = createEl('button', {
+      className: 'btn btn-sm observation-group-pill',
+      text: code,
+      attrs: {
+        type: 'button',
+        'aria-pressed': 'false',
+        style: `--group-color: ${color};`,
+      },
+      dataset: { role: 'observation-template-group-filter', value: code },
+    });
+    groupFilterBar.appendChild(button);
+  };
+
+  OBSERVATION_GROUP_CODES.forEach((code) => addGroupButton(code));
+
+  const groupModeToggle = createEl('div', {
+    className: 'btn-group btn-group-sm observation-templates__group-mode',
+    attrs: { role: 'group', 'aria-label': 'Gruppenfilter Modus' },
+  });
+
+  const addGroupModeButton = (label, value, isActive = false) => {
+    const button = createEl('button', {
+      className: `btn btn-outline-secondary${isActive ? ' active' : ''}`,
+      text: label,
+      attrs: {
+        type: 'button',
+        'aria-pressed': isActive ? 'true' : 'false',
+      },
+      dataset: { role: 'observation-template-group-mode', value },
+    });
+    groupModeToggle.appendChild(button);
+  };
+
+  addGroupModeButton('UND', 'AND', true);
+  addGroupModeButton('ODER', 'OR');
+
+  const groupControls = createEl('div', {
+    className:
+      'd-flex flex-column flex-md-row gap-2 align-items-start observation-templates__group-controls',
+    children: [groupFilterBar, groupModeToggle],
+  });
 
   const filterBar = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-templates__filters',
@@ -487,16 +594,18 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
       className: 'd-flex flex-wrap gap-2 observation-templates__group-buttons',
       dataset: { role: 'observation-template-group' },
     });
-    items.forEach((label) => {
+    items.forEach((item) => {
+      const groupsValue = Array.isArray(item.groups) ? item.groups.join(',') : '';
       const button = createEl('button', {
         className:
           'btn btn-outline-secondary observation-chip observation-template-button',
-        text: label,
+        text: item.text,
         attrs: { type: 'button' },
         dataset: {
           role: 'observation-template-add',
-          value: label,
+          value: item.text,
           initial,
+          groups: groupsValue,
         },
       });
       buttons.appendChild(button);
@@ -514,7 +623,7 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
 
   const content = createEl('div', {
     className: 'mt-3 d-flex flex-column gap-3',
-    children: hasTemplates ? [controls, list, empty] : [empty],
+    children: hasTemplates ? [groupControls, controls, list, empty] : [empty],
   });
 
   const scrollContent = createEl('div', {
@@ -543,6 +652,8 @@ export const buildObservationsSection = ({
   presets,
   observationStats,
   absentChildren,
+  observationCatalog,
+  observationGroups,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
@@ -610,6 +721,8 @@ export const buildObservationsSection = ({
   });
   const templatesOverlay = buildObservationTemplatesOverlay({
     templates: presets,
+    observationCatalog,
+    observationGroups,
   });
   children.forEach((child) => {
     const data = observations[child] || {};

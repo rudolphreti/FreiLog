@@ -175,6 +175,34 @@ body {
   flex: 1;
 }
 
+.observation-templates__group-controls {
+  align-items: center;
+}
+
+.observation-templates__group-filters {
+  flex: 1;
+}
+
+.observation-group-pill {
+  --group-color: #6c757d;
+  background-color: transparent;
+  border: 1px solid var(--group-color);
+  border-radius: 999px;
+  color: var(--group-color);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+}
+
+.observation-group-pill.active {
+  background-color: var(--group-color);
+  color: #fff;
+}
+
+.observation-templates__group-mode .btn {
+  border-radius: 999px;
+}
+
 .observation-templates__search {
   max-width: 240px;
 }
