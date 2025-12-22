@@ -723,9 +723,6 @@ const buildObservationTemplatesOverlay = ({
       const groupsValue = Array.isArray(item.groups) ? item.groups.join(',') : '';
       const groupDots = buildObservationGroupDots(item.groups, observationGroups);
       const hasBlackGroup = normalizeObservationGroups(item.groups).includes('SCHWARZ');
-      const entry = createEl('div', {
-        className: 'observation-template-entry d-flex flex-wrap align-items-center gap-2',
-      });
       const button = createEl('button', {
         className:
           `btn btn-outline-secondary observation-chip observation-template-button${
@@ -740,18 +737,7 @@ const buildObservationTemplatesOverlay = ({
         },
         children: [groupDots, createEl('span', { text: item.text })],
       });
-      const editButton = createEl('button', {
-        className: 'btn btn-outline-secondary btn-sm observation-template-edit',
-        text: 'Bearbeiten',
-        attrs: { type: 'button', 'aria-label': `${item.text} bearbeiten` },
-        dataset: {
-          role: 'observation-template-edit',
-          value: item.text,
-          groups: groupsValue,
-        },
-      });
-      entry.append(button, editButton);
-      buttons.appendChild(entry);
+      buttons.appendChild(button);
     });
     group.append(heading, buttons);
     list.appendChild(group);

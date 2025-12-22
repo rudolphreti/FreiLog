@@ -1004,22 +1004,6 @@ export const bindObservations = ({
       return;
     }
 
-    const editButton = target.closest(
-      '[data-role="observation-template-edit"]',
-    );
-    if (editButton) {
-      const text = editButton.dataset.value;
-      const groups = normalizeObservationGroups(
-        typeof editButton.dataset.groups === 'string'
-          ? editButton.dataset.groups.split(',')
-          : [],
-      );
-      if (text) {
-        openEditOverlay({ text, groups });
-      }
-      return;
-    }
-
     const templateButton = target.closest(
       '[data-role="observation-template-add"]',
     );

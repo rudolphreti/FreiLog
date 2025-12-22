@@ -387,11 +387,6 @@ body {
   border-radius: 0.75rem;
 }
 
-.observation-template-edit {
-  border-radius: 999px;
-  min-height: 40px;
-}
-
 .observation-chip {
   border-radius: 999px;
   font-size: 0.85rem;
