@@ -190,7 +190,9 @@ export const renderApp = (root, state) => {
     overlayTitle: observationsSection.refs.overlayTitle,
     closeButton: observationsSection.refs.closeButton,
     templatesOverlay: observationsSection.refs.templatesOverlay,
+    createOverlay: observationsSection.refs.createOverlay,
     date: selectedDate,
+    observationGroups,
   });
 
   bindDrawerSections(drawerContentRefs?.sections);

@@ -125,6 +125,10 @@ body {
   overflow: hidden;
 }
 
+.observation-overlay__panel.is-create-open .observation-overlay__content {
+  overflow: hidden;
+}
+
 .observation-overlay__header {
   position: sticky;
   top: 0;
@@ -202,6 +206,54 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+.observation-create-overlay {
+  position: absolute;
+  inset: 0;
+  background: #f5f7fb;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 4;
+}
+
+.observation-create-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.observation-create-overlay__panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fb;
+}
+
+.observation-create-overlay__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: calc(1rem + env(safe-area-inset-top)) 1.25rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.observation-create-overlay__close {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.observation-create-overlay__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
 .observation-templates__filters {
   flex: 1;
 }
@@ -226,6 +278,22 @@ body {
 }
 
 .observation-group-pill.active {
+  background-color: var(--group-color);
+  color: #fff;
+}
+
+.observation-create-group-toggle {
+  border-radius: 999px;
+  border: 2px solid var(--group-color);
+  color: var(--group-color);
+  font-weight: 600;
+  padding: 0.5rem 0.85rem;
+  min-height: 44px;
+  flex: 1 1 200px;
+  text-align: left;
+}
+
+.observation-create-group-toggle.active {
   background-color: var(--group-color);
   color: #fff;
 }
@@ -278,6 +346,18 @@ body.observation-overlay-open {
   }
 
   .observation-templates-overlay__content {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .observation-create-overlay__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
+  }
+
+  .observation-create-overlay__content {
     padding: 1rem;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
