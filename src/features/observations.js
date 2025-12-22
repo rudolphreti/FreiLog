@@ -178,9 +178,37 @@ const findExistingPreset = (presets, value) => {
 const normalizeTemplateQuery = (value) =>
   typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
 
+const normalizeTemplateGroups = (value) =>
+  typeof value === 'string'
+    ? value
+        .split(',')
+        .map((group) => group.trim().toLocaleUpperCase())
+        .filter(Boolean)
+    : [];
+
+const matchesTemplateGroups = ({ selectedGroups, buttonGroups, mode }) => {
+  if (!selectedGroups.length) {
+    return true;
+  }
+  if (!buttonGroups.length) {
+    return false;
+  }
+
+  if (mode === 'OR') {
+    return selectedGroups.some((group) => buttonGroups.includes(group));
+  }
+
+  return selectedGroups.every((group) => buttonGroups.includes(group));
+};
+
 const applyTemplateFilters = (container) => {
   const selectedInitial = container.dataset.templateFilter || 'ALL';
   const normalizedQuery = normalizeTemplateQuery(container.dataset.templateQuery || '');
+  const selectedGroups = normalizeTemplateGroups(
+    container.dataset.templateGroups || '',
+  );
+  const groupMode =
+    container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
   const templateButtons = container.querySelectorAll(
     '[data-role="observation-template-add"]',
   );
@@ -203,12 +231,18 @@ const applyTemplateFilters = (container) => {
   templateButtons.forEach((button) => {
     const initial = button.dataset.initial || '';
     const label = button.dataset.value || '';
+    const buttonGroups = normalizeTemplateGroups(button.dataset.groups || '');
     const matchesInitial =
       selectedInitial === 'ALL' || initial === selectedInitial;
     const matchesQuery = normalizedQuery
       ? label.toLocaleLowerCase().includes(normalizedQuery)
       : true;
-    button.hidden = !(matchesInitial && matchesQuery);
+    const matchesGroups = matchesTemplateGroups({
+      selectedGroups,
+      buttonGroups,
+      mode: groupMode,
+    });
+    button.hidden = !(matchesInitial && matchesQuery && matchesGroups);
   });
 
   let visibleCount = 0;
@@ -246,6 +280,55 @@ const setTemplateFilter = (container, selected) => {
   container.dataset.templateFilter = next;
   const buttons = container.querySelectorAll(
     '[data-role="observation-template-letter"]',
+  );
+  buttons.forEach((button) => {
+    const isActive = button.dataset.value === next;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  applyTemplateFilters(container);
+};
+
+const setTemplateGroups = (container, groups) => {
+  const normalized = Array.isArray(groups)
+    ? groups
+        .map((group) => (typeof group === 'string' ? group.trim() : ''))
+        .filter(Boolean)
+        .map((group) => group.toLocaleUpperCase())
+    : [];
+  container.dataset.templateGroups = normalized.join(',');
+  const buttons = container.querySelectorAll(
+    '[data-role="observation-template-group-filter"]',
+  );
+  buttons.forEach((button) => {
+    const isActive = normalized.includes(button.dataset.value || '');
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  applyTemplateFilters(container);
+};
+
+const toggleTemplateGroup = (container, group) => {
+  if (!group) {
+    return;
+  }
+  const selected = new Set(
+    normalizeTemplateGroups(container.dataset.templateGroups || ''),
+  );
+  const normalized = group.trim().toLocaleUpperCase();
+  if (selected.has(normalized)) {
+    selected.delete(normalized);
+  } else {
+    selected.add(normalized);
+  }
+  setTemplateGroups(container, Array.from(selected));
+};
+
+const setTemplateGroupMode = (container, mode) => {
+  const next = mode === 'OR' ? 'OR' : 'AND';
+  container.dataset.templateGroupMode = next;
+  const buttons = container.querySelectorAll(
+    '[data-role="observation-template-group-mode"]',
   );
   buttons.forEach((button) => {
     const isActive = button.dataset.value === next;
@@ -618,6 +701,28 @@ export const bindObservations = ({
       if (tag && activeChild) {
         addTagForChild(date, activeChild, tag);
       }
+      return;
+    }
+
+    const templateGroupButton = target.closest(
+      '[data-role="observation-template-group-filter"]',
+    );
+    if (templateGroupButton) {
+      toggleTemplateGroup(
+        templatesOverlay,
+        templateGroupButton.dataset.value,
+      );
+      return;
+    }
+
+    const templateGroupModeButton = target.closest(
+      '[data-role="observation-template-group-mode"]',
+    );
+    if (templateGroupModeButton) {
+      setTemplateGroupMode(
+        templatesOverlay,
+        templateGroupModeButton.dataset.value,
+      );
       return;
     }
 
