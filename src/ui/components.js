@@ -4,6 +4,7 @@ import {
   OBSERVATION_GROUP_CODES,
   normalizeObservationKey,
   normalizeObservationGroups,
+  normalizeObservationText,
 } from '../utils/observationCatalog.js';
 
 export const buildHeader = ({ selectedDate }) => {
@@ -423,17 +424,48 @@ const buildTopList = (items, getGroups, observationGroups) => {
   return list;
 };
 
-const buildTopItems = (stats) => {
+const buildTopItems = (stats, catalog) => {
   if (!stats || typeof stats !== 'object') {
     return [];
   }
 
-  return Object.entries(stats)
-    .map(([label, count]) => ({
-      label,
-      count: Number.isFinite(count) ? count : Number(count) || 0,
-    }))
-    .filter((item) => item.label && item.count > 0)
+  const normalizedCounts = new Map();
+  Object.entries(stats).forEach(([label, count]) => {
+    const key = normalizeObservationKey(label);
+    if (!key) {
+      return;
+    }
+    const safeCount = Number.isFinite(count) ? count : Number(count) || 0;
+    if (safeCount <= 0) {
+      return;
+    }
+    normalizedCounts.set(key, (normalizedCounts.get(key) || 0) + safeCount);
+  });
+
+  const entries = Array.isArray(catalog) ? catalog : [];
+  const seen = new Set();
+  const items = [];
+
+  entries.forEach((entry) => {
+    const text =
+      typeof entry === 'string'
+        ? normalizeObservationText(entry)
+        : normalizeObservationText(entry?.text);
+    if (!text) {
+      return;
+    }
+    const key = normalizeObservationKey(text);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    const count = normalizedCounts.get(key) || 0;
+    if (count > 0) {
+      items.push({ label: text, count });
+    }
+  });
+
+  return items
     .sort((a, b) => {
       if (b.count !== a.count) {
         return b.count - a.count;
@@ -964,7 +996,7 @@ export const buildObservationsSection = ({
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
   children.forEach((child) => {
     const data = observations[child] || {};
-    const topItems = buildTopItems(observationStats?.[child]);
+    const topItems = buildTopItems(observationStats?.[child], observationCatalog);
     const isAbsent = absentSet.has(child);
 
     const todayTitle = createEl('p', {
