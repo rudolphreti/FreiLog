@@ -12,6 +12,7 @@ import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
+import { normalizeTopicEntries } from '../utils/topics.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -29,12 +30,10 @@ const normalizeObservations = (value) => {
   if (Array.isArray(value)) {
     return value.reduce((acc, item) => {
       if (item && item.child) {
-        const preset = item.preset || '';
         const tags = Array.isArray(item.tags) ? item.tags : [];
-        if (preset && !tags.includes(preset)) {
-          tags.push(preset);
-        }
-        acc[item.child] = tags;
+        const preset = typeof item.preset === 'string' ? item.preset.trim() : '';
+        const list = preset && !tags.includes(preset) ? [...tags, preset] : tags;
+        acc[item.child] = normalizeTopicEntries(list);
       }
       return acc;
     }, {});
@@ -42,21 +41,7 @@ const normalizeObservations = (value) => {
 
   if (typeof value === 'object') {
     return Object.entries(value).reduce((acc, [child, item]) => {
-      if (Array.isArray(item)) {
-        acc[child] = item;
-        return acc;
-      }
-      if (typeof item === 'string') {
-        acc[child] = [item];
-        return acc;
-      }
-      const entry = item && typeof item === 'object' ? item : {};
-      const preset = typeof entry.preset === 'string' ? entry.preset.trim() : '';
-      const tags = Array.isArray(entry.tags) ? [...entry.tags] : [];
-      if (preset && !tags.includes(preset)) {
-        tags.push(preset);
-      }
-      acc[child] = tags;
+      acc[child] = normalizeTopicEntries(item);
       return acc;
     }, {});
   }

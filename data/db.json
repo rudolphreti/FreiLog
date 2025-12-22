@@ -1,6 +1,6 @@
 {
   "meta": {
-    "schemaVersion": 1,
+    "schemaVersion": 3,
     "app": "KidsObservations",
     "updatedAt": "2025-12-20T00:00:00Z"
   },
@@ -33,25 +33,304 @@
       "Daphne"
     ],
     "angebote": [
-      "Basteln",
-      "Sport",
-      "Freispiel",
-      "Lesen",
-      "Musik",
-      "Ausflug",
-      "Lernzeit",
-      "Spiele"
+      {
+        "text": "Basteln",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Sport",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Freispiel",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Lesen",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Musik",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Ausflug",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Lernzeit",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Spiele",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      }
     ],
     "observations": [
-      "ruhig",
-      "Konflikt",
-      "hilfsbereit",
-      "konzentriert",
-      "müde",
-      "sehr aktiv",
-      "braucht Pause",
-      "streitet",
-      "arbeitet gut in Gruppe"
+      {
+        "text": "ruhig",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Konflikt",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "hilfsbereit",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "konzentriert",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "müde",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "sehr aktiv",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "braucht Pause",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "streitet",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "arbeitet gut in Gruppe",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Zeichnet ausdauernd",
+        "topics": [
+          "art"
+        ],
+        "primaryTopic": "art",
+        "isAlarm": false
+      },
+      {
+        "text": "Freies Gestalten",
+        "topics": [
+          "art"
+        ],
+        "primaryTopic": "art",
+        "isAlarm": false
+      },
+      {
+        "text": "Eigene Figuren erfinden",
+        "topics": [
+          "art"
+        ],
+        "primaryTopic": "art",
+        "isAlarm": false
+      },
+      {
+        "text": "Rhythmisches Bewegen",
+        "topics": [
+          "music"
+        ],
+        "primaryTopic": "music",
+        "isAlarm": false
+      },
+      {
+        "text": "Melodien nachsingen",
+        "topics": [
+          "music"
+        ],
+        "primaryTopic": "music",
+        "isAlarm": false
+      },
+      {
+        "text": "Leises Mitsingen",
+        "topics": [
+          "music"
+        ],
+        "primaryTopic": "music",
+        "isAlarm": false
+      },
+      {
+        "text": "Hoher Bewegungsdrang",
+        "topics": [
+          "sport"
+        ],
+        "primaryTopic": "sport",
+        "isAlarm": false
+      },
+      {
+        "text": "Freudiges Laufen",
+        "topics": [
+          "sport"
+        ],
+        "primaryTopic": "sport",
+        "isAlarm": false
+      },
+      {
+        "text": "Klettern ohne Angst",
+        "topics": [
+          "sport"
+        ],
+        "primaryTopic": "sport",
+        "isAlarm": false
+      },
+      {
+        "text": "Eigenständiges Bauen",
+        "topics": [
+          "tech"
+        ],
+        "primaryTopic": "tech",
+        "isAlarm": false
+      },
+      {
+        "text": "Stabilität testen",
+        "topics": [
+          "tech"
+        ],
+        "primaryTopic": "tech",
+        "isAlarm": false
+      },
+      {
+        "text": "Warum-Fragen stellen",
+        "topics": [
+          "tech"
+        ],
+        "primaryTopic": "tech",
+        "isAlarm": false
+      },
+      {
+        "text": "Gerechtigkeitssinn",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Empathisches Verhalten",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Konflikte vermitteln",
+        "topics": [
+          "social"
+        ],
+        "primaryTopic": "social",
+        "isAlarm": false
+      },
+      {
+        "text": "Schimpfwörter",
+        "topics": [
+          "alarm"
+        ],
+        "primaryTopic": "alarm",
+        "isAlarm": true
+      },
+      {
+        "text": "Körperliche Grenze Übertretung",
+        "topics": [
+          "alarm"
+        ],
+        "primaryTopic": "alarm",
+        "isAlarm": true
+      },
+      {
+        "text": "Hysterie Anfall",
+        "topics": [
+          "alarm"
+        ],
+        "primaryTopic": "alarm",
+        "isAlarm": true
+      },
+      {
+        "text": "Aggression",
+        "topics": [
+          "alarm"
+        ],
+        "primaryTopic": "alarm",
+        "isAlarm": true
+      },
+      {
+        "text": "Respektlosigkeit",
+        "topics": [
+          "alarm"
+        ],
+        "primaryTopic": "alarm",
+        "isAlarm": true
+      }
     ]
   },
   "records": {

@@ -1,5 +1,11 @@
 import { createEl } from './dom.js';
 import { todayYmd } from '../utils/date.js';
+import {
+  getEntryText,
+  getTopicById,
+  getTopicList,
+  groupEntriesByPrimaryTopic,
+} from '../utils/topics.js';
 
 export const buildHeader = ({ selectedDate }) => {
   const header = createEl('header', {
@@ -198,8 +204,9 @@ export const buildDrawerContent = ({
   };
 };
 
-const buildPill = ({ label, removeLabel, removeRole, value }) => {
+const buildPill = ({ label, topics, removeLabel, removeRole, value }) => {
   const labelSpan = createEl('span', { text: label });
+  const dots = buildTopicDots(topics);
   const removeButton = createEl('button', {
     className: 'btn btn-link btn-sm text-white p-0 ms-2',
     text: '✕',
@@ -208,9 +215,84 @@ const buildPill = ({ label, removeLabel, removeRole, value }) => {
   });
   return createEl('span', {
     className: 'badge rounded-pill text-bg-primary d-inline-flex align-items-center badge-pill',
-    children: [labelSpan, removeButton],
+    children: dots ? [dots, labelSpan, removeButton] : [labelSpan, removeButton],
     dataset: { value },
   });
+};
+
+const buildTopicDot = (topicId) => {
+  const topic = getTopicById(topicId);
+  if (!topic) {
+    return null;
+  }
+
+  return createEl('span', {
+    className: `topic-dot ${topic.colorClass}`,
+    attrs: { title: topic.label, 'aria-label': topic.label },
+  });
+};
+
+const buildTopicDots = (topics) => {
+  const list = Array.isArray(topics) ? topics : [];
+  if (!list.length) {
+    return null;
+  }
+
+  const wrapper = createEl('span', {
+    className: 'topic-dots d-inline-flex align-items-center',
+  });
+  list.forEach((topicId) => {
+    const dot = buildTopicDot(topicId);
+    if (dot) {
+      wrapper.appendChild(dot);
+    }
+  });
+  return wrapper;
+};
+
+const buildTopicSectionHeader = (topic) =>
+  createEl('div', {
+    className: 'topic-section__header d-flex align-items-center gap-2',
+    children: [
+      buildTopicDot(topic.id),
+      createEl('span', { text: topic.label }),
+    ],
+  });
+
+const buildTopicGroupedList = ({
+  items,
+  buildItem,
+  emptyText,
+}) => {
+  const normalized = Array.isArray(items) ? items : [];
+  const wrapper = createEl('div', { className: 'd-flex flex-column gap-3' });
+
+  if (!normalized.length) {
+    if (emptyText) {
+      wrapper.appendChild(
+        createEl('p', { className: 'text-muted small mb-0', text: emptyText }),
+      );
+    }
+    return wrapper;
+  }
+
+  const grouped = groupEntriesByPrimaryTopic(normalized);
+  grouped.forEach(({ topic, items: topicItems }) => {
+    if (!topicItems.length) {
+      return;
+    }
+    const section = createEl('div', {
+      className: `topic-section topic-section--${topic.id}`,
+      dataset: { topic: topic.id },
+    });
+    const heading = buildTopicSectionHeader(topic);
+    const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+    topicItems.forEach((item) => list.appendChild(buildItem(item)));
+    section.append(heading, list);
+    wrapper.appendChild(section);
+  });
+
+  return wrapper;
 };
 
 export const buildAngebotSection = ({
@@ -235,7 +317,11 @@ export const buildAngebotSection = ({
 
   const datalist = createEl('datalist', { attrs: { id: datalistId } });
   angebote.forEach((item) => {
-    datalist.appendChild(createEl('option', { attrs: { value: item } }));
+    const label = getEntryText(item);
+    if (!label) {
+      return;
+    }
+    datalist.appendChild(createEl('option', { attrs: { value: label } }));
   });
 
   const addButton = createEl('button', {
@@ -249,19 +335,26 @@ export const buildAngebotSection = ({
     text: 'Heute ausgewählt',
   });
   const selectedList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
+    className: 'd-flex flex-column gap-2',
     dataset: { role: 'angebot-list' },
   });
-  activeAngebote.forEach((angebot) => {
-    const pill = buildPill({
-      label: angebot,
-      removeLabel: `${angebot} entfernen`,
-      removeRole: 'angebot-remove',
-      value: angebot,
-    });
-    pill.dataset.angebot = angebot;
-    selectedList.appendChild(pill);
+  const selectedGrouped = buildTopicGroupedList({
+    items: activeAngebote,
+    buildItem: (angebot) => {
+      const label = getEntryText(angebot);
+      const pill = buildPill({
+        label,
+        removeLabel: `${label} entfernen`,
+        removeRole: 'angebot-remove',
+        value: label,
+        topics: angebot?.topics || [],
+      });
+      pill.dataset.angebot = label;
+      return pill;
+    },
+    emptyText: 'Noch keine Angebote ausgewählt.',
   });
+  selectedList.appendChild(selectedGrouped);
 
   const comboRow = createEl('div', {
     className: 'd-flex align-items-center gap-2',
@@ -283,28 +376,30 @@ export const buildAngebotSection = ({
   };
 };
 
-const buildPillList = ({ items, getLabel, getRemoveLabel, removeRole }) => {
-  const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
-  items.forEach((item) => {
-    const label = getLabel(item);
-    const pill = createEl('span', {
-      className:
-        'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
-      dataset: { value: label },
-      children: [
-        createEl('span', { text: label }),
-        createEl('button', {
-          className: 'btn btn-link btn-sm text-white p-0 ms-2',
-          text: '✕',
-          attrs: { type: 'button', 'aria-label': getRemoveLabel(label) },
-          dataset: { role: removeRole, value: label },
-        }),
-      ],
-    });
-    list.appendChild(pill);
+const buildPillList = ({ items, removeRole }) => {
+  return buildTopicGroupedList({
+    items,
+    emptyText: 'Noch keine Beobachtungen erfasst.',
+    buildItem: (item) => {
+      const label = getEntryText(item);
+      const pill = createEl('span', {
+        className:
+          'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
+        dataset: { value: label },
+        children: [
+          buildTopicDots(item?.topics || []),
+          createEl('span', { text: label }),
+          createEl('button', {
+            className: 'btn btn-link btn-sm text-white p-0 ms-2',
+            text: '✕',
+            attrs: { type: 'button', 'aria-label': `${label} entfernen` },
+            dataset: { role: removeRole, value: label },
+          }),
+        ].filter(Boolean),
+      });
+      return pill;
+    },
   });
-
-  return list;
 };
 
 const buildTopList = (items) => {
@@ -377,32 +472,12 @@ export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
 };
 
 const buildTemplateGroups = (templates) => {
-  const normalized = Array.isArray(templates) ? templates : [];
-  const sorted = [...normalized]
-    .filter((item) => typeof item === 'string' && item.trim())
-    .map((item) => item.trim())
-    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
-
-  const groups = new Map();
-  sorted.forEach((label) => {
-    const initial = label[0].toLocaleUpperCase();
-    if (!groups.has(initial)) {
-      groups.set(initial, []);
-    }
-    groups.get(initial).push(label);
-  });
-
-  return {
-    groups,
-    initials: Array.from(groups.keys())
-      .filter((letter) => /^[A-Z]$/i.test(letter))
-      .sort((a, b) => a.localeCompare(b, 'de')),
-  };
+  return groupEntriesByPrimaryTopic(templates);
 };
 
 const buildObservationTemplatesOverlay = ({ templates }) => {
-  const { groups, initials } = buildTemplateGroups(templates);
-  const hasTemplates = groups.size > 0;
+  const groups = buildTemplateGroups(templates);
+  const hasTemplates = groups.some((group) => group.items.length > 0);
   const overlay = createEl('div', {
     className: 'observation-templates-overlay',
     dataset: {
@@ -446,13 +521,13 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
         type: 'button',
         'aria-pressed': isActive ? 'true' : 'false',
       },
-      dataset: { role: 'observation-template-letter', value },
+      dataset: { role: 'observation-template-topic', value },
     });
     filterBar.appendChild(button);
   };
 
   addFilterButton('Alle', 'ALL', true);
-  initials.forEach((letter) => addFilterButton(letter, letter));
+  getTopicList().forEach((topic) => addFilterButton(topic.label, topic.id));
 
   const searchInput = createEl('input', {
     className: 'form-control form-control-sm observation-templates__search',
@@ -474,30 +549,33 @@ const buildObservationTemplatesOverlay = ({ templates }) => {
     dataset: { role: 'observation-template-list' },
   });
 
-  groups.forEach((items, initial) => {
+  groups.forEach(({ topic, items }) => {
+    if (!items.length) {
+      return;
+    }
     const group = createEl('div', {
-      className: 'observation-templates__group',
-      dataset: { initial },
+      className: `observation-templates__group topic-section topic-section--${topic.id}`,
+      dataset: { role: 'observation-template-group', topic: topic.id },
     });
-    const heading = createEl('p', {
-      className: 'text-muted small mb-1 fw-semibold',
-      text: initial,
-    });
+    const heading = buildTopicSectionHeader(topic);
     const buttons = createEl('div', {
       className: 'd-flex flex-wrap gap-2 observation-templates__group-buttons',
-      dataset: { role: 'observation-template-group' },
     });
-    items.forEach((label) => {
+    items.forEach((item) => {
+      const label = getEntryText(item);
       const button = createEl('button', {
         className:
-          'btn btn-outline-secondary observation-chip observation-template-button',
-        text: label,
+          'btn btn-outline-secondary observation-chip observation-template-button d-inline-flex align-items-center gap-2',
         attrs: { type: 'button' },
         dataset: {
           role: 'observation-template-add',
           value: label,
-          initial,
+          topics: (item.topics || []).join(','),
+          primaryTopic: item.primaryTopic || '',
         },
+        children: [buildTopicDots(item.topics), createEl('span', { text: label })].filter(
+          Boolean,
+        ),
       });
       buttons.appendChild(button);
     });
@@ -634,6 +712,58 @@ export const buildObservationsSection = ({
     });
     comboInput.value = '';
 
+    const topicLegend = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Themen',
+    });
+    const topicPicker = createEl('div', {
+      className: 'd-flex flex-wrap gap-2',
+    });
+    getTopicList().forEach((topic) => {
+      const inputId = `observation-topic-${safeId}-${topic.id}`;
+      const checkbox = createEl('input', {
+        className: 'form-check-input',
+        attrs: {
+          type: 'checkbox',
+          id: inputId,
+          value: topic.id,
+        },
+        dataset: { role: 'observation-topic' },
+      });
+      checkbox.checked = topic.id === 'social';
+      const label = createEl('label', {
+        className: 'form-check-label d-flex align-items-center gap-2',
+        attrs: { for: inputId },
+        children: [buildTopicDot(topic.id), createEl('span', { text: topic.label })].filter(
+          Boolean,
+        ),
+      });
+      const wrapper = createEl('div', {
+        className: 'form-check form-check-inline topic-checkbox',
+        children: [checkbox, label],
+      });
+      topicPicker.appendChild(wrapper);
+    });
+
+    const primaryLabel = createEl('label', {
+      className: 'form-label text-muted small mb-0',
+      text: 'Hauptthema',
+    });
+    const primarySelect = createEl('select', {
+      className: 'form-select form-select-sm',
+      dataset: { role: 'observation-primary-topic' },
+    });
+    getTopicList().forEach((topic) => {
+      const option = createEl('option', {
+        attrs: { value: topic.id },
+        text: topic.label,
+      });
+      if (topic.id === 'social') {
+        option.selected = true;
+      }
+      primarySelect.appendChild(option);
+    });
+
     const addButton = createEl('button', {
       className: 'btn btn-outline-secondary btn-sm',
       text: '+',
@@ -648,8 +778,6 @@ export const buildObservationsSection = ({
 
     const todayList = buildPillList({
       items: Array.isArray(data) ? data : [],
-      getLabel: (item) => item,
-      getRemoveLabel: (label) => `${label} entfernen`,
       removeRole: 'observation-today-remove',
     });
 
@@ -685,6 +813,10 @@ export const buildObservationsSection = ({
       dataset: { role: 'observation-form' },
       children: [
         comboInputLabel,
+        topicLegend,
+        topicPicker,
+        primaryLabel,
+        primarySelect,
         comboInputRow,
         feedback,
       ],

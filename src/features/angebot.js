@@ -1,22 +1,8 @@
 import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
+import { buildTopicEntry, getEntryText, normalizeTopicEntries } from '../utils/topics.js';
 
 const normalizeOffers = (value) => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const seen = new Set();
-  return value.filter((item) => {
-    if (typeof item !== 'string') {
-      return false;
-    }
-    const trimmed = item.trim();
-    if (!trimmed || seen.has(trimmed)) {
-      return false;
-    }
-    seen.add(trimmed);
-    return true;
-  });
+  return normalizeTopicEntries(value);
 };
 
 const addOffer = ({ date, value }) => {
@@ -25,23 +11,40 @@ const addOffer = ({ date, value }) => {
     return;
   }
 
+  const offerEntry = buildTopicEntry({ text: trimmed });
+  if (!offerEntry) {
+    return;
+  }
+
   const entry = getEntry(date);
   const current = normalizeOffers(entry.angebote);
 
-  if (!current.includes(trimmed)) {
-    updateEntry(date, { angebote: [...current, trimmed] });
+  const normalizedKey = trimmed.toLocaleLowerCase();
+  if (
+    !current.some(
+      (item) => getEntryText(item).toLocaleLowerCase() === normalizedKey,
+    )
+  ) {
+    updateEntry(date, { angebote: [...current, offerEntry] });
   }
 
   const presets = getPresets('angebote');
-  if (!presets.includes(trimmed)) {
-    addPreset('angebote', trimmed);
+  if (
+    !presets.some(
+      (item) => getEntryText(item).toLocaleLowerCase() === normalizedKey,
+    )
+  ) {
+    addPreset('angebote', offerEntry);
   }
 };
 
 const removeOffer = (date, value) => {
   const entry = getEntry(date);
   const current = normalizeOffers(entry.angebote);
-  const updated = current.filter((item) => item !== value);
+  const normalizedKey = value.toLocaleLowerCase();
+  const updated = current.filter(
+    (item) => getEntryText(item).toLocaleLowerCase() !== normalizedKey,
+  );
   updateEntry(date, { angebote: updated });
 };
 
@@ -81,7 +84,7 @@ export const bindAngebot = ({
     if (!removeButton) {
       return;
     }
-    const value = removeButton.dataset.angebot;
+    const value = removeButton.dataset.value;
     if (!value) {
       return;
     }

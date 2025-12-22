@@ -6,6 +6,12 @@ import {
   updateEntry,
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
+import {
+  buildTopicEntry,
+  getEntryText,
+  normalizeTopicEntries,
+  resolvePrimaryTopic,
+} from '../utils/topics.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -16,37 +22,23 @@ const normalizeObservationInput = (value) => {
 };
 
 const normalizeObservationKey = (value) =>
-  normalizeObservationInput(value).toLocaleLowerCase();
+  normalizeObservationInput(getEntryText(value)).toLocaleLowerCase();
 
 const normalizeObservationList = (value) => {
-  if (typeof value === 'string') {
-    const trimmed = normalizeObservationInput(value);
-    return trimmed ? [trimmed] : [];
+  if (Array.isArray(value) || typeof value === 'string') {
+    return normalizeTopicEntries(value);
   }
 
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return normalizeObservationList(value.tags);
+    if (typeof value.text === 'string') {
+      return normalizeTopicEntries([value]);
+    }
+    if (Array.isArray(value.tags) || typeof value.tags === 'string') {
+      return normalizeTopicEntries(value.tags);
+    }
   }
 
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const unique = new Set();
-  const result = [];
-  value.forEach((item) => {
-    if (typeof item !== 'string') {
-      return;
-    }
-    const trimmed = normalizeObservationInput(item);
-    if (!trimmed || unique.has(trimmed)) {
-      return;
-    }
-    unique.add(trimmed);
-    result.push(trimmed);
-  });
-
-  return result;
+  return [];
 };
 
 const LONG_PRESS_MS = 600;
@@ -128,29 +120,29 @@ export const applyInitialFilter = (children, selectedInitial) => {
   });
 };
 
-const getObservationTags = (entry, child) =>
+const getObservationEntries = (entry, child) =>
   entry.observations && entry.observations[child]
     ? entry.observations[child]
     : [];
 
-const addTagForChild = (date, child, value) => {
-  const trimmed = normalizeObservationInput(value);
-  if (!trimmed) {
+const addEntryForChild = (date, child, entry) => {
+  if (!entry) {
     return;
   }
 
   updateEntry(date, {
     observations: {
-      [child]: [trimmed],
+      [child]: [entry],
     },
   });
 };
 
 const removeObservationForChild = (date, child, tag) => {
   const entry = getEntry(date);
-  const updatedTags = normalizeObservationList(getObservationTags(entry, child)).filter(
-    (item) => item !== tag,
-  );
+  const normalizedKey = normalizeObservationKey(tag);
+  const updatedTags = normalizeObservationList(
+    getObservationEntries(entry, child),
+  ).filter((item) => normalizeObservationKey(item) !== normalizedKey);
 
   updateEntry(date, {
     observations: {
@@ -179,7 +171,7 @@ const normalizeTemplateQuery = (value) =>
   typeof value === 'string' ? value.trim().toLocaleLowerCase() : '';
 
 const applyTemplateFilters = (container) => {
-  const selectedInitial = container.dataset.templateFilter || 'ALL';
+  const selectedTopic = container.dataset.templateFilter || 'ALL';
   const normalizedQuery = normalizeTemplateQuery(container.dataset.templateQuery || '');
   const templateButtons = container.querySelectorAll(
     '[data-role="observation-template-add"]',
@@ -201,14 +193,17 @@ const applyTemplateFilters = (container) => {
   }
 
   templateButtons.forEach((button) => {
-    const initial = button.dataset.initial || '';
+    const topics = (button.dataset.topics || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean);
     const label = button.dataset.value || '';
-    const matchesInitial =
-      selectedInitial === 'ALL' || initial === selectedInitial;
+    const matchesTopic =
+      selectedTopic === 'ALL' || topics.includes(selectedTopic);
     const matchesQuery = normalizedQuery
       ? label.toLocaleLowerCase().includes(normalizedQuery)
       : true;
-    button.hidden = !(matchesInitial && matchesQuery);
+    button.hidden = !(matchesTopic && matchesQuery);
   });
 
   let visibleCount = 0;
@@ -223,10 +218,7 @@ const applyTemplateFilters = (container) => {
         visibleCount += 1;
       }
     });
-    const groupWrapper = group.closest('[data-initial]');
-    if (groupWrapper) {
-      groupWrapper.hidden = !hasVisible;
-    }
+    group.hidden = !hasVisible;
   });
 
   if (isHtmlElement(emptyMessage)) {
@@ -241,11 +233,11 @@ const applyTemplateFilters = (container) => {
 const setTemplateFilter = (container, selected) => {
   const next =
     selected && selected !== 'ALL'
-      ? selected.toLocaleUpperCase()
+      ? selected
       : 'ALL';
   container.dataset.templateFilter = next;
   const buttons = container.querySelectorAll(
-    '[data-role="observation-template-letter"]',
+    '[data-role="observation-template-topic"]',
   );
   buttons.forEach((button) => {
     const isActive = button.dataset.value === next;
@@ -283,6 +275,45 @@ const showFeedback = (card, message) => {
   feedbackTimeouts.set(feedback, timeoutId);
 };
 
+const getSelectedTopics = (card) => {
+  const checkboxes = card.querySelectorAll('[data-role="observation-topic"]');
+  const topics = [];
+  checkboxes.forEach((checkbox) => {
+    if (checkbox instanceof HTMLInputElement && checkbox.checked) {
+      topics.push(checkbox.value);
+    }
+  });
+  return topics;
+};
+
+const getPrimaryTopicSelection = (card) => {
+  const select = card.querySelector('[data-role="observation-primary-topic"]');
+  if (select instanceof HTMLSelectElement) {
+    return select.value;
+  }
+  return '';
+};
+
+const syncPrimaryTopicSelection = (card) => {
+  const topics = getSelectedTopics(card);
+  const select = card.querySelector('[data-role="observation-primary-topic"]');
+  if (!(select instanceof HTMLSelectElement)) {
+    return;
+  }
+  const resolved = resolvePrimaryTopic(select.value, topics);
+  select.value = resolved;
+};
+
+const resetTopicSelection = (card) => {
+  const checkboxes = card.querySelectorAll('[data-role="observation-topic"]');
+  checkboxes.forEach((checkbox) => {
+    if (checkbox instanceof HTMLInputElement) {
+      checkbox.checked = checkbox.value === 'social';
+    }
+  });
+  syncPrimaryTopicSelection(card);
+};
+
 const addObservationForChild = ({ date, card, input }) => {
   const child = getCardChild(card);
   if (!child) {
@@ -294,28 +325,43 @@ const addObservationForChild = ({ date, card, input }) => {
     return;
   }
 
+  const selectedTopics = getSelectedTopics(card);
+  const primaryTopic = getPrimaryTopicSelection(card);
+  const observationEntry = buildTopicEntry({
+    text: normalized,
+    topics: selectedTopics,
+    primaryTopic,
+  });
+  if (!observationEntry) {
+    return;
+  }
+
   const presets = getObservationPresets();
   const existingPreset = findExistingPreset(presets, normalized);
-  const observationValue = existingPreset || normalized;
   if (!existingPreset) {
-    addPreset('observations', observationValue);
+    addPreset('observations', observationEntry);
   }
 
   const entry = getEntry(date);
-  const existing = normalizeObservationList(getObservationTags(entry, child));
+  const existing = normalizeObservationList(
+    getObservationEntries(entry, child),
+  );
 
-  if (existing.includes(observationValue)) {
+  if (
+    existing.some(
+      (item) =>
+        normalizeObservationKey(item) ===
+        normalizeObservationKey(observationEntry),
+    )
+  ) {
     showFeedback(card, 'Bereits für heute erfasst.');
     return;
   }
 
-  updateEntry(date, {
-    observations: {
-      [child]: [observationValue],
-    },
-  });
+  addEntryForChild(date, child, observationEntry);
 
   input.value = '';
+  resetTopicSelection(card);
 };
 
 const parseChildFromHash = () => {
@@ -491,6 +537,39 @@ export const bindObservations = ({
     addObservationForChild({ date, card, input });
   };
 
+  const handleOverlayChange = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    if (target instanceof HTMLInputElement && target.dataset.role === 'observation-topic') {
+      const card = target.closest('[data-child]');
+      if (card) {
+        syncPrimaryTopicSelection(card);
+      }
+      return;
+    }
+
+    if (
+      target instanceof HTMLSelectElement &&
+      target.dataset.role === 'observation-primary-topic'
+    ) {
+      const card = target.closest('[data-child]');
+      if (!card) {
+        return;
+      }
+      const primary = target.value;
+      const checkbox = card.querySelector(
+        `[data-role=\"observation-topic\"][value=\"${primary}\"]`,
+      );
+      if (checkbox instanceof HTMLInputElement) {
+        checkbox.checked = true;
+      }
+      syncPrimaryTopicSelection(card);
+    }
+  };
+
   const handleOverlayClick = (event) => {
     const target = event.target;
     if (!isHtmlElement(target)) {
@@ -520,9 +599,18 @@ export const bindObservations = ({
     if (topButton) {
       const tag = topButton.dataset.value;
       if (tag) {
-        addTagForChild(date, card.dataset.child, tag);
-        if (!findExistingPreset(getObservationPresets(), tag)) {
-          addPreset('observations', tag);
+        const topics = getSelectedTopics(card);
+        const primaryTopic = getPrimaryTopicSelection(card);
+        const entry = buildTopicEntry({
+          text: tag,
+          topics,
+          primaryTopic,
+        });
+        if (entry) {
+          addEntryForChild(date, card.dataset.child, entry);
+          if (!findExistingPreset(getObservationPresets(), tag)) {
+            addPreset('observations', entry);
+          }
         }
       }
       return;
@@ -536,7 +624,7 @@ export const bindObservations = ({
     }
 
     const templateFilterButton = target.closest(
-      '[data-role="observation-template-letter"]',
+      '[data-role="observation-template-topic"]',
     );
     if (templateFilterButton) {
       return;
@@ -616,13 +704,23 @@ export const bindObservations = ({
     if (templateButton) {
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
-        addTagForChild(date, activeChild, tag);
+        const entry = buildTopicEntry({
+          text: tag,
+          topics: (templateButton.dataset.topics || '')
+            .split(',')
+            .map((item) => item.trim())
+            .filter(Boolean),
+          primaryTopic: templateButton.dataset.primaryTopic || '',
+        });
+        if (entry) {
+          addEntryForChild(date, activeChild, entry);
+        }
       }
       return;
     }
 
     const templateFilterButton = target.closest(
-      '[data-role="observation-template-letter"]',
+      '[data-role="observation-template-topic"]',
     );
     if (templateFilterButton) {
       setTemplateFilter(
@@ -672,6 +770,7 @@ export const bindObservations = ({
   };
 
   overlayContent.addEventListener('submit', handleOverlaySubmit);
+  overlayContent.addEventListener('change', handleOverlayChange);
   overlayContent.addEventListener('click', handleOverlayClick);
   list.addEventListener('click', handleListClick);
   list.addEventListener('pointerdown', handleListPointerDown);

@@ -1,41 +1,28 @@
-import {
-  ensureUniqueSortedStrings,
-  normalizeAppData,
-  sanitizeDaysByDate,
-} from './dbSchema.js';
+import { normalizeAppData, sanitizeDaysByDate } from './dbSchema.js';
 import { clearAppData } from '../state/persistence.js';
 import { getState, initStore, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
+import {
+  buildTopicEntry,
+  getEntryText,
+  normalizeTopicEntries,
+} from '../utils/topics.js';
 
 const normalizeObservationList = (value) => {
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
+  if (typeof value === 'string' || Array.isArray(value)) {
+    return normalizeTopicEntries(value);
   }
 
   if (value && typeof value === 'object' && !Array.isArray(value)) {
-    return normalizeObservationList(value.tags);
+    if (typeof value.text === 'string') {
+      return normalizeTopicEntries([value]);
+    }
+    if (Array.isArray(value.tags) || typeof value.tags === 'string') {
+      return normalizeTopicEntries(value.tags);
+    }
   }
 
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  const unique = new Set();
-  const result = [];
-  value.forEach((item) => {
-    if (typeof item !== 'string') {
-      return;
-    }
-    const trimmed = item.trim();
-    if (!trimmed || unique.has(trimmed)) {
-      return;
-    }
-    unique.add(trimmed);
-    result.push(trimmed);
-  });
-
-  return result;
+  return [];
 };
 
 const buildDefaultObservations = (childrenList) => {
@@ -80,6 +67,8 @@ const mergeObservations = (currentObservations, patchObservations) => {
           ? incomingValue.items
           : Array.isArray(incomingValue.tags)
             ? incomingValue.tags
+            : typeof incomingValue.text === 'string'
+              ? [incomingValue]
             : [];
       incomingList = normalizeObservationList(items);
       replace =
@@ -163,29 +152,36 @@ export const updateEntry = (date, patch) => {
 };
 
 export const addPreset = (type, value) => {
-  const trimmed = typeof value === 'string' ? value.trim() : '';
-  if (!trimmed) {
+  const entry = buildTopicEntry(
+    typeof value === 'string' ? { text: value } : value,
+  );
+  if (!entry) {
     return;
   }
 
   const presets = getPresets(type);
-  if (presets.includes(trimmed)) {
+  const key = getEntryText(entry).toLocaleLowerCase();
+  if (
+    presets.some(
+      (preset) => getEntryText(preset).toLocaleLowerCase() === key,
+    )
+  ) {
     return;
   }
 
   updateAppData((data) => {
     if (type === 'angebote') {
-      data.angebote = ensureUniqueSortedStrings([
+      data.angebote = normalizeTopicEntries([
         ...(data.angebote || []),
-        trimmed,
+        entry,
       ]);
       return;
     }
 
     if (type === 'observations') {
-      data.observationTemplates = ensureUniqueSortedStrings([
+      data.observationTemplates = normalizeTopicEntries([
         ...(data.observationTemplates || []),
-        trimmed,
+        entry,
       ]);
     }
   });
