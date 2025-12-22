@@ -9,7 +9,7 @@ import {
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
 const DEFAULT_OBSERVATION_GROUPS = {
@@ -389,10 +389,7 @@ export const normalizeAppData = (source, fallback = {}) => {
   const uiSource = base.ui || fallbackData.ui || null;
 
   return {
-    schemaVersion:
-      typeof base.schemaVersion === 'number'
-        ? base.schemaVersion
-        : SCHEMA_VERSION,
+    schemaVersion: SCHEMA_VERSION,
     children,
     angebote,
     observationTemplates: getObservationCatalogLabels(observationCatalog),
