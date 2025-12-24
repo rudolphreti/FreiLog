@@ -220,7 +220,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
     clearElement(yearSelectGroup.select);
     schoolYears.forEach((year) => {
       yearSelectGroup.select.append(
-        createEl('option', { value: year.label, text: year.label }),
+        createEl('option', { attrs: { value: year.label }, text: year.label }),
       );
     });
     const hasMultipleYears = schoolYears.length > 1;
@@ -249,7 +249,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
     year.weeks.forEach((week) => {
       const optionText = `${week.label} (${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)})`;
       weekSelectGroup.select.append(
-        createEl('option', { value: week.id, text: optionText }),
+        createEl('option', { attrs: { value: week.id }, text: optionText }),
       );
     });
     if (desiredWeekId && year.weeks.some((week) => week.id === desiredWeekId)) {
