@@ -5,6 +5,7 @@ import {
   normalizeSavedObservationFilters,
 } from '../db/dbSchema.js';
 import { loadAppData, saveAppData } from './persistence.js';
+import { ensureYmd, todayYmd } from '../utils/date.js';
 
 let appData = null;
 const subscribers = new Set();
@@ -74,8 +75,9 @@ export const getState = () => {
 };
 
 export const setSelectedDate = (date) => {
+  const normalized = ensureYmd(date, todayYmd());
   updateAppData((draft) => {
-    draft.ui.selectedDate = date;
+    draft.ui.selectedDate = normalized;
   });
 };
 

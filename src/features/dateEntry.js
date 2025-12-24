@@ -1,5 +1,21 @@
-import { setSelectedDate } from '../state/store.js';
-import { todayYmd } from '../utils/date.js';
+import { getEntry } from '../db/dbRepository.js';
+import { getState, setSelectedDate } from '../state/store.js';
+import { ensureYmd, todayYmd } from '../utils/date.js';
+
+const normalizeDateValue = (value) => {
+  const fallback = getState().ui?.selectedDate || todayYmd();
+  return ensureYmd(value, fallback);
+};
+
+const applyDateSelection = (input, value) => {
+  const normalized = normalizeDateValue(value);
+  input.value = normalized;
+  const currentSelected = getState().ui?.selectedDate || '';
+  if (currentSelected !== normalized) {
+    setSelectedDate(normalized);
+  }
+  getEntry(normalized);
+};
 
 export const bindDateEntry = (input) => {
   if (!input) {
@@ -7,14 +23,10 @@ export const bindDateEntry = (input) => {
   }
 
   if (!input.value) {
-    const today = todayYmd();
-    input.value = today;
-    setSelectedDate(today);
+    applyDateSelection(input, todayYmd());
   }
 
   input.addEventListener('change', () => {
-    const nextValue = input.value || todayYmd();
-    input.value = nextValue;
-    setSelectedDate(nextValue);
+    applyDateSelection(input, input.value);
   });
 };
