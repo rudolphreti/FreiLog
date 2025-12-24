@@ -387,6 +387,12 @@ body {
   border-radius: 0.75rem;
 }
 
+.observation-template-button.is-selected {
+  background-color: var(--bs-btn-hover-bg);
+  border-color: var(--bs-btn-hover-border-color);
+  color: var(--bs-btn-hover-color);
+}
+
 .observation-chip {
   border-radius: 999px;
   font-size: 0.85rem;

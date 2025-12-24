@@ -190,6 +190,14 @@ const normalizeTemplateGroups = (value) =>
         .filter(Boolean)
     : [];
 
+const updateTemplateButtonState = (button, isSelected) => {
+  if (!isHtmlElement(button)) {
+    return;
+  }
+  button.classList.toggle('is-selected', isSelected);
+  button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+};
+
 const matchesTemplateGroups = ({ selectedGroups, buttonGroups, mode }) => {
   if (!selectedGroups.length) {
     return true;
@@ -348,6 +356,95 @@ const setTemplateQuery = (container, query) => {
 };
 
 const feedbackTimeouts = new WeakMap();
+
+const getSelectedObservationKeys = (date, child) => {
+  if (!child) {
+    return new Set();
+  }
+  const entry = getEntry(date);
+  const tags = normalizeObservationList(getObservationTags(entry, child));
+  return new Set(
+    tags
+      .map((tag) => normalizeObservationKey(tag))
+      .filter(Boolean),
+  );
+};
+
+const updateTemplateSelectionState = (templatesOverlay, date, child) => {
+  if (!templatesOverlay || !child) {
+    return;
+  }
+  const selectedKeys = getSelectedObservationKeys(date, child);
+  const buttons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-add"]',
+  );
+  buttons.forEach((button) => {
+    const key = normalizeObservationKey(button.dataset.value || '');
+    updateTemplateButtonState(button, key && selectedKeys.has(key));
+  });
+};
+
+const getTemplateUiState = (templatesOverlay) => {
+  if (!templatesOverlay) {
+    return null;
+  }
+  return {
+    templateFilter: templatesOverlay.dataset.templateFilter || 'ALL',
+    templateQuery: templatesOverlay.dataset.templateQuery || '',
+    templateGroups: templatesOverlay.dataset.templateGroups || '',
+    templateGroupMode: templatesOverlay.dataset.templateGroupMode || 'AND',
+  };
+};
+
+const restoreTemplateUiState = (templatesOverlay, state) => {
+  if (!templatesOverlay || !state) {
+    return;
+  }
+  templatesOverlay.dataset.templateFilter = state.templateFilter || 'ALL';
+  templatesOverlay.dataset.templateQuery = state.templateQuery || '';
+  templatesOverlay.dataset.templateGroups = state.templateGroups || '';
+  templatesOverlay.dataset.templateGroupMode =
+    state.templateGroupMode === 'OR' ? 'OR' : 'AND';
+
+  const filterButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-letter"]',
+  );
+  filterButtons.forEach((button) => {
+    const isActive = button.dataset.value === templatesOverlay.dataset.templateFilter;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const groupButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-group-filter"]',
+  );
+  const selectedGroups = normalizeTemplateGroups(
+    templatesOverlay.dataset.templateGroups || '',
+  );
+  groupButtons.forEach((button) => {
+    const isActive = selectedGroups.includes(button.dataset.value || '');
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const groupModeButtons = templatesOverlay.querySelectorAll(
+    '[data-role="observation-template-group-mode"]',
+  );
+  groupModeButtons.forEach((button) => {
+    const isActive = button.dataset.value === templatesOverlay.dataset.templateGroupMode;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const searchInput = templatesOverlay.querySelector(
+    '[data-role="observation-template-search"]',
+  );
+  if (isInputElement(searchInput)) {
+    searchInput.value = templatesOverlay.dataset.templateQuery || '';
+  }
+
+  applyTemplateFilters(templatesOverlay);
+};
 
 const showFeedback = (card, message) => {
   const feedback = card.querySelector('[data-role="observation-feedback"]');
@@ -530,7 +627,7 @@ export const bindObservations = ({
     document.body.classList.remove('observation-overlay-open');
   };
 
-  const openTemplateOverlay = (child) => {
+  const openTemplateOverlay = (child, { focusSearch = true } = {}) => {
     if (!child) {
       return;
     }
@@ -540,10 +637,11 @@ export const bindObservations = ({
     templatesOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-template-open');
     applyTemplateFilters(templatesOverlay);
+    updateTemplateSelectionState(templatesOverlay, date, child);
     const searchInput = templatesOverlay.querySelector(
       '[data-role="observation-template-search"]',
     );
-    if (isInputElement(searchInput)) {
+    if (focusSearch && isInputElement(searchInput)) {
       searchInput.focus();
     }
   };
@@ -921,6 +1019,7 @@ export const bindObservations = ({
       pendingTemplateRestore = {
         child: activeChild,
         scrollTop: getTemplateScrollTop(),
+        templateState: getTemplateUiState(templatesOverlay),
       };
     }
     updateObservationCatalogEntry({
@@ -1013,7 +1112,22 @@ export const bindObservations = ({
       }
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
-        addTagForChild(date, activeChild, tag);
+        const selectedKeys = getSelectedObservationKeys(date, activeChild);
+        const tagKey = normalizeObservationKey(tag);
+        const isSelected = tagKey && selectedKeys.has(tagKey);
+        const scrollTop = getTemplateScrollTop();
+        pendingTemplateRestore = {
+          child: activeChild,
+          scrollTop,
+          focusSearch: false,
+          templateState: getTemplateUiState(templatesOverlay),
+        };
+        updateTemplateButtonState(templateButton, !isSelected);
+        if (isSelected) {
+          removeObservationForChild(date, activeChild, tag);
+        } else {
+          addTagForChild(date, activeChild, tag);
+        }
       }
       return;
     }
@@ -1206,15 +1320,21 @@ export const bindObservations = ({
   });
 
   const initialChild = parseChildFromHash();
-  if (initialChild) {
+  if (initialChild && !pendingTemplateRestore?.child) {
     openOverlay(initialChild, { updateHistory: false });
   }
 
   if (pendingTemplateRestore?.child) {
-    const { child, scrollTop } = pendingTemplateRestore;
+    const {
+      child,
+      scrollTop,
+      focusSearch = true,
+      templateState = null,
+    } = pendingTemplateRestore;
     pendingTemplateRestore = null;
     if (openOverlay(child, { updateHistory: false })) {
-      openTemplateOverlay(child);
+      restoreTemplateUiState(templatesOverlay, templateState);
+      openTemplateOverlay(child, { focusSearch });
     }
     requestAnimationFrame(() => {
       const scroll = templatesOverlay.querySelector(
