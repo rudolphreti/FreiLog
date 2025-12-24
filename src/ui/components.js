@@ -1310,7 +1310,15 @@ export const buildObservationsSection = ({
     const templateContent = refs.templatesOverlay.querySelector(
       '.observation-templates-overlay__content',
     );
-    const previousScrollTop = templateContent ? templateContent.scrollTop : 0;
+    const pendingScrollValue = refs.templatesOverlay.dataset.pendingScrollTop;
+    const pendingScrollTop = pendingScrollValue ? Number(pendingScrollValue) : null;
+    const previousScrollTop =
+      typeof pendingScrollTop === 'number' && Number.isFinite(pendingScrollTop)
+        ? pendingScrollTop
+        : templateContent
+          ? templateContent.scrollTop
+          : 0;
+    delete refs.templatesOverlay.dataset.pendingScrollTop;
     // eslint-disable-next-line no-console
     console.log('freilog: template-scroll/preserve-start', { previousScrollTop });
 

@@ -1127,6 +1127,7 @@ export const bindObservations = ({
           focusSearch: false,
           templateState: getTemplateUiState(templatesOverlay),
         };
+        templatesOverlay.dataset.pendingScrollTop = `${scrollTop}`;
         console.log('freilog: template-scroll/save', {
           child: activeChild,
           scrollTop,
