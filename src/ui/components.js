@@ -1307,6 +1307,13 @@ export const buildObservationsSection = ({
     nextObservationGroups,
     nextObservationPresets,
   }) => {
+    const templateContent = refs.templatesOverlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    const previousScrollTop = templateContent ? templateContent.scrollTop : 0;
+    // eslint-disable-next-line no-console
+    console.log('freilog: template-scroll/preserve-start', { previousScrollTop });
+
     const absentSetNext = new Set(nextAbsentChildren || []);
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
     const getGroupsForLabelNext = (label) =>
@@ -1390,6 +1397,15 @@ export const buildObservationsSection = ({
       console.debug('freilog: template-overlay/update-skip', {
         isTemplateOpen,
         preservedFilter: refs.templatesOverlay.dataset.templateFilter,
+      });
+    }
+
+    if (templateContent) {
+      templateContent.scrollTop = previousScrollTop;
+      requestAnimationFrame(() => {
+        templateContent.scrollTop = previousScrollTop;
+        // eslint-disable-next-line no-console
+        console.log('freilog: template-scroll/preserve-end', { previousScrollTop });
       });
     }
   };
