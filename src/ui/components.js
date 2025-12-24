@@ -1295,10 +1295,14 @@ export const buildObservationsSection = ({
     nextObservationGroups,
     nextObservationPresets,
   }) => {
-    const templateScroll = overlayPanel.classList.contains('is-template-open')
-      ? refs.templatesOverlay.querySelector('.observation-templates-overlay__content')
-          ?.scrollTop
-      : null;
+    const templateContent = refs.templatesOverlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    const shouldPreserve =
+      overlayPanel.classList.contains('is-template-open') ||
+      refs.templatesOverlay.classList.contains('is-open');
+    const templateScroll =
+      shouldPreserve && templateContent ? templateContent.scrollTop : null;
     const absentSetNext = new Set(nextAbsentChildren || []);
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
     const getGroupsForLabelNext = (label) =>
