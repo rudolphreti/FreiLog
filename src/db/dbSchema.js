@@ -12,6 +12,13 @@ import {
 export const SCHEMA_VERSION = 3;
 
 const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
+export const DEFAULT_SAVED_OBSERVATION_FILTERS = {
+  multiGroups: false,
+  andOrMode: 'AND',
+  showAlphabet: false,
+  selectedGroups: [],
+  selectedLetter: 'ALL',
+};
 const DEFAULT_OBSERVATION_GROUPS = {
   ROT: {
     code: 'ROT',
@@ -187,12 +194,35 @@ export const sanitizeDaysByDate = (days, childrenList) => {
   return result;
 };
 
+export const normalizeSavedObservationFilters = (value) => {
+  const source = isPlainObject(value) ? value : {};
+  const selectedGroups = normalizeObservationGroups(source.selectedGroups);
+  const multiGroups = source.multiGroups === true;
+  const andOrMode = source.andOrMode === 'OR' ? 'OR' : 'AND';
+  const showAlphabet = source.showAlphabet === true;
+  const letterRaw =
+    typeof source.selectedLetter === 'string' && source.selectedLetter.trim()
+      ? source.selectedLetter.trim()
+      : 'ALL';
+  const selectedLetter =
+    letterRaw === 'ALL' ? 'ALL' : letterRaw.slice(0, 1).toLocaleUpperCase();
+
+  return {
+    multiGroups,
+    andOrMode,
+    showAlphabet,
+    selectedGroups,
+    selectedLetter,
+  };
+};
+
 const normalizeUi = (ui) => {
   const source = isPlainObject(ui) ? ui : {};
   const drawer = isPlainObject(source.drawer) ? source.drawer : {};
   const drawerSections = isPlainObject(drawer.sections)
     ? drawer.sections
     : {};
+  const overlay = isPlainObject(source.overlay) ? source.overlay : {};
 
   return {
     selectedDate: typeof source.selectedDate === 'string' ? source.selectedDate : '',
@@ -201,6 +231,12 @@ const normalizeUi = (ui) => {
       typeof source.observationsFilter === 'string'
         ? source.observationsFilter
         : 'ALL',
+    overlay: {
+      savedObsFilters: normalizeSavedObservationFilters(
+        overlay.savedObsFilters,
+        source.observationsFilter,
+      ),
+    },
     drawer: {
       open: typeof drawer.open === 'boolean' ? drawer.open : false,
       sections: {
@@ -342,7 +378,12 @@ export const createEmptyAppData = () => ({
   settings: {
     exportMode: DEFAULT_EXPORT_MODE,
   },
-  ui: normalizeUi(null),
+  ui: {
+    ...normalizeUi(null),
+    overlay: {
+      savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS },
+    },
+  },
 });
 
 export const normalizeAppData = (source, fallback = {}) => {

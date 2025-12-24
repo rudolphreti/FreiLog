@@ -9,6 +9,7 @@ import {
 } from '../db/dbRepository.js';
 import { debounce } from '../utils/debounce.js';
 import { normalizeObservationGroups } from '../utils/observationCatalog.js';
+import { setSavedObservationFilters } from '../state/store.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -190,6 +191,107 @@ const normalizeTemplateGroups = (value) =>
         .filter(Boolean)
     : [];
 
+const getTemplateFlags = (container) => ({
+  multiGroups: container?.dataset.templateMulti === 'true',
+  showAlphabet: container?.dataset.templateShowAlphabet === 'true',
+  settingsOpen: container?.dataset.templateSettingsOpen === 'true',
+});
+
+const persistTemplateFilters = (container) => {
+  if (!container) {
+    return;
+  }
+  const selectedGroups = normalizeTemplateGroups(container.dataset.templateGroups || '');
+  const templateFilter = container.dataset.templateFilter || 'ALL';
+  const { multiGroups, showAlphabet } = getTemplateFlags(container);
+  const templateGroupMode =
+    container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
+  setSavedObservationFilters({
+    multiGroups,
+    showAlphabet,
+    andOrMode: templateGroupMode,
+    selectedGroups,
+    selectedLetter: templateFilter || 'ALL',
+  });
+};
+
+const updateTemplateControls = (container, { syncInput = false } = {}) => {
+  if (!container) {
+    return;
+  }
+  const selectedGroups = normalizeTemplateGroups(container.dataset.templateGroups || '');
+  const selectedLetter = container.dataset.templateFilter || 'ALL';
+  const { multiGroups, showAlphabet, settingsOpen } = getTemplateFlags(container);
+  const groupMode = container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
+
+  const groupButtons = container.querySelectorAll(
+    '[data-role="observation-template-group-filter"]',
+  );
+  groupButtons.forEach((button) => {
+    const isActive = selectedGroups.includes(button.dataset.value || '');
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  const groupModeButtons = container.querySelectorAll(
+    '[data-role="observation-template-group-mode"]',
+  );
+  groupModeButtons.forEach((button) => {
+    const isActive = button.dataset.value === groupMode;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    button.classList.toggle('is-disabled', !multiGroups);
+    button.disabled = !multiGroups;
+    button.setAttribute('aria-disabled', !multiGroups ? 'true' : 'false');
+  });
+
+  const letterBar = container.querySelector('[data-role="observation-template-letter-bar"]');
+  const letterButtons = container.querySelectorAll('[data-role="observation-template-letter"]');
+  letterButtons.forEach((button) => {
+    const isActive = button.dataset.value === selectedLetter;
+    button.classList.toggle('active', isActive);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+  if (isHtmlElement(letterBar)) {
+    letterBar.hidden = !showAlphabet;
+    letterBar.classList.toggle('is-hidden', !showAlphabet);
+  }
+
+  const multiSwitch = container.querySelector('[data-role="observation-template-multi-switch"]');
+  if (isInputElement(multiSwitch)) {
+    multiSwitch.checked = multiGroups;
+  }
+
+  const alphabetSwitch = container.querySelector(
+    '[data-role="observation-template-alphabet-switch"]',
+  );
+  if (isInputElement(alphabetSwitch)) {
+    alphabetSwitch.checked = showAlphabet;
+  }
+
+  const settingsPanel = container.querySelector(
+    '[data-role="observation-template-settings-panel"]',
+  );
+  if (isHtmlElement(settingsPanel)) {
+    settingsPanel.hidden = !settingsOpen;
+  }
+
+  const settingsToggle = container.querySelector(
+    '[data-role="observation-template-settings-toggle"]',
+  );
+  if (isHtmlElement(settingsToggle)) {
+    settingsToggle.setAttribute('aria-expanded', settingsOpen ? 'true' : 'false');
+    settingsToggle.classList.toggle('is-active', settingsOpen);
+  }
+
+  if (syncInput) {
+    const searchInput = container.querySelector('[data-role="observation-template-search"]');
+    if (isInputElement(searchInput)) {
+      searchInput.value = container.dataset.templateQuery || '';
+    }
+  }
+};
+
 const updateTemplateButtonState = (button, isSelected) => {
   if (!isHtmlElement(button)) {
     return;
@@ -214,7 +316,11 @@ const matchesTemplateGroups = ({ selectedGroups, buttonGroups, mode }) => {
 };
 
 const applyTemplateFilters = (container) => {
-  const selectedInitial = container.dataset.templateFilter || 'ALL';
+  const { showAlphabet } = getTemplateFlags(container);
+  const selectedInitial =
+    showAlphabet && container.dataset.templateFilter
+      ? container.dataset.templateFilter
+      : 'ALL';
   const normalizedQuery = normalizeTemplateQuery(container.dataset.templateQuery || '');
   const selectedGroups = normalizeTemplateGroups(
     container.dataset.templateGroups || '',
@@ -290,14 +396,7 @@ const setTemplateFilter = (container, selected) => {
       ? selected.toLocaleUpperCase()
       : 'ALL';
   container.dataset.templateFilter = next;
-  const buttons = container.querySelectorAll(
-    '[data-role="observation-template-letter"]',
-  );
-  buttons.forEach((button) => {
-    const isActive = button.dataset.value === next;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
+  updateTemplateControls(container);
   applyTemplateFilters(container);
 };
 
@@ -308,15 +407,11 @@ const setTemplateGroups = (container, groups) => {
         .filter(Boolean)
         .map((group) => group.toLocaleUpperCase())
     : [];
-  container.dataset.templateGroups = normalized.join(',');
-  const buttons = container.querySelectorAll(
-    '[data-role="observation-template-group-filter"]',
-  );
-  buttons.forEach((button) => {
-    const isActive = normalized.includes(button.dataset.value || '');
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
+  const { multiGroups } = getTemplateFlags(container);
+  const uniqueGroups = Array.from(new Set(normalized));
+  const nextGroups = multiGroups ? uniqueGroups : uniqueGroups.slice(0, 1);
+  container.dataset.templateGroups = nextGroups.join(',');
+  updateTemplateControls(container);
   applyTemplateFilters(container);
 };
 
@@ -324,35 +419,58 @@ const toggleTemplateGroup = (container, group) => {
   if (!group) {
     return;
   }
-  const selected = new Set(
-    normalizeTemplateGroups(container.dataset.templateGroups || ''),
-  );
+  const selected = new Set(normalizeTemplateGroups(container.dataset.templateGroups || ''));
   const normalized = group.trim().toLocaleUpperCase();
-  if (selected.has(normalized)) {
-    selected.delete(normalized);
+  const { multiGroups } = getTemplateFlags(container);
+  if (multiGroups) {
+    if (selected.has(normalized)) {
+      selected.delete(normalized);
+    } else {
+      selected.add(normalized);
+    }
+  } else if (selected.has(normalized)) {
+    selected.clear();
   } else {
+    selected.clear();
     selected.add(normalized);
   }
   setTemplateGroups(container, Array.from(selected));
 };
 
 const setTemplateGroupMode = (container, mode) => {
+  const { multiGroups } = getTemplateFlags(container);
   const next = mode === 'OR' ? 'OR' : 'AND';
-  container.dataset.templateGroupMode = next;
-  const buttons = container.querySelectorAll(
-    '[data-role="observation-template-group-mode"]',
-  );
-  buttons.forEach((button) => {
-    const isActive = button.dataset.value === next;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
+  container.dataset.templateGroupMode = multiGroups ? next : 'AND';
+  updateTemplateControls(container);
   applyTemplateFilters(container);
 };
 
 const setTemplateQuery = (container, query) => {
   container.dataset.templateQuery = typeof query === 'string' ? query : '';
   applyTemplateFilters(container);
+};
+
+const setTemplateMultiGroups = (container, enabled) => {
+  container.dataset.templateMulti = enabled ? 'true' : 'false';
+  if (!enabled) {
+    const selected = normalizeTemplateGroups(container.dataset.templateGroups || '');
+    const next = selected.length > 0 ? [selected[0]] : [];
+    container.dataset.templateGroups = next.join(',');
+    container.dataset.templateGroupMode = 'AND';
+  }
+  updateTemplateControls(container);
+  applyTemplateFilters(container);
+};
+
+const setTemplateShowAlphabet = (container, enabled) => {
+  container.dataset.templateShowAlphabet = enabled ? 'true' : 'false';
+  updateTemplateControls(container);
+  applyTemplateFilters(container);
+};
+
+const setTemplateSettingsOpen = (container, isOpen) => {
+  container.dataset.templateSettingsOpen = isOpen ? 'true' : 'false';
+  updateTemplateControls(container);
 };
 
 const feedbackTimeouts = new WeakMap();
@@ -393,56 +511,33 @@ const getTemplateUiState = (templatesOverlay) => {
     templateQuery: templatesOverlay.dataset.templateQuery || '',
     templateGroups: templatesOverlay.dataset.templateGroups || '',
     templateGroupMode: templatesOverlay.dataset.templateGroupMode || 'AND',
+    templateMulti: templatesOverlay.dataset.templateMulti === 'true',
+    templateShowAlphabet: templatesOverlay.dataset.templateShowAlphabet === 'true',
+    templateSettingsOpen: templatesOverlay.dataset.templateSettingsOpen === 'true',
   };
 };
 
 const restoreTemplateUiState = (templatesOverlay, state) => {
-  if (!templatesOverlay || !state) {
+  if (!templatesOverlay) {
     return;
   }
-  templatesOverlay.dataset.templateFilter = state.templateFilter || 'ALL';
-  templatesOverlay.dataset.templateQuery = state.templateQuery || '';
-  templatesOverlay.dataset.templateGroups = state.templateGroups || '';
-  templatesOverlay.dataset.templateGroupMode =
-    state.templateGroupMode === 'OR' ? 'OR' : 'AND';
-
-  const filterButtons = templatesOverlay.querySelectorAll(
-    '[data-role="observation-template-letter"]',
-  );
-  filterButtons.forEach((button) => {
-    const isActive = button.dataset.value === templatesOverlay.dataset.templateFilter;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
-
-  const groupButtons = templatesOverlay.querySelectorAll(
-    '[data-role="observation-template-group-filter"]',
-  );
-  const selectedGroups = normalizeTemplateGroups(
-    templatesOverlay.dataset.templateGroups || '',
-  );
-  groupButtons.forEach((button) => {
-    const isActive = selectedGroups.includes(button.dataset.value || '');
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
-
-  const groupModeButtons = templatesOverlay.querySelectorAll(
-    '[data-role="observation-template-group-mode"]',
-  );
-  groupModeButtons.forEach((button) => {
-    const isActive = button.dataset.value === templatesOverlay.dataset.templateGroupMode;
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
-
-  const searchInput = templatesOverlay.querySelector(
-    '[data-role="observation-template-search"]',
-  );
-  if (isInputElement(searchInput)) {
-    searchInput.value = templatesOverlay.dataset.templateQuery || '';
+  if (state) {
+    templatesOverlay.dataset.templateFilter = state.templateFilter || 'ALL';
+    templatesOverlay.dataset.templateQuery = state.templateQuery || '';
+    const groupsValue = Array.isArray(state.templateGroups)
+      ? state.templateGroups.join(',')
+      : state.templateGroups || '';
+    templatesOverlay.dataset.templateGroups = groupsValue;
+    templatesOverlay.dataset.templateGroupMode =
+      state.templateGroupMode === 'OR' ? 'OR' : 'AND';
+    templatesOverlay.dataset.templateMulti = state.templateMulti ? 'true' : 'false';
+    templatesOverlay.dataset.templateShowAlphabet =
+      state.templateShowAlphabet === true ? 'true' : 'false';
+    templatesOverlay.dataset.templateSettingsOpen =
+      state.templateSettingsOpen === true ? 'true' : 'false';
   }
 
+  updateTemplateControls(templatesOverlay, { syncInput: Boolean(state) });
   applyTemplateFilters(templatesOverlay);
 };
 
@@ -543,6 +638,7 @@ export const bindObservations = ({
   createOverlay,
   date,
   observationGroups,
+  savedFilters,
 }) => {
   if (
     !list ||
@@ -573,6 +669,21 @@ export const bindObservations = ({
   let suppressNextClick = false;
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
+
+  if (templatesOverlay) {
+    const savedTemplateState = savedFilters
+      ? {
+          templateFilter: savedFilters.selectedLetter || 'ALL',
+          templateQuery: templatesOverlay.dataset.templateQuery || '',
+          templateGroups: normalizeObservationGroups(savedFilters.selectedGroups || []).join(','),
+          templateGroupMode: savedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+          templateMulti: savedFilters.multiGroups === true,
+          templateShowAlphabet: savedFilters.showAlphabet === true,
+          templateSettingsOpen: false,
+        }
+      : getTemplateUiState(templatesOverlay);
+    restoreTemplateUiState(templatesOverlay, savedTemplateState);
+  }
 
   const setOverlayState = (child) => {
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
@@ -640,7 +751,7 @@ export const bindObservations = ({
     templatesOverlay.classList.add('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-template-open');
-    applyTemplateFilters(templatesOverlay);
+    restoreTemplateUiState(templatesOverlay, getTemplateUiState(templatesOverlay));
     updateTemplateSelectionState(templatesOverlay, getDate(), child);
     const searchInput = templatesOverlay.querySelector(
       '[data-role="observation-template-search"]',
@@ -657,6 +768,7 @@ export const bindObservations = ({
     closeEditOverlay();
     isTemplateOverlayOpen = false;
     templatesOverlay.dataset.isOpen = 'false';
+    setTemplateSettingsOpen(templatesOverlay, false);
     templatesOverlay.classList.remove('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'true');
     overlayPanel.classList.remove('is-template-open');
@@ -930,6 +1042,18 @@ export const bindObservations = ({
 
     if (target.dataset.role === 'observation-template-search') {
       handleTemplateSearch(target);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-multi-switch') {
+      setTemplateMultiGroups(templatesOverlay, target.checked);
+      persistTemplateFilters(templatesOverlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-alphabet-switch') {
+      setTemplateShowAlphabet(templatesOverlay, target.checked);
+      persistTemplateFilters(templatesOverlay);
     }
   };
 
@@ -1108,6 +1232,15 @@ export const bindObservations = ({
       return;
     }
 
+    const settingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    if (settingsToggle) {
+      const { settingsOpen } = getTemplateFlags(templatesOverlay);
+      setTemplateSettingsOpen(templatesOverlay, !settingsOpen);
+      return;
+    }
+
     const templateButton = target.closest(
       '[data-role="observation-template-add"]',
     );
@@ -1151,6 +1284,7 @@ export const bindObservations = ({
         templatesOverlay,
         templateGroupButton.dataset.value,
       );
+      persistTemplateFilters(templatesOverlay);
       return;
     }
 
@@ -1162,6 +1296,7 @@ export const bindObservations = ({
         templatesOverlay,
         templateGroupModeButton.dataset.value,
       );
+      persistTemplateFilters(templatesOverlay);
       return;
     }
 
@@ -1173,6 +1308,7 @@ export const bindObservations = ({
         templatesOverlay,
         templateFilterButton.dataset.value || 'ALL',
       );
+      persistTemplateFilters(templatesOverlay);
     }
   };
 

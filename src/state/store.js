@@ -1,5 +1,9 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
-import { normalizeAppData } from '../db/dbSchema.js';
+import {
+  DEFAULT_SAVED_OBSERVATION_FILTERS,
+  normalizeAppData,
+  normalizeSavedObservationFilters,
+} from '../db/dbSchema.js';
 import { loadAppData, saveAppData } from './persistence.js';
 
 let appData = null;
@@ -39,6 +43,9 @@ export const getState = () => {
     appData.ui.observationsFilter.trim()
       ? appData.ui.observationsFilter
       : 'ALL';
+  const savedObsFilters = appData?.ui?.overlay?.savedObsFilters
+    ? normalizeSavedObservationFilters(appData.ui.overlay.savedObsFilters)
+    : { ...DEFAULT_SAVED_OBSERVATION_FILTERS };
 
   return {
     db: appData,
@@ -46,6 +53,9 @@ export const getState = () => {
       selectedDate,
       exportMode,
       observationsFilter,
+      overlay: {
+        savedObsFilters,
+      },
       drawer: {
         open: Boolean(drawer.open),
         sections: {
@@ -75,33 +85,58 @@ export const setExportMode = (mode) => {
   });
 };
 
+const ensureUiDraft = (draft) => {
+  if (!draft.ui) {
+    draft.ui = {
+      selectedDate: '',
+      exportMode: '',
+      observationsFilter: 'ALL',
+      overlay: { savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS } },
+      drawer: { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } },
+    };
+  }
+
+  if (!draft.ui.drawer) {
+    draft.ui.drawer = { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } };
+  }
+
+  if (!draft.ui.drawer.sections) {
+    draft.ui.drawer.sections = { ...DEFAULT_DRAWER_SECTIONS };
+  }
+
+  if (!draft.ui.overlay) {
+    draft.ui.overlay = { savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS } };
+  }
+
+  if (!draft.ui.overlay.savedObsFilters) {
+    draft.ui.overlay.savedObsFilters = { ...DEFAULT_SAVED_OBSERVATION_FILTERS };
+  }
+};
+
 export const setDrawerSectionState = (sectionId, isOpen) => {
   updateAppData((draft) => {
-    if (!draft.ui.drawer) {
-      draft.ui.drawer = { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } };
-    }
-    if (!draft.ui.drawer.sections) {
-      draft.ui.drawer.sections = { ...DEFAULT_DRAWER_SECTIONS };
-    }
+    ensureUiDraft(draft);
     draft.ui.drawer.sections[sectionId] = Boolean(isOpen);
   });
 };
 
 export const setObservationsFilter = (value) => {
   updateAppData((draft) => {
-    if (!draft.ui) {
-      draft.ui = {
-        selectedDate: '',
-        exportMode: '',
-        observationsFilter: 'ALL',
-        drawer: { open: false, sections: { ...DEFAULT_DRAWER_SECTIONS } },
-      };
-    }
+    ensureUiDraft(draft);
     const next =
       typeof value === 'string' && value.trim()
         ? value.trim().toLocaleUpperCase()
         : 'ALL';
     draft.ui.observationsFilter = next;
+  });
+};
+
+export const setSavedObservationFilters = (value) => {
+  updateAppData((draft) => {
+    ensureUiDraft(draft);
+    const current = draft.ui.overlay.savedObsFilters || DEFAULT_SAVED_OBSERVATION_FILTERS;
+    const merged = normalizeSavedObservationFilters({ ...current, ...(value || {}) });
+    draft.ui.overlay.savedObsFilters = merged;
   });
 };
 

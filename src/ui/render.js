@@ -129,6 +129,7 @@ export const renderApp = (root, state) => {
   const observationStats = db.observationStats || {};
   const observationCatalog = db.observationCatalog || [];
   const observationGroups = db.observationGroups || {};
+  const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
 
   const preservedUi = getPreservedUiState(root);
 
@@ -149,6 +150,7 @@ export const renderApp = (root, state) => {
         absentChildren,
         observationCatalog,
         observationGroups,
+        savedObsFilters,
       });
 
   if (!drawerShell) {
@@ -197,6 +199,7 @@ export const renderApp = (root, state) => {
       createOverlay: observationsSection.refs.createOverlay,
       date: selectedDate,
       observationGroups,
+      savedFilters: savedObsFilters,
     });
 
     bindDrawerSections(drawerContentRefs?.sections);
@@ -228,6 +231,7 @@ export const renderApp = (root, state) => {
     nextObservationCatalog: observationCatalog,
     nextObservationGroups: observationGroups,
     nextObservationPresets: observationPresets,
+    nextSavedObsFilters: savedObsFilters,
   });
 
   if (observationsBinding?.updateDate) {

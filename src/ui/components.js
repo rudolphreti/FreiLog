@@ -1,6 +1,10 @@
 import { createEl } from './dom.js';
 import { todayYmd } from '../utils/date.js';
 import {
+  DEFAULT_SAVED_OBSERVATION_FILTERS,
+  normalizeSavedObservationFilters,
+} from '../db/dbSchema.js';
+import {
   OBSERVATION_GROUP_CODES,
   normalizeObservationKey,
   normalizeObservationGroups,
@@ -575,6 +579,7 @@ const buildObservationTemplatesOverlay = ({
   templates,
   observationCatalog,
   observationGroups,
+  savedFilters,
 }) => {
   const templateEntries = buildObservationTemplateEntries(
     templates,
@@ -582,14 +587,24 @@ const buildObservationTemplatesOverlay = ({
   );
   const { groups, initials } = buildTemplateGroups(templateEntries);
   const hasTemplates = groups.size > 0;
+  const normalizedSavedFilters = normalizeSavedObservationFilters(
+    savedFilters || DEFAULT_SAVED_OBSERVATION_FILTERS,
+  );
+  const normalizedSelectedGroups = normalizeObservationGroups(
+    normalizedSavedFilters.selectedGroups,
+  );
   const overlay = createEl('div', {
     className: 'observation-templates-overlay',
     dataset: {
       role: 'observation-templates-overlay',
-      templateFilter: 'ALL',
+      templateFilter: normalizedSavedFilters.selectedLetter || 'ALL',
       templateQuery: '',
-      templateGroups: '',
-      templateGroupMode: 'AND',
+      templateGroups: normalizedSelectedGroups.join(','),
+      templateGroupMode:
+        normalizedSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+      templateMulti: normalizedSavedFilters.multiGroups ? 'true' : 'false',
+      templateShowAlphabet: normalizedSavedFilters.showAlphabet ? 'true' : 'false',
+      templateSettingsOpen: 'false',
     },
     attrs: { 'aria-hidden': 'true' },
   });
@@ -616,7 +631,7 @@ const buildObservationTemplatesOverlay = ({
   header.append(closeButton, title);
 
   const groupFilterBar = createEl('div', {
-    className: 'd-flex flex-wrap gap-2 observation-templates__group-filters',
+    className: 'observation-templates__group-dots',
   });
 
   const addGroupButton = (code) => {
@@ -624,13 +639,27 @@ const buildObservationTemplatesOverlay = ({
       observationGroups && observationGroups[code]?.color
         ? observationGroups[code].color
         : '#6c757d';
+    const label =
+      observationGroups && observationGroups[code]?.label
+        ? observationGroups[code].label
+        : code;
     const button = createEl('button', {
-      className: 'btn btn-sm observation-group-pill',
-      text: code,
+      className: 'observation-group-dot-btn',
+      children: [
+        createEl('span', {
+          className: 'observation-group-dot',
+          attrs: { 'aria-hidden': 'true' },
+        }),
+        createEl('span', {
+          className: 'visually-hidden',
+          text: `${label} (${code})`,
+        }),
+      ],
       attrs: {
         type: 'button',
         'aria-pressed': 'false',
         style: `--group-color: ${color};`,
+        title: `${label} (${code})`,
       },
       dataset: { role: 'observation-template-group-filter', value: code },
     });
@@ -640,13 +669,13 @@ const buildObservationTemplatesOverlay = ({
   OBSERVATION_GROUP_CODES.forEach((code) => addGroupButton(code));
 
   const groupModeToggle = createEl('div', {
-    className: 'btn-group btn-group-sm observation-templates__group-mode',
+    className: 'observation-templates__group-mode',
     attrs: { role: 'group', 'aria-label': 'Gruppenfilter Modus' },
   });
 
   const addGroupModeButton = (label, value, isActive = false) => {
     const button = createEl('button', {
-      className: `btn btn-outline-secondary${isActive ? ' active' : ''}`,
+      className: `observation-templates__mode-btn${isActive ? ' active' : ''}`,
       text: label,
       attrs: {
         type: 'button',
@@ -657,22 +686,24 @@ const buildObservationTemplatesOverlay = ({
     groupModeToggle.appendChild(button);
   };
 
-  addGroupModeButton('UND', 'AND', true);
-  addGroupModeButton('ODER', 'OR');
+  addGroupModeButton('UND', 'AND', normalizedSavedFilters.andOrMode !== 'OR');
+  addGroupModeButton('ODER', 'OR', normalizedSavedFilters.andOrMode === 'OR');
 
   const groupControls = createEl('div', {
-    className:
-      'd-flex flex-column flex-md-row gap-2 align-items-start observation-templates__group-controls',
+    className: 'observation-templates__group-set',
     children: [groupFilterBar, groupModeToggle],
   });
 
   const filterBar = createEl('div', {
-    className: 'd-flex flex-wrap gap-2 observation-templates__filters',
+    className: 'observation-templates__filters',
+    dataset: { role: 'observation-template-letter-bar' },
   });
 
   const addFilterButton = (label, value, isActive = false) => {
     const button = createEl('button', {
-      className: `btn btn-outline-secondary btn-sm${isActive ? ' active' : ''}`,
+      className: `btn btn-outline-secondary btn-sm observation-letter${
+        isActive ? ' active' : ''
+      }`,
       text: label,
       attrs: {
         type: 'button',
@@ -696,15 +727,100 @@ const buildObservationTemplatesOverlay = ({
     dataset: { role: 'observation-template-search' },
   });
 
-  const controls = createEl('div', {
-    className: 'd-flex flex-column flex-md-row gap-2 align-items-start',
-    children: [filterBar, searchInput],
+  const settingsToggle = createEl('button', {
+    className: 'observation-templates__settings-btn',
+    attrs: {
+      type: 'button',
+      'aria-label': 'Erweiterte Filter',
+      'aria-expanded': 'false',
+    },
+    dataset: { role: 'observation-template-settings-toggle' },
+    text: '⚙',
+  });
+
+  const multiOption = createEl('label', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('span', { className: 'form-check-label', text: 'Mehrere Gruppen auswählen' }),
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox' },
+        dataset: { role: 'observation-template-multi-switch' },
+      }),
+    ],
+  });
+
+  const alphabetOption = createEl('label', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('span', { className: 'form-check-label', text: 'Buchstaben-Filter anzeigen' }),
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox' },
+        dataset: { role: 'observation-template-alphabet-switch' },
+      }),
+    ],
+  });
+
+  const settingsMode = createEl('div', {
+    className:
+      'observation-templates__setting-option observation-templates__setting-option--mode',
+    children: [
+      createEl('span', { className: 'form-check-label', text: 'UND/ODER' }),
+      createEl('div', {
+        className: 'observation-templates__mode-inline',
+        children: [
+          createEl('button', {
+            className: 'observation-templates__mode-btn',
+            text: 'UND',
+            attrs: { type: 'button', 'aria-pressed': 'false' },
+            dataset: { role: 'observation-template-group-mode', value: 'AND' },
+          }),
+          createEl('button', {
+            className: 'observation-templates__mode-btn',
+            text: 'ODER',
+            attrs: { type: 'button', 'aria-pressed': 'false' },
+            dataset: { role: 'observation-template-group-mode', value: 'OR' },
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const settingsPanel = createEl('div', {
+    className: 'observation-templates__settings-panel',
+    dataset: { role: 'observation-template-settings-panel' },
+    hidden: true,
+    children: [multiOption, settingsMode, alphabetOption],
+  });
+
+  const settings = createEl('div', {
+    className: 'observation-templates__settings',
+    children: [settingsToggle, settingsPanel],
+  });
+
+  const searchRow = createEl('div', {
+    className: 'observation-templates__search-row',
+    children: [searchInput],
+  });
+
+  const filtersShell = createEl('div', {
+    className: 'observation-templates__filters-shell',
+    children: [
+      createEl('div', {
+        className: 'observation-templates__filter-row',
+        children: [groupControls, settings],
+      }),
+      filterBar,
+      searchRow,
+    ],
   });
 
   const list = createEl('div', {
     className: 'd-flex flex-column gap-3 observation-templates__list',
     dataset: { role: 'observation-template-list' },
   });
+  list.hidden = !hasTemplates;
 
   groups.forEach((items, initial) => {
     const group = createEl('div', {
@@ -752,7 +868,7 @@ const buildObservationTemplatesOverlay = ({
 
   const content = createEl('div', {
     className: 'mt-3 d-flex flex-column gap-3',
-    children: hasTemplates ? [groupControls, controls, list, empty] : [empty],
+    children: [filtersShell, list, empty],
   });
 
   const scrollContent = createEl('div', {
@@ -1129,6 +1245,7 @@ export const buildObservationsSection = ({
   absentChildren,
   observationCatalog,
   observationGroups,
+  savedObsFilters,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
@@ -1138,6 +1255,10 @@ export const buildObservationsSection = ({
   const observationGroupMap = buildObservationCatalogGroupMap(observationCatalog);
   const getGroupsForLabel = (label) =>
     observationGroupMap.get(normalizeObservationKey(label)) || [];
+  const normalizedSavedFilters = normalizeSavedObservationFilters(
+    savedObsFilters || DEFAULT_SAVED_OBSERVATION_FILTERS,
+  );
+  let currentSavedFilters = normalizedSavedFilters;
 
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-child-list',
@@ -1183,6 +1304,7 @@ export const buildObservationsSection = ({
     templates: presets,
     observationCatalog,
     observationGroups,
+    savedFilters: normalizedSavedFilters,
   });
   const editOverlay = buildObservationEditOverlay({ observationGroups });
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
@@ -1306,7 +1428,13 @@ export const buildObservationsSection = ({
     nextObservationCatalog,
     nextObservationGroups,
     nextObservationPresets,
+    nextSavedObsFilters,
   }) => {
+    if (nextSavedObsFilters) {
+      currentSavedFilters = normalizeSavedObservationFilters(
+        nextSavedObsFilters || DEFAULT_SAVED_OBSERVATION_FILTERS,
+      );
+    }
     const templateContent = refs.templatesOverlay.querySelector(
       '.observation-templates-overlay__content',
     );
@@ -1355,6 +1483,7 @@ export const buildObservationsSection = ({
         templates: nextObservationPresets,
         observationCatalog: nextObservationCatalog,
         observationGroups: nextObservationGroups,
+        savedFilters: currentSavedFilters,
       });
       if (refreshed?.element) {
         const nextPanel = refreshed.element.querySelector(
@@ -1392,11 +1521,22 @@ export const buildObservationsSection = ({
         const nextGroupMode =
           refreshed.element.dataset.templateGroupMode ||
           refs.templatesOverlay.dataset.templateGroupMode;
+        const nextMulti =
+          refreshed.element.dataset.templateMulti || refs.templatesOverlay.dataset.templateMulti;
+        const nextShowAlphabet =
+          refreshed.element.dataset.templateShowAlphabet ||
+          refs.templatesOverlay.dataset.templateShowAlphabet;
+        const nextSettingsOpen =
+          refreshed.element.dataset.templateSettingsOpen ||
+          refs.templatesOverlay.dataset.templateSettingsOpen;
         Object.assign(refs.templatesOverlay.dataset, {
           templateFilter: nextFilter,
           templateQuery: nextQuery,
           templateGroups: nextGroups,
           templateGroupMode: nextGroupMode,
+          templateMulti: nextMulti,
+          templateShowAlphabet: nextShowAlphabet,
+          templateSettingsOpen: nextSettingsOpen,
         });
       }
     } else if (isTemplateOpen) {
