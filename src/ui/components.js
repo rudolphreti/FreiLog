@@ -1295,6 +1295,10 @@ export const buildObservationsSection = ({
     nextObservationGroups,
     nextObservationPresets,
   }) => {
+    const templateScroll = overlayPanel.classList.contains('is-template-open')
+      ? refs.templatesOverlay.querySelector('.observation-templates-overlay__content')
+          ?.scrollTop
+      : null;
     const absentSetNext = new Set(nextAbsentChildren || []);
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
     const getGroupsForLabelNext = (label) =>
@@ -1341,6 +1345,17 @@ export const buildObservationsSection = ({
           refreshed.element.dataset.templateGroupMode ||
           refs.templatesOverlay.dataset.templateGroupMode;
       }
+    }
+
+    if (typeof templateScroll === 'number') {
+      requestAnimationFrame(() => {
+        const scrollNode = refs.templatesOverlay.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        if (scrollNode) {
+          scrollNode.scrollTop = templateScroll;
+        }
+      });
     }
   };
 
