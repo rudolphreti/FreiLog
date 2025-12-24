@@ -32,23 +32,34 @@ const startOfIsoWeek = (date) => {
   return addUtcDays(date, diff);
 };
 
+const getFirstSchoolMonday = (startDate) => {
+  const day = startDate.getUTCDay();
+  if (day === 1) {
+    return startDate;
+  }
+  const offset = (8 - day) % 7;
+  return addUtcDays(startDate, offset || 7);
+};
+
 const getSchoolYearFromDate = (date) => {
   const month = date.getUTCMonth() + 1;
   const year = date.getUTCFullYear();
   const startYear = month >= 9 ? year : year - 1;
   const startDate = new Date(Date.UTC(startYear, 8, 1));
   const endDate = new Date(Date.UTC(startYear + 1, 7, 31));
+  const firstWeekStart = getFirstSchoolMonday(startDate);
   const label = `${startYear}-${String(startYear + 1).slice(-2)}`;
   return {
     label,
     startYear,
     startDate,
     endDate,
+    firstWeekStart,
   };
 };
 
 const clampWeekWithinSchoolYear = (weekStart, schoolYear) => {
-  const boundedStart = weekStart < schoolYear.startDate ? schoolYear.startDate : weekStart;
+  const boundedStart = weekStart < schoolYear.firstWeekStart ? schoolYear.firstWeekStart : weekStart;
   let endDate = addUtcDays(boundedStart, 4);
   if (endDate > schoolYear.endDate) {
     endDate = schoolYear.endDate;
@@ -77,7 +88,9 @@ export const getSchoolWeeks = (daysByDate) => {
     }
     const schoolYear = getSchoolYearFromDate(date);
     const isoWeekStart = startOfIsoWeek(date);
-    const { startDate, endDate } = clampWeekWithinSchoolYear(isoWeekStart, schoolYear);
+    const normalizedWeekStart =
+      isoWeekStart < schoolYear.firstWeekStart ? schoolYear.firstWeekStart : isoWeekStart;
+    const { startDate, endDate } = clampWeekWithinSchoolYear(normalizedWeekStart, schoolYear);
     const startYmd = formatYmd(startDate);
     const endYmd = formatYmd(endDate);
     if (!schoolYears.has(schoolYear.label)) {
@@ -86,6 +99,7 @@ export const getSchoolWeeks = (daysByDate) => {
         startYear: schoolYear.startYear,
         startDate,
         endDate,
+        firstWeekStart: schoolYear.firstWeekStart,
         weeks: new Map(),
       });
     }
@@ -111,7 +125,9 @@ export const getSchoolWeeks = (daysByDate) => {
       (a, b) => a.startDate.getTime() - b.startDate.getTime(),
     );
     weeks.forEach((week, index) => {
-      week.number = index + 1;
+      const diffMs = week.startDate.getTime() - year.firstWeekStart.getTime();
+      const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+      week.number = diffWeeks + 1;
       week.label = `${week.number}/${year.label}`;
     });
     year.weeks = weeks;
