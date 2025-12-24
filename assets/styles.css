@@ -26,6 +26,37 @@ body {
   gap: 0.35rem;
 }
 
+.observation-top-list {
+  --observation-top-scale: 0.95;
+  --observation-top-border: rgba(0, 0, 0, 0.08);
+  --observation-top-bg: #fbfcff;
+  --observation-top-text: #5c6778;
+  --observation-top-count-bg: #f0f4ff;
+  --observation-top-count-border: rgba(0, 0, 0, 0.06);
+}
+
+.observation-top-list .observation-top-button {
+  transform: scale(var(--observation-top-scale));
+  transform-origin: left top;
+  border-color: var(--observation-top-border);
+  color: var(--observation-top-text);
+  background: var(--observation-top-bg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.observation-top-list .observation-top-button:hover,
+.observation-top-list .observation-top-button:focus-visible {
+  border-color: rgba(0, 0, 0, 0.12);
+  color: #384152;
+  background: #f7f9fe;
+}
+
+.observation-top-list .observation-top-count {
+  background: var(--observation-top-count-bg);
+  border-color: var(--observation-top-count-border);
+  color: var(--observation-top-text);
+}
+
 .observation-pill {
   font-size: 0.85rem;
   min-height: 40px;
