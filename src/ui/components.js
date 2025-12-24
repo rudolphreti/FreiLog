@@ -1331,10 +1331,11 @@ export const buildObservationsSection = ({
       });
     });
 
-    if (
-      !overlayPanel.classList.contains('is-template-open') &&
-      Array.isArray(nextObservationPresets)
-    ) {
+    const isTemplateOpen =
+      overlayPanel.classList.contains('is-template-open') ||
+      refs.templatesOverlay?.dataset.isOpen === 'true';
+
+    if (!isTemplateOpen && Array.isArray(nextObservationPresets)) {
       const refreshed = buildObservationTemplatesOverlay({
         templates: nextObservationPresets,
         observationCatalog: nextObservationCatalog,
@@ -1367,16 +1368,29 @@ export const buildObservationsSection = ({
           currentContent.replaceChildren(...nextContent.children);
           currentContent.scrollTop = preservedScrollTop;
         }
-        refs.templatesOverlay.dataset.templateFilter =
+        const nextFilter =
           refreshed.element.dataset.templateFilter || refs.templatesOverlay.dataset.templateFilter;
-        refs.templatesOverlay.dataset.templateQuery =
+        const nextQuery =
           refreshed.element.dataset.templateQuery || refs.templatesOverlay.dataset.templateQuery;
-        refs.templatesOverlay.dataset.templateGroups =
+        const nextGroups =
           refreshed.element.dataset.templateGroups || refs.templatesOverlay.dataset.templateGroups;
-        refs.templatesOverlay.dataset.templateGroupMode =
+        const nextGroupMode =
           refreshed.element.dataset.templateGroupMode ||
           refs.templatesOverlay.dataset.templateGroupMode;
+        Object.assign(refs.templatesOverlay.dataset, {
+          templateFilter: nextFilter,
+          templateQuery: nextQuery,
+          templateGroups: nextGroups,
+          templateGroupMode: nextGroupMode,
+        });
       }
+    } else if (isTemplateOpen) {
+      // Debug logging to trace unexpected rebuilds that could reset scroll.
+      // eslint-disable-next-line no-console
+      console.debug('freilog: template-overlay/update-skip', {
+        isTemplateOpen,
+        preservedFilter: refs.templatesOverlay.dataset.templateFilter,
+      });
     }
   };
 
