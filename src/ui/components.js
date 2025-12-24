@@ -907,10 +907,13 @@ const rebuildChildButton = ({ child, isAbsent, observationsByChild }) => {
         text: 'Abwesend',
       })
     : null;
-  const countBadge = createEl('span', {
-    className: 'badge text-bg-light text-secondary observation-count-badge',
-    text: `${count}`,
-  });
+  const countBadge =
+    count > 0
+      ? createEl('span', {
+          className: 'badge text-bg-light text-secondary observation-count-badge',
+          text: `${count}`,
+        })
+      : null;
   return createEl('button', {
     className:
       `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
@@ -921,11 +924,11 @@ const rebuildChildButton = ({ child, isAbsent, observationsByChild }) => {
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
           countBadge,
           badge,
-        ]
+        ].filter(Boolean)
       : [
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
           countBadge,
-        ],
+        ].filter(Boolean),
   });
 };
 
