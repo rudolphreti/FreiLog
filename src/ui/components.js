@@ -1286,6 +1286,18 @@ export const buildObservationsSection = ({
     }
   };
 
+  const refs = {
+    list,
+    overlay,
+    overlayPanel,
+    overlayContent,
+    overlayTitle,
+    closeButton,
+    templatesOverlay: templatesOverlay.element,
+    editOverlay: editOverlay.element,
+    createOverlay: createOverlay.element,
+  };
+
   const update = ({
     nextChildren,
     nextObservations,
@@ -1370,17 +1382,7 @@ export const buildObservationsSection = ({
 
   return {
     element: section,
-    refs: {
-      list,
-      overlay,
-      overlayPanel,
-      overlayContent,
-      overlayTitle,
-      closeButton,
-      templatesOverlay: templatesOverlay.element,
-      editOverlay: editOverlay.element,
-      createOverlay: createOverlay.element,
-    },
+    refs,
     update,
   };
 };
