@@ -401,7 +401,7 @@ const buildPillList = ({
 };
 
 const buildTopList = (items, getGroups, observationGroups) => {
-  const list = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+  const list = createEl('div', { className: 'd-flex flex-wrap gap-2 small' });
   items.forEach(({ label, count }) => {
     const groups = getGroups ? getGroups(label) : [];
     const groupDots = buildObservationGroupDots(groups, observationGroups);
@@ -970,6 +970,10 @@ const createDetailPanel = ({
 
   topList.dataset.role = 'observation-top-list';
 
+  const actionRow = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+  });
+
   const templatesButton = createEl('button', {
     className: 'btn btn-primary btn-sm observation-template-open align-self-start',
     text: 'Gespeicherte Beobachtungen',
@@ -983,6 +987,8 @@ const createDetailPanel = ({
     attrs: { type: 'button' },
     dataset: { role: 'observation-create-open' },
   });
+
+  actionRow.append(templatesButton, createButton);
 
   const feedback = createEl('p', {
     className: 'text-muted small mb-0',
@@ -999,7 +1005,7 @@ const createDetailPanel = ({
       templateQuery: '',
       absent: isAbsent ? 'true' : 'false',
     },
-    children: [topList, todayTitle, todayList, templatesButton, createButton, feedback],
+    children: [todayTitle, todayList, topList, actionRow, feedback],
   });
 
   let absentNotice = null;
@@ -1012,8 +1018,7 @@ const createDetailPanel = ({
     topList.hidden = true;
     todayTitle.hidden = true;
     todayList.hidden = true;
-    templatesButton.hidden = true;
-    createButton.hidden = true;
+    actionRow.hidden = true;
     feedback.hidden = true;
     detail.append(absentNotice);
   }
@@ -1026,6 +1031,7 @@ const createDetailPanel = ({
       todayList,
       templatesButton,
       createButton,
+      actionRow,
       feedback,
       absentNotice,
     },
@@ -1412,8 +1418,7 @@ export const buildObservationsSection = ({
     refs.topList.hidden = isHidden;
     refs.todayTitle.hidden = isHidden;
     refs.todayList.hidden = isHidden;
-    refs.templatesButton.hidden = isHidden;
-    refs.createButton.hidden = isHidden;
+    refs.actionRow.hidden = isHidden;
     refs.feedback.hidden = isHidden;
 
     if (isAbsent) {
