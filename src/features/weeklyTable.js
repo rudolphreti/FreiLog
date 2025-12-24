@@ -311,8 +311,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
 
   weekSelectGroup.select.addEventListener('change', (event) => {
     selectedWeekId = event.target.value || null;
-    renderInfo();
-    renderTable();
+    render();
   });
 
   const open = () => {
