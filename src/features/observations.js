@@ -557,6 +557,9 @@ export const bindObservations = ({
     return;
   }
 
+  let currentDate = date;
+  const getDate = () => currentDate;
+
   let activeChild = null;
   let isOverlayOpen = false;
   let isTemplateOverlayOpen = false;
@@ -637,7 +640,7 @@ export const bindObservations = ({
     templatesOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-template-open');
     applyTemplateFilters(templatesOverlay);
-    updateTemplateSelectionState(templatesOverlay, date, child);
+    updateTemplateSelectionState(templatesOverlay, getDate(), child);
     const searchInput = templatesOverlay.querySelector(
       '[data-role="observation-template-search"]',
     );
@@ -840,7 +843,7 @@ export const bindObservations = ({
     if (removeButton) {
       const tag = removeButton.dataset.value;
       if (tag) {
-        removeObservationForChild(date, card.dataset.child, tag);
+        removeObservationForChild(getDate(), card.dataset.child, tag);
       }
       return;
     }
@@ -849,7 +852,7 @@ export const bindObservations = ({
     if (topButton) {
       const tag = topButton.dataset.value;
       if (tag) {
-        addTagForChild(date, card.dataset.child, tag);
+        addTagForChild(getDate(), card.dataset.child, tag);
         if (!findExistingPreset(getObservationPresets(), tag)) {
           addPreset('observations', tag);
         }
@@ -965,7 +968,7 @@ export const bindObservations = ({
       return;
     }
 
-    const entry = getEntry(date);
+    const entry = getEntry(getDate());
     const existing = normalizeObservationList(
       getObservationTags(entry, activeChild),
     );
@@ -978,7 +981,7 @@ export const bindObservations = ({
       return;
     }
 
-    updateEntry(date, {
+    updateEntry(getDate(), {
       observations: {
         [activeChild]: [resolved],
       },
@@ -1112,7 +1115,7 @@ export const bindObservations = ({
       }
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
-        const selectedKeys = getSelectedObservationKeys(date, activeChild);
+        const selectedKeys = getSelectedObservationKeys(getDate(), activeChild);
         const tagKey = normalizeObservationKey(tag);
         const isSelected = tagKey && selectedKeys.has(tagKey);
         const scrollTop = getTemplateScrollTop();
@@ -1124,9 +1127,9 @@ export const bindObservations = ({
         };
         updateTemplateButtonState(templateButton, !isSelected);
         if (isSelected) {
-          removeObservationForChild(date, activeChild, tag);
+          removeObservationForChild(getDate(), activeChild, tag);
         } else {
-          addTagForChild(date, activeChild, tag);
+          addTagForChild(getDate(), activeChild, tag);
         }
       }
       return;
@@ -1267,7 +1270,7 @@ export const bindObservations = ({
     clearLongPress();
     longPressTimer = window.setTimeout(() => {
       suppressNextClick = true;
-      toggleAbsentChild(date, button.dataset.child);
+      toggleAbsentChild(getDate(), button.dataset.child);
       longPressTimer = null;
     }, LONG_PRESS_MS);
   };
@@ -1345,4 +1348,10 @@ export const bindObservations = ({
       }
     });
   }
+
+  return {
+    updateDate: (nextDate) => {
+      currentDate = nextDate;
+    },
+  };
 };

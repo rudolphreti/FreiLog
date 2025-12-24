@@ -81,6 +81,8 @@ const getAbsentChildren = (entry) =>
   Array.isArray(entry.absentChildIds) ? entry.absentChildIds : [];
 
 let drawerShell = null;
+let appShell = null;
+let observationsBinding = null;
 
 const renderDrawerContent = (
   state,
@@ -114,13 +116,6 @@ export const renderApp = (root, state) => {
     return;
   }
 
-  const preservedUi = getPreservedUiState(root);
-
-  clearElement(root);
-
-  const container = document.createElement('div');
-  container.className = 'app';
-
   const selectedDate = getSelectedDate(state);
   const db = state?.db || {};
   const entry = getEntryForDate(db, selectedDate);
@@ -135,6 +130,8 @@ export const renderApp = (root, state) => {
   const observationCatalog = db.observationCatalog || [];
   const observationGroups = db.observationGroups || {};
 
+  const preservedUi = getPreservedUiState(root);
+
   const header = buildHeader({ selectedDate });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const angebotSection = buildAngebotSection({
@@ -142,15 +139,17 @@ export const renderApp = (root, state) => {
     selectedAngebote,
     newValue: preservedUi.angebotInputValue,
   });
-  const observationsSection = buildObservationsSection({
-    children: sortedChildren,
-    observations,
-    presets: observationPresets,
-    observationStats,
-    absentChildren,
-    observationCatalog,
-    observationGroups,
-  });
+  const observationsSection = appShell?.observationsView
+    ? appShell.observationsView
+    : buildObservationsSection({
+        children: sortedChildren,
+        observations,
+        presets: observationPresets,
+        observationStats,
+        absentChildren,
+        observationCatalog,
+        observationGroups,
+      });
 
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
@@ -163,14 +162,78 @@ export const renderApp = (root, state) => {
     preservedUi.drawerScrollTop,
   );
 
-  const contentWrap = document.createElement('div');
-  contentWrap.className = 'container d-flex flex-column gap-3';
-  contentWrap.append(header.element, observationsSection.element);
+  if (!appShell) {
+    clearElement(root);
+    const container = document.createElement('div');
+    container.className = 'app';
+    const contentWrap = document.createElement('div');
+    contentWrap.className = 'container d-flex flex-column gap-3';
+    contentWrap.append(header.element, observationsSection.element);
 
-  container.append(contentWrap, drawerShell.element);
-  root.appendChild(container);
+    container.append(contentWrap, drawerShell.element);
+    root.appendChild(container);
 
+    bindDateEntry(header.refs.dateInput);
+    bindImportExport({
+      exportButton: drawerContentRefs?.exportButton,
+      importButton: drawerContentRefs?.importButton,
+      fileInput: drawerContentRefs?.importInput,
+    });
+    bindAngebot({
+      comboInput: angebotSection.refs.comboInput,
+      addButton: angebotSection.refs.addButton,
+      selectedList: angebotSection.refs.selectedList,
+      date: selectedDate,
+    });
+    observationsBinding = bindObservations({
+      list: observationsSection.refs.list,
+      overlay: observationsSection.refs.overlay,
+      overlayPanel: observationsSection.refs.overlayPanel,
+      overlayContent: observationsSection.refs.overlayContent,
+      overlayTitle: observationsSection.refs.overlayTitle,
+      closeButton: observationsSection.refs.closeButton,
+      templatesOverlay: observationsSection.refs.templatesOverlay,
+      editOverlay: observationsSection.refs.editOverlay,
+      createOverlay: observationsSection.refs.createOverlay,
+      date: selectedDate,
+      observationGroups,
+    });
+
+    bindDrawerSections(drawerContentRefs?.sections);
+
+    appShell = {
+      container,
+      contentWrap,
+      headerEl: header.element,
+      angebotEl: angebotSection.element,
+      observationsView: observationsSection,
+    };
+    return;
+  }
+
+  appShell.headerEl.replaceWith(header.element);
+  appShell.headerEl = header.element;
   bindDateEntry(header.refs.dateInput);
+
+  appShell.angebotEl.replaceWith(angebotSection.element);
+  appShell.angebotEl = angebotSection.element;
+
+  appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.observationsView.element);
+
+  appShell.observationsView.update({
+    nextChildren: sortedChildren,
+    nextObservations: observations,
+    nextObservationStats: observationStats,
+    nextAbsentChildren: absentChildren,
+    nextObservationCatalog: observationCatalog,
+    nextObservationGroups: observationGroups,
+    nextObservationPresets: observationPresets,
+  });
+
+  if (observationsBinding?.updateDate) {
+    observationsBinding.updateDate(selectedDate);
+  }
+
   bindImportExport({
     exportButton: drawerContentRefs?.exportButton,
     importButton: drawerContentRefs?.importButton,
@@ -182,19 +245,5 @@ export const renderApp = (root, state) => {
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
   });
-  bindObservations({
-    list: observationsSection.refs.list,
-    overlay: observationsSection.refs.overlay,
-    overlayPanel: observationsSection.refs.overlayPanel,
-    overlayContent: observationsSection.refs.overlayContent,
-    overlayTitle: observationsSection.refs.overlayTitle,
-    closeButton: observationsSection.refs.closeButton,
-    templatesOverlay: observationsSection.refs.templatesOverlay,
-    editOverlay: observationsSection.refs.editOverlay,
-    createOverlay: observationsSection.refs.createOverlay,
-    date: selectedDate,
-    observationGroups,
-  });
-
   bindDrawerSections(drawerContentRefs?.sections);
 };

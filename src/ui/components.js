@@ -775,6 +775,127 @@ const buildObservationTemplatesOverlay = ({
   };
 };
 
+const rebuildChildButton = ({ child, isAbsent }) => {
+  const badge = isAbsent
+    ? createEl('span', {
+        className: 'badge text-bg-light text-secondary observation-absent-badge',
+        text: 'Abwesend',
+      })
+    : null;
+  return createEl('button', {
+    className:
+      `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-child', child, absent: isAbsent ? 'true' : 'false' },
+    children: badge
+      ? [
+          createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+          badge,
+        ]
+      : [createEl('span', { className: 'fw-semibold observation-child-label', text: child })],
+  });
+};
+
+const rebuildTodayList = (items, getGroupsForLabel, observationGroups) =>
+  buildPillList({
+    items: Array.isArray(items) ? items : [],
+    getLabel: (item) => item,
+    getRemoveLabel: (label) => `${label} entfernen`,
+    removeRole: 'observation-today-remove',
+    getGroups: (item) => getGroupsForLabel(item),
+    observationGroups,
+  });
+
+const rebuildTopList = (topItems, getGroupsForLabel, observationGroups) =>
+  topItems.length
+    ? buildTopList(topItems, getGroupsForLabel, observationGroups)
+    : createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Noch keine Daten',
+      });
+
+const createDetailPanel = ({
+  child,
+  isAbsent,
+  topItems,
+  observationGroups,
+  getGroupsForLabel,
+}) => {
+  const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups);
+
+  const todayTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Heutige Beobachtungen',
+    dataset: { role: 'observation-today-title' },
+  });
+
+  const todayList = rebuildTodayList([], getGroupsForLabel, observationGroups);
+  todayList.dataset.role = 'observation-today-list';
+
+  topList.dataset.role = 'observation-top-list';
+
+  const templatesButton = createEl('button', {
+    className: 'btn btn-primary btn-sm observation-template-open align-self-start',
+    text: 'Gespeicherte Beobachtungen',
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-template-open' },
+  });
+
+  const createButton = createEl('button', {
+    className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
+    text: '+ Neue Beobachtung',
+    attrs: { type: 'button' },
+    dataset: { role: 'observation-create-open' },
+  });
+
+  const feedback = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: '',
+    dataset: { role: 'observation-feedback' },
+  });
+  feedback.hidden = true;
+
+  const detail = createEl('div', {
+    className: 'observation-detail d-flex flex-column gap-3 d-none',
+    dataset: {
+      child,
+      templateFilter: 'ALL',
+      templateQuery: '',
+      absent: isAbsent ? 'true' : 'false',
+    },
+    children: [topList, todayTitle, todayList, templatesButton, createButton, feedback],
+  });
+
+  let absentNotice = null;
+  if (isAbsent) {
+    absentNotice = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Abwesend – Beobachtungen deaktiviert.',
+      dataset: { role: 'observation-absent-notice' },
+    });
+    topList.hidden = true;
+    todayTitle.hidden = true;
+    todayList.hidden = true;
+    templatesButton.hidden = true;
+    createButton.hidden = true;
+    feedback.hidden = true;
+    detail.append(absentNotice);
+  }
+
+  return {
+    detail,
+    refs: {
+      topList,
+      todayTitle,
+      todayList,
+      templatesButton,
+      createButton,
+      feedback,
+      absentNotice,
+    },
+  };
+};
+
 const buildObservationEditOverlay = ({ observationGroups }) => {
   const overlay = createEl('div', {
     className: 'observation-edit-overlay',
@@ -1023,25 +1144,7 @@ export const buildObservationsSection = ({
   });
   children.forEach((child) => {
     const isAbsent = absentSet.has(child);
-    const badge = isAbsent
-      ? createEl('span', {
-          className: 'badge text-bg-light text-secondary observation-absent-badge',
-          text: 'Abwesend',
-        })
-      : null;
-    const button = createEl('button', {
-      className:
-        `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
-      attrs: { type: 'button' },
-      dataset: { role: 'observation-child', child, absent: isAbsent ? 'true' : 'false' },
-      children: badge
-        ? [
-            createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
-            badge,
-          ]
-        : [createEl('span', { className: 'fw-semibold observation-child-label', text: child })],
-    });
-    list.appendChild(button);
+    list.appendChild(rebuildChildButton({ child, isAbsent }));
   });
 
   const overlay = createEl('div', {
@@ -1083,84 +1186,27 @@ export const buildObservationsSection = ({
   });
   const editOverlay = buildObservationEditOverlay({ observationGroups });
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
+
+  const detailRefs = new Map();
+
   children.forEach((child) => {
     const data = observations[child] || {};
     const topItems = buildTopItems(observationStats?.[child], observationCatalog);
     const isAbsent = absentSet.has(child);
-
-    const todayTitle = createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Heutige Beobachtungen',
-    });
-
-    const todayList = buildPillList({
-      items: Array.isArray(data) ? data : [],
-      getLabel: (item) => item,
-      getRemoveLabel: (label) => `${label} entfernen`,
-      removeRole: 'observation-today-remove',
-      getGroups: (item) => getGroupsForLabel(item),
+    const { detail, refs } = createDetailPanel({
+      child,
+      isAbsent,
+      topItems,
       observationGroups,
+      getGroupsForLabel,
     });
-
-    const topList = topItems.length
-      ? buildTopList(topItems, getGroupsForLabel, observationGroups)
-      : createEl('p', {
-          className: 'text-muted small mb-0',
-          text: 'Noch keine Daten',
-        });
-
-    const templatesButton = createEl('button', {
-      className:
-        'btn btn-primary btn-sm observation-template-open align-self-start',
-      text: 'Gespeicherte Beobachtungen',
-      attrs: { type: 'button' },
-      dataset: { role: 'observation-template-open' },
-    });
-
-    const createButton = createEl('button', {
-      className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
-      text: '+ Neue Beobachtung',
-      attrs: { type: 'button' },
-      dataset: { role: 'observation-create-open' },
-    });
-
-    const feedback = createEl('p', {
-      className: 'text-muted small mb-0',
-      text: '',
-      dataset: { role: 'observation-feedback' },
-    });
-    feedback.hidden = true;
-
-    const detail = createEl('div', {
-      className: 'observation-detail d-flex flex-column gap-3 d-none',
-      dataset: {
-        child,
-        templateFilter: 'ALL',
-        templateQuery: '',
-        absent: isAbsent ? 'true' : 'false',
-      },
-      children: [
-        topList,
-        todayTitle,
-        todayList,
-        templatesButton,
-        createButton,
-        feedback,
-      ],
-    });
-    if (isAbsent) {
-      const absentNotice = createEl('p', {
-        className: 'text-muted small mb-0',
-        text: 'Abwesend – Beobachtungen deaktiviert.',
-      });
-      topList.hidden = true;
-      todayTitle.hidden = true;
-      todayList.hidden = true;
-      templatesButton.hidden = true;
-      createButton.hidden = true;
-      feedback.hidden = true;
-      detail.append(absentNotice);
-    }
+    const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
+    nextToday.dataset.role = 'observation-today-list';
+    refs.todayList.replaceWith(nextToday);
+    refs.todayList = nextToday;
+    refs.topList.dataset.role = 'observation-top-list';
+    detail.dataset.child = child;
+    detailRefs.set(child, refs);
     detail.hidden = true;
     overlayContent.appendChild(detail);
   });
@@ -1172,10 +1218,131 @@ export const buildObservationsSection = ({
     editOverlay.element,
     createOverlay.element,
   );
-  overlay.appendChild(overlayPanel);
+    overlay.appendChild(overlayPanel);
 
-  body.append(list, overlay);
+    body.append(list, overlay);
   section.appendChild(body);
+
+  const updateChildDetail = ({
+    child,
+    data,
+    topItems,
+    isAbsent,
+    getGroupsForLabel,
+    observationGroups,
+  }) => {
+    const detail = overlayContent.querySelector(`[data-child="${child}"]`);
+    if (!detail) {
+      const panel = createDetailPanel({
+        child,
+        isAbsent,
+        topItems,
+        observationGroups,
+        getGroupsForLabel,
+      });
+      panel.detail.hidden = true;
+      detailRefs.set(child, panel.refs);
+      overlayContent.appendChild(panel.detail);
+      return;
+    }
+    const refs = detailRefs.get(child);
+    if (!refs) {
+      return;
+    }
+    detail.dataset.absent = isAbsent ? 'true' : 'false';
+    if (refs.absentNotice) {
+      refs.absentNotice.remove();
+    }
+
+    const nextTop = rebuildTopList(topItems, getGroupsForLabel, observationGroups);
+    nextTop.dataset.role = 'observation-top-list';
+    refs.topList.replaceWith(nextTop);
+    refs.topList = nextTop;
+
+    const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
+    nextToday.dataset.role = 'observation-today-list';
+    refs.todayList.replaceWith(nextToday);
+    refs.todayList = nextToday;
+
+    const isHidden = Boolean(isAbsent);
+    refs.topList.hidden = isHidden;
+    refs.todayTitle.hidden = isHidden;
+    refs.todayList.hidden = isHidden;
+    refs.templatesButton.hidden = isHidden;
+    refs.createButton.hidden = isHidden;
+    refs.feedback.hidden = isHidden;
+
+    if (isAbsent) {
+      const notice = createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Abwesend – Beobachtungen deaktiviert.',
+        dataset: { role: 'observation-absent-notice' },
+      });
+      detail.append(notice);
+      refs.absentNotice = notice;
+    } else if (refs.absentNotice) {
+      refs.absentNotice.remove();
+      refs.absentNotice = null;
+    }
+  };
+
+  const update = ({
+    nextChildren,
+    nextObservations,
+    nextObservationStats,
+    nextAbsentChildren,
+    nextObservationCatalog,
+    nextObservationGroups,
+    nextObservationPresets,
+  }) => {
+    const absentSetNext = new Set(nextAbsentChildren || []);
+    const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
+    const getGroupsForLabelNext = (label) =>
+      observationGroupMapNext.get(normalizeObservationKey(label)) || [];
+
+    list.replaceChildren(
+      ...nextChildren.map((child) =>
+        rebuildChildButton({ child, isAbsent: absentSetNext.has(child) }),
+      ),
+    );
+
+    nextChildren.forEach((child) => {
+      const data = nextObservations[child] || {};
+      const topItems = buildTopItems(nextObservationStats?.[child], nextObservationCatalog);
+      updateChildDetail({
+        child,
+        data,
+        topItems,
+        isAbsent: absentSetNext.has(child),
+        getGroupsForLabel: getGroupsForLabelNext,
+        observationGroups: nextObservationGroups,
+      });
+    });
+
+    if (
+      !overlayPanel.classList.contains('is-template-open') &&
+      Array.isArray(nextObservationPresets)
+    ) {
+      const refreshed = buildObservationTemplatesOverlay({
+        templates: nextObservationPresets,
+        observationCatalog: nextObservationCatalog,
+        observationGroups: nextObservationGroups,
+      });
+      if (refreshed?.element) {
+        const newContent = Array.from(refreshed.element.children);
+        refs.templatesOverlay.replaceChildren(...newContent);
+        refs.templatesOverlay.dataset.templateFilter =
+          refreshed.element.dataset.templateFilter || refs.templatesOverlay.dataset.templateFilter;
+        refs.templatesOverlay.dataset.templateQuery =
+          refreshed.element.dataset.templateQuery || refs.templatesOverlay.dataset.templateQuery;
+        refs.templatesOverlay.dataset.templateGroups =
+          refreshed.element.dataset.templateGroups || refs.templatesOverlay.dataset.templateGroups;
+        refs.templatesOverlay.dataset.templateGroupMode =
+          refreshed.element.dataset.templateGroupMode ||
+          refs.templatesOverlay.dataset.templateGroupMode;
+      }
+    }
+  };
 
   return {
     element: section,
@@ -1190,5 +1357,6 @@ export const buildObservationsSection = ({
       editOverlay: editOverlay.element,
       createOverlay: createOverlay.element,
     },
+    update,
   };
 };
