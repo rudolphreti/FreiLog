@@ -234,6 +234,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
   };
 
   const renderWeekOptions = () => {
+    const desiredWeekId = selectedWeekId || weekSelectGroup.select.value || null;
     clearElement(weekSelectGroup.select);
     const year = findSelectedYear();
     if (!year || !year.weeks.length) {
@@ -251,18 +252,14 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
         createEl('option', { value: week.id, text: optionText }),
       );
     });
-    if (selectedWeekId && year.weeks.some((week) => week.id === selectedWeekId)) {
+    if (desiredWeekId && year.weeks.some((week) => week.id === desiredWeekId)) {
+      selectedWeekId = desiredWeekId;
       weekSelectGroup.select.value = selectedWeekId;
     } else {
       const latest = getLatestWeekForYear(schoolYears, selectedYear);
       selectedWeekId = latest ? latest.id : year.weeks[0].id;
       weekSelectGroup.select.value = selectedWeekId || '';
     }
-    console.debug('weekly-table: renderWeekOptions', {
-      selectedYear,
-      selectedWeekId,
-      options: year.weeks.map((week) => week.id),
-    });
   };
 
   const renderInfo = () => {
