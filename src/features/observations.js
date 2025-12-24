@@ -996,6 +996,20 @@ export const bindObservations = ({
     return scroll ? scroll.scrollTop : 0;
   };
 
+  const restoreTemplateScrollTop = (scrollTop) => {
+    if (typeof scrollTop !== 'number') {
+      return;
+    }
+    requestAnimationFrame(() => {
+      const scroll = templatesOverlay.querySelector(
+        '.observation-templates-overlay__content',
+      );
+      if (scroll) {
+        scroll.scrollTop = scrollTop;
+      }
+    });
+  };
+
   const handleEditSubmit = (event) => {
     const target = event.target;
     if (!isFormElement(target)) {
@@ -1115,13 +1129,13 @@ export const bindObservations = ({
       }
       const tag = templateButton.dataset.value;
       if (tag && activeChild) {
+        const templateScrollTop = getTemplateScrollTop();
         const selectedKeys = getSelectedObservationKeys(getDate(), activeChild);
         const tagKey = normalizeObservationKey(tag);
         const isSelected = tagKey && selectedKeys.has(tagKey);
-        const scrollTop = getTemplateScrollTop();
         pendingTemplateRestore = {
           child: activeChild,
-          scrollTop,
+          scrollTop: templateScrollTop,
           focusSearch: false,
           templateState: getTemplateUiState(templatesOverlay),
         };
@@ -1131,6 +1145,7 @@ export const bindObservations = ({
         } else {
           addTagForChild(getDate(), activeChild, tag);
         }
+        restoreTemplateScrollTop(templateScrollTop);
       }
       return;
     }
