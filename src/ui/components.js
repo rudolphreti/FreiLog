@@ -604,6 +604,7 @@ const buildObservationTemplatesOverlay = ({
       templateGroupMode:
         normalizedSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
       templateMulti: normalizedSavedFilters.multiGroups ? 'true' : 'false',
+      templateShowAndOr: normalizedSavedFilters.showAndOr ? 'true' : 'false',
       templateShowAlphabet: normalizedSavedFilters.showAlphabet ? 'true' : 'false',
       templateSettingsOpen: 'false',
     },
@@ -672,6 +673,7 @@ const buildObservationTemplatesOverlay = ({
   const groupModeToggle = createEl('div', {
     className: 'observation-templates__group-mode',
     attrs: { role: 'group', 'aria-label': 'Gruppenfilter Modus' },
+    dataset: { role: 'observation-template-group-mode-toggle' },
   });
 
   const addGroupModeButton = (label, value, isActive = false) => {
@@ -766,6 +768,7 @@ const buildObservationTemplatesOverlay = ({
   const settingsMode = createEl('div', {
     className:
       'observation-templates__setting-option observation-templates__setting-option--mode',
+    dataset: { role: 'observation-template-group-mode-settings' },
     children: [
       createEl('span', { className: 'form-check-label', text: 'UND/ODER' }),
       createEl('div', {
@@ -788,11 +791,23 @@ const buildObservationTemplatesOverlay = ({
     ],
   });
 
+  const andOrVisibilityOption = createEl('label', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('span', { className: 'form-check-label', text: 'UND/ODER anzeigen' }),
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox' },
+        dataset: { role: 'observation-template-andor-switch' },
+      }),
+    ],
+  });
+
   const settingsPanel = createEl('div', {
     className: 'observation-templates__settings-panel',
     dataset: { role: 'observation-template-settings-panel' },
     hidden: true,
-    children: [multiOption, settingsMode, alphabetOption],
+    children: [multiOption, andOrVisibilityOption, settingsMode, alphabetOption],
   });
 
   const settings = createEl('div', {

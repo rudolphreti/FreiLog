@@ -15,6 +15,7 @@ const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
 export const DEFAULT_SAVED_OBSERVATION_FILTERS = {
   multiGroups: false,
   andOrMode: 'AND',
+  showAndOr: true,
   showAlphabet: false,
   selectedGroups: [],
   selectedLetter: 'ALL',
@@ -199,6 +200,7 @@ export const normalizeSavedObservationFilters = (value) => {
   const selectedGroups = normalizeObservationGroups(source.selectedGroups);
   const multiGroups = source.multiGroups === true;
   const andOrMode = source.andOrMode === 'OR' ? 'OR' : 'AND';
+  const showAndOr = source.showAndOr !== false;
   const showAlphabet = source.showAlphabet === true;
   const letterRaw =
     typeof source.selectedLetter === 'string' && source.selectedLetter.trim()
@@ -210,6 +212,7 @@ export const normalizeSavedObservationFilters = (value) => {
   return {
     multiGroups,
     andOrMode,
+    showAndOr,
     showAlphabet,
     selectedGroups,
     selectedLetter,
