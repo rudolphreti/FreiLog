@@ -193,6 +193,7 @@ const normalizeTemplateGroups = (value) =>
 
 const getTemplateFlags = (container) => ({
   multiGroups: container?.dataset.templateMulti === 'true',
+  showAndOr: container?.dataset.templateShowAndOr === 'true',
   showAlphabet: container?.dataset.templateShowAlphabet === 'true',
   settingsOpen: container?.dataset.templateSettingsOpen === 'true',
 });
@@ -203,11 +204,12 @@ const persistTemplateFilters = (container) => {
   }
   const selectedGroups = normalizeTemplateGroups(container.dataset.templateGroups || '');
   const templateFilter = container.dataset.templateFilter || 'ALL';
-  const { multiGroups, showAlphabet } = getTemplateFlags(container);
+  const { multiGroups, showAlphabet, showAndOr } = getTemplateFlags(container);
   const templateGroupMode =
     container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
   setSavedObservationFilters({
     multiGroups,
+    showAndOr,
     showAlphabet,
     andOrMode: templateGroupMode,
     selectedGroups,
@@ -221,7 +223,7 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
   }
   const selectedGroups = normalizeTemplateGroups(container.dataset.templateGroups || '');
   const selectedLetter = container.dataset.templateFilter || 'ALL';
-  const { multiGroups, showAlphabet, settingsOpen } = getTemplateFlags(container);
+  const { multiGroups, showAlphabet, showAndOr, settingsOpen } = getTemplateFlags(container);
   const groupMode = container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
 
   const groupButtons = container.querySelectorAll(
@@ -244,6 +246,19 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
     button.disabled = !multiGroups;
     button.setAttribute('aria-disabled', !multiGroups ? 'true' : 'false');
   });
+  const groupModeToggle = container.querySelector(
+    '[data-role="observation-template-group-mode-toggle"]',
+  );
+  if (isHtmlElement(groupModeToggle)) {
+    groupModeToggle.hidden = !showAndOr;
+    groupModeToggle.classList.toggle('is-hidden', !showAndOr);
+  }
+  const settingsMode = container.querySelector(
+    '[data-role="observation-template-group-mode-settings"]',
+  );
+  if (isHtmlElement(settingsMode)) {
+    settingsMode.hidden = !showAndOr;
+  }
 
   const letterBar = container.querySelector('[data-role="observation-template-letter-bar"]');
   const letterButtons = container.querySelectorAll('[data-role="observation-template-letter"]');
@@ -267,6 +282,12 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
   );
   if (isInputElement(alphabetSwitch)) {
     alphabetSwitch.checked = showAlphabet;
+  }
+  const andOrSwitch = container.querySelector(
+    '[data-role="observation-template-andor-switch"]',
+  );
+  if (isInputElement(andOrSwitch)) {
+    andOrSwitch.checked = showAndOr;
   }
 
   const settingsPanel = container.querySelector(
@@ -468,6 +489,12 @@ const setTemplateShowAlphabet = (container, enabled) => {
   applyTemplateFilters(container);
 };
 
+const setTemplateShowAndOr = (container, enabled) => {
+  container.dataset.templateShowAndOr = enabled ? 'true' : 'false';
+  updateTemplateControls(container);
+  applyTemplateFilters(container);
+};
+
 const setTemplateSettingsOpen = (container, isOpen) => {
   container.dataset.templateSettingsOpen = isOpen ? 'true' : 'false';
   updateTemplateControls(container);
@@ -512,6 +539,7 @@ const getTemplateUiState = (templatesOverlay) => {
     templateGroups: templatesOverlay.dataset.templateGroups || '',
     templateGroupMode: templatesOverlay.dataset.templateGroupMode || 'AND',
     templateMulti: templatesOverlay.dataset.templateMulti === 'true',
+    templateShowAndOr: templatesOverlay.dataset.templateShowAndOr === 'true',
     templateShowAlphabet: templatesOverlay.dataset.templateShowAlphabet === 'true',
     templateSettingsOpen: templatesOverlay.dataset.templateSettingsOpen === 'true',
   };
@@ -531,6 +559,8 @@ const restoreTemplateUiState = (templatesOverlay, state) => {
     templatesOverlay.dataset.templateGroupMode =
       state.templateGroupMode === 'OR' ? 'OR' : 'AND';
     templatesOverlay.dataset.templateMulti = state.templateMulti ? 'true' : 'false';
+    templatesOverlay.dataset.templateShowAndOr =
+      state.templateShowAndOr === true ? 'true' : 'false';
     templatesOverlay.dataset.templateShowAlphabet =
       state.templateShowAlphabet === true ? 'true' : 'false';
     templatesOverlay.dataset.templateSettingsOpen =
@@ -678,6 +708,7 @@ export const bindObservations = ({
           templateGroups: normalizeObservationGroups(savedFilters.selectedGroups || []).join(','),
           templateGroupMode: savedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
           templateMulti: savedFilters.multiGroups === true,
+          templateShowAndOr: savedFilters.showAndOr === true,
           templateShowAlphabet: savedFilters.showAlphabet === true,
           templateSettingsOpen: false,
         }
@@ -1047,6 +1078,12 @@ export const bindObservations = ({
 
     if (target.dataset.role === 'observation-template-multi-switch') {
       setTemplateMultiGroups(templatesOverlay, target.checked);
+      persistTemplateFilters(templatesOverlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-andor-switch') {
+      setTemplateShowAndOr(templatesOverlay, target.checked);
       persistTemplateFilters(templatesOverlay);
       return;
     }

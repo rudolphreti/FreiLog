@@ -474,6 +474,10 @@ body {
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
 }
 
+.observation-templates__group-mode.is-hidden {
+  display: none;
+}
+
 .observation-templates__mode-btn {
   border: none;
   background: transparent;
