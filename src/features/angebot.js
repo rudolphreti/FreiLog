@@ -81,7 +81,10 @@ export const bindAngebot = ({
     if (!removeButton) {
       return;
     }
-    const value = removeButton.dataset.angebot;
+    const value =
+      removeButton.dataset.angebot ||
+      removeButton.dataset.value ||
+      removeButton.closest('[data-angebot]')?.dataset.angebot;
     if (!value) {
       return;
     }
