@@ -401,23 +401,24 @@ const buildPillList = ({
 };
 
 const buildTopList = (items, getGroups, observationGroups) => {
-  const list = createEl('div', { className: 'd-flex flex-wrap gap-2 small' });
+  const list = createEl('div', { className: 'd-flex flex-wrap gap-2 small observation-top-list' });
   items.forEach(({ label, count }) => {
     const groups = getGroups ? getGroups(label) : [];
     const groupDots = buildObservationGroupDots(groups, observationGroups);
     const hasBlackGroup = normalizeObservationGroups(groups).includes('SCHWARZ');
     const button = createEl('button', {
       className:
-        `btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2${
+        `btn btn-outline-secondary btn-sm observation-chip observation-top-button d-inline-flex align-items-center gap-2${
           hasBlackGroup ? ' observation-group-outline' : ''
         }`,
       attrs: { type: 'button' },
       dataset: { role: 'observation-top-add', value: label },
       children: [
         groupDots,
+        createEl('span', { className: 'observation-top-plus', text: '+' }),
         createEl('span', { text: label }),
         createEl('span', {
-          className: 'badge text-bg-light border',
+          className: 'badge text-bg-light border observation-top-count',
           text: String(count),
         }),
       ],
@@ -976,14 +977,14 @@ const createDetailPanel = ({
 
   const templatesButton = createEl('button', {
     className: 'btn btn-primary btn-sm observation-template-open align-self-start',
-    text: 'Gespeicherte Beobachtungen',
+    text: 'Beobachtungen hinzufügen...',
     attrs: { type: 'button' },
     dataset: { role: 'observation-template-open' },
   });
 
   const createButton = createEl('button', {
     className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
-    text: '+ Neue Beobachtung',
+    text: '+ Erstelle Beobachtung',
     attrs: { type: 'button' },
     dataset: { role: 'observation-create-open' },
   });
