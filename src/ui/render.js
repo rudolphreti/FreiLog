@@ -218,9 +218,6 @@ export const renderApp = (root, state) => {
   appShell.headerEl = header.element;
   bindDateEntry(header.refs.dateInput);
 
-  appShell.angebotEl.replaceWith(angebotSection.element);
-  appShell.angebotEl = angebotSection.element;
-
   appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.observationsView.element);
 
   appShell.observationsView.update({
@@ -243,6 +240,8 @@ export const renderApp = (root, state) => {
     importButton: drawerContentRefs?.importButton,
     fileInput: drawerContentRefs?.importInput,
   });
+
+  appShell.angebotEl = angebotSection.element;
   bindAngebot({
     comboInput: angebotSection.refs.comboInput,
     addButton: angebotSection.refs.addButton,
