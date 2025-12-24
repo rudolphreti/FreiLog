@@ -27,7 +27,7 @@ body {
 }
 
 .observation-top-list {
-  --observation-top-scale: 0.95;
+  --observation-top-scale: 0.9;
   --observation-top-border: rgba(0, 0, 0, 0.08);
   --observation-top-bg: #fbfcff;
   --observation-top-text: #5c6778;
@@ -42,6 +42,8 @@ body {
   color: var(--observation-top-text);
   background: var(--observation-top-bg);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  padding: 0.3rem 0.5rem;
 }
 
 .observation-top-list .observation-top-button:hover,
@@ -51,10 +53,26 @@ body {
   background: #f7f9fe;
 }
 
+.observation-top-list .observation-top-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  background: rgba(56, 65, 82, 0.06);
+  color: #5c6778;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
 .observation-top-list .observation-top-count {
   background: var(--observation-top-count-bg);
   border-color: var(--observation-top-count-border);
   color: var(--observation-top-text);
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.4rem;
 }
 
 .observation-pill {

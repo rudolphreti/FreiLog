@@ -415,6 +415,7 @@ const buildTopList = (items, getGroups, observationGroups) => {
       dataset: { role: 'observation-top-add', value: label },
       children: [
         groupDots,
+        createEl('span', { className: 'observation-top-plus', text: '+' }),
         createEl('span', { text: label }),
         createEl('span', {
           className: 'badge text-bg-light border observation-top-count',
