@@ -242,9 +242,9 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
     const isActive = button.dataset.value === groupMode;
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    button.classList.toggle('is-disabled', !multiGroups);
-    button.disabled = !multiGroups;
-    button.setAttribute('aria-disabled', !multiGroups ? 'true' : 'false');
+    button.classList.remove('is-disabled');
+    button.disabled = false;
+    button.setAttribute('aria-disabled', 'false');
   });
   const groupModeToggle = container.querySelector(
     '[data-role="observation-template-group-mode-toggle"]',
@@ -459,9 +459,8 @@ const toggleTemplateGroup = (container, group) => {
 };
 
 const setTemplateGroupMode = (container, mode) => {
-  const { multiGroups } = getTemplateFlags(container);
   const next = mode === 'OR' ? 'OR' : 'AND';
-  container.dataset.templateGroupMode = multiGroups ? next : 'AND';
+  container.dataset.templateGroupMode = next;
   updateTemplateControls(container);
   applyTemplateFilters(container);
 };
