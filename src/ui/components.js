@@ -147,6 +147,11 @@ export const buildDrawerContent = ({
   drawerSections,
   angebotSection,
 }) => {
+  const weeklyTableButton = createEl('button', {
+    className: 'btn btn-outline-secondary w-100',
+    text: 'Daten als Wochentabelle anzeigen…',
+    attrs: { type: 'button', 'data-bs-dismiss': 'offcanvas' },
+  });
   const exportButton = createEl('button', {
     className: 'btn btn-primary w-100',
     text: 'Exportieren',
@@ -159,7 +164,7 @@ export const buildDrawerContent = ({
   });
   const actionsGroup = createEl('div', {
     className: 'd-grid gap-2',
-    children: [exportButton, importButton],
+    children: [weeklyTableButton, exportButton, importButton],
   });
 
   const accordionId = 'drawerAccordion';
@@ -200,6 +205,7 @@ export const buildDrawerContent = ({
       exportButton,
       importButton,
       importInput,
+      weeklyTableButton,
       sections: {
         actions: actionsSection,
         angebote: offersSectionItem,

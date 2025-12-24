@@ -12,6 +12,7 @@ import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
+import { createWeeklyTableView } from '../features/weeklyTable.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -83,6 +84,7 @@ const getAbsentChildren = (entry) =>
 let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
+let weeklyTableViewBinding = null;
 
 const renderDrawerContent = (
   state,
@@ -130,6 +132,7 @@ export const renderApp = (root, state) => {
   const observationCatalog = db.observationCatalog || [];
   const observationGroups = db.observationGroups || {};
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
+  const weeklyDays = db.days || {};
 
   const preservedUi = getPreservedUiState(root);
 
@@ -152,6 +155,17 @@ export const renderApp = (root, state) => {
         observationGroups,
         savedObsFilters,
       });
+  if (!weeklyTableViewBinding) {
+    weeklyTableViewBinding = createWeeklyTableView({
+      days: weeklyDays,
+      children: sortedChildren,
+    });
+  } else {
+    weeklyTableViewBinding.update({
+      days: weeklyDays,
+      children: sortedChildren,
+    });
+  }
 
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
@@ -172,7 +186,7 @@ export const renderApp = (root, state) => {
     contentWrap.className = 'container d-flex flex-column gap-3';
     contentWrap.append(header.element, observationsSection.element);
 
-    container.append(contentWrap, drawerShell.element);
+    container.append(contentWrap, drawerShell.element, weeklyTableViewBinding.element);
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
@@ -181,6 +195,11 @@ export const renderApp = (root, state) => {
       importButton: drawerContentRefs?.importButton,
       fileInput: drawerContentRefs?.importInput,
     });
+    if (drawerContentRefs?.weeklyTableButton && weeklyTableViewBinding) {
+      drawerContentRefs.weeklyTableButton.addEventListener('click', () => {
+        weeklyTableViewBinding.open();
+      });
+    }
     bindAngebot({
       comboInput: angebotSection.refs.comboInput,
       addButton: angebotSection.refs.addButton,
@@ -240,6 +259,11 @@ export const renderApp = (root, state) => {
     importButton: drawerContentRefs?.importButton,
     fileInput: drawerContentRefs?.importInput,
   });
+  if (drawerContentRefs?.weeklyTableButton && weeklyTableViewBinding) {
+    drawerContentRefs.weeklyTableButton.addEventListener('click', () => {
+      weeklyTableViewBinding.open();
+    });
+  }
 
   appShell.angebotEl = angebotSection.element;
   bindAngebot({
