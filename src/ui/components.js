@@ -977,14 +977,14 @@ const createDetailPanel = ({
 
   const templatesButton = createEl('button', {
     className: 'btn btn-primary btn-sm observation-template-open align-self-start',
-    text: 'Gespeicherte Beobachtungen',
+    text: 'Beobachtungen hinzufügen...',
     attrs: { type: 'button' },
     dataset: { role: 'observation-template-open' },
   });
 
   const createButton = createEl('button', {
     className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
-    text: '+ Neue Beobachtung',
+    text: '+ Erstelle Beobachtung',
     attrs: { type: 'button' },
     dataset: { role: 'observation-create-open' },
   });
