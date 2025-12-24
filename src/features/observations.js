@@ -636,6 +636,7 @@ export const bindObservations = ({
     }
     activeChild = child;
     isTemplateOverlayOpen = true;
+    templatesOverlay.dataset.isOpen = 'true';
     templatesOverlay.classList.add('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-template-open');
@@ -655,6 +656,7 @@ export const bindObservations = ({
     }
     closeEditOverlay();
     isTemplateOverlayOpen = false;
+    templatesOverlay.dataset.isOpen = 'false';
     templatesOverlay.classList.remove('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'true');
     overlayPanel.classList.remove('is-template-open');
@@ -1125,6 +1127,12 @@ export const bindObservations = ({
           focusSearch: false,
           templateState: getTemplateUiState(templatesOverlay),
         };
+        templatesOverlay.dataset.pendingScrollTop = `${scrollTop}`;
+        console.log('freilog: template-scroll/save', {
+          child: activeChild,
+          scrollTop,
+          focusSearch: false,
+        });
         updateTemplateButtonState(templateButton, !isSelected);
         if (isSelected) {
           removeObservationForChild(getDate(), activeChild, tag);
@@ -1345,6 +1353,12 @@ export const bindObservations = ({
       );
       if (scroll) {
         scroll.scrollTop = scrollTop || 0;
+        console.log('freilog: template-scroll/restore', {
+          child,
+          scrollTop: scrollTop || 0,
+          focusSearch,
+          templateState,
+        });
       }
     });
   }

@@ -1286,6 +1286,18 @@ export const buildObservationsSection = ({
     }
   };
 
+  const refs = {
+    list,
+    overlay,
+    overlayPanel,
+    overlayContent,
+    overlayTitle,
+    closeButton,
+    templatesOverlay: templatesOverlay.element,
+    editOverlay: editOverlay.element,
+    createOverlay: createOverlay.element,
+  };
+
   const update = ({
     nextChildren,
     nextObservations,
@@ -1295,6 +1307,21 @@ export const buildObservationsSection = ({
     nextObservationGroups,
     nextObservationPresets,
   }) => {
+    const templateContent = refs.templatesOverlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    const pendingScrollValue = refs.templatesOverlay.dataset.pendingScrollTop;
+    const pendingScrollTop = pendingScrollValue ? Number(pendingScrollValue) : null;
+    const previousScrollTop =
+      typeof pendingScrollTop === 'number' && Number.isFinite(pendingScrollTop)
+        ? pendingScrollTop
+        : templateContent
+          ? templateContent.scrollTop
+          : 0;
+    delete refs.templatesOverlay.dataset.pendingScrollTop;
+    // eslint-disable-next-line no-console
+    console.log('freilog: template-scroll/preserve-start', { previousScrollTop });
+
     const absentSetNext = new Set(nextAbsentChildren || []);
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
     const getGroupsForLabelNext = (label) =>
@@ -1319,44 +1346,81 @@ export const buildObservationsSection = ({
       });
     });
 
-    if (
-      !overlayPanel.classList.contains('is-template-open') &&
-      Array.isArray(nextObservationPresets)
-    ) {
+    const isTemplateOpen =
+      overlayPanel.classList.contains('is-template-open') ||
+      refs.templatesOverlay?.dataset.isOpen === 'true';
+
+    if (!isTemplateOpen && Array.isArray(nextObservationPresets)) {
       const refreshed = buildObservationTemplatesOverlay({
         templates: nextObservationPresets,
         observationCatalog: nextObservationCatalog,
         observationGroups: nextObservationGroups,
       });
       if (refreshed?.element) {
-        const newContent = Array.from(refreshed.element.children);
-        refs.templatesOverlay.replaceChildren(...newContent);
-        refs.templatesOverlay.dataset.templateFilter =
+        const nextPanel = refreshed.element.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const currentPanel = refs.templatesOverlay.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const nextHeader = nextPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        const currentHeader = currentPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        if (currentHeader && nextHeader) {
+          currentHeader.replaceChildren(...nextHeader.children);
+        }
+        const nextContent = nextPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        const currentContent = currentPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        if (currentContent && nextContent) {
+          const preservedScrollTop = currentContent.scrollTop;
+          currentContent.replaceChildren(...nextContent.children);
+          currentContent.scrollTop = preservedScrollTop;
+        }
+        const nextFilter =
           refreshed.element.dataset.templateFilter || refs.templatesOverlay.dataset.templateFilter;
-        refs.templatesOverlay.dataset.templateQuery =
+        const nextQuery =
           refreshed.element.dataset.templateQuery || refs.templatesOverlay.dataset.templateQuery;
-        refs.templatesOverlay.dataset.templateGroups =
+        const nextGroups =
           refreshed.element.dataset.templateGroups || refs.templatesOverlay.dataset.templateGroups;
-        refs.templatesOverlay.dataset.templateGroupMode =
+        const nextGroupMode =
           refreshed.element.dataset.templateGroupMode ||
           refs.templatesOverlay.dataset.templateGroupMode;
+        Object.assign(refs.templatesOverlay.dataset, {
+          templateFilter: nextFilter,
+          templateQuery: nextQuery,
+          templateGroups: nextGroups,
+          templateGroupMode: nextGroupMode,
+        });
       }
+    } else if (isTemplateOpen) {
+      // Debug logging to trace unexpected rebuilds that could reset scroll.
+      // eslint-disable-next-line no-console
+      console.debug('freilog: template-overlay/update-skip', {
+        isTemplateOpen,
+        preservedFilter: refs.templatesOverlay.dataset.templateFilter,
+      });
+    }
+
+    if (templateContent) {
+      templateContent.scrollTop = previousScrollTop;
+      requestAnimationFrame(() => {
+        templateContent.scrollTop = previousScrollTop;
+        // eslint-disable-next-line no-console
+        console.log('freilog: template-scroll/preserve-end', { previousScrollTop });
+      });
     }
   };
 
   return {
     element: section,
-    refs: {
-      list,
-      overlay,
-      overlayPanel,
-      overlayContent,
-      overlayTitle,
-      closeButton,
-      templatesOverlay: templatesOverlay.element,
-      editOverlay: editOverlay.element,
-      createOverlay: createOverlay.element,
-    },
+    refs,
     update,
   };
 };
