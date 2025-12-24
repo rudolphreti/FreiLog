@@ -258,6 +258,11 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
       selectedWeekId = latest ? latest.id : year.weeks[0].id;
       weekSelectGroup.select.value = selectedWeekId || '';
     }
+    console.debug('weekly-table: renderWeekOptions', {
+      selectedYear,
+      selectedWeekId,
+      options: year.weeks.map((week) => week.id),
+    });
   };
 
   const renderInfo = () => {
@@ -311,6 +316,10 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
 
   weekSelectGroup.select.addEventListener('change', (event) => {
     selectedWeekId = event.target.value || null;
+    console.debug('weekly-table: week-select-change', {
+      selectedYear,
+      selectedWeekId,
+    });
     render();
   });
 
