@@ -94,6 +94,11 @@ body {
   line-height: 1;
 }
 
+.observation-count-badge {
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
 .observation-child-list {
   align-items: flex-start;
 }

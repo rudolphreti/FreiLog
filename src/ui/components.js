@@ -891,13 +891,29 @@ const buildObservationTemplatesOverlay = ({
   };
 };
 
-const rebuildChildButton = ({ child, isAbsent }) => {
+const getObservationCount = (observationsByChild, child) => {
+  const items = observationsByChild?.[child];
+  if (Array.isArray(items)) {
+    return items.length;
+  }
+  return 0;
+};
+
+const rebuildChildButton = ({ child, isAbsent, observationsByChild }) => {
+  const count = getObservationCount(observationsByChild, child);
   const badge = isAbsent
     ? createEl('span', {
         className: 'badge text-bg-light text-secondary observation-absent-badge',
         text: 'Abwesend',
       })
     : null;
+  const countBadge =
+    count > 0
+      ? createEl('span', {
+          className: 'badge text-bg-light text-secondary observation-count-badge',
+          text: `${count}`,
+        })
+      : null;
   return createEl('button', {
     className:
       `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
@@ -906,9 +922,13 @@ const rebuildChildButton = ({ child, isAbsent }) => {
     children: badge
       ? [
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+          countBadge,
           badge,
-        ]
-      : [createEl('span', { className: 'fw-semibold observation-child-label', text: child })],
+        ].filter(Boolean)
+      : [
+          createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+          countBadge,
+        ].filter(Boolean),
   });
 };
 
@@ -1265,7 +1285,9 @@ export const buildObservationsSection = ({
   });
   children.forEach((child) => {
     const isAbsent = absentSet.has(child);
-    list.appendChild(rebuildChildButton({ child, isAbsent }));
+    list.appendChild(
+      rebuildChildButton({ child, isAbsent, observationsByChild: observations }),
+    );
   });
 
   const overlay = createEl('div', {
@@ -1457,7 +1479,11 @@ export const buildObservationsSection = ({
 
     list.replaceChildren(
       ...nextChildren.map((child) =>
-        rebuildChildButton({ child, isAbsent: absentSetNext.has(child) }),
+        rebuildChildButton({
+          child,
+          isAbsent: absentSetNext.has(child),
+          observationsByChild: nextObservations,
+        }),
       ),
     );
 
