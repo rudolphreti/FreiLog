@@ -300,6 +300,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
   const render = () => {
     renderYearOptions();
     renderWeekOptions();
+    selectedWeekId = weekSelectGroup.select.value || selectedWeekId;
     renderInfo();
     renderTable();
   };
@@ -313,7 +314,7 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
 
   weekSelectGroup.select.addEventListener('change', (event) => {
     selectedWeekId = event.target.value || null;
-    console.debug('weekly-table: week-select-change', {
+    console.log('weekly-table: week-select-change', {
       selectedYear,
       selectedWeekId,
     });
