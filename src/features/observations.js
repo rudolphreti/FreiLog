@@ -257,7 +257,7 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
     '[data-role="observation-template-group-mode-settings"]',
   );
   if (isHtmlElement(settingsMode)) {
-    settingsMode.hidden = !showAndOr;
+    settingsMode.hidden = showAndOr;
   }
 
   const letterBar = container.querySelector('[data-role="observation-template-letter-bar"]');
