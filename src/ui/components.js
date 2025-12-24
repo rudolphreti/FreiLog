@@ -1329,8 +1329,32 @@ export const buildObservationsSection = ({
         observationGroups: nextObservationGroups,
       });
       if (refreshed?.element) {
-        const newContent = Array.from(refreshed.element.children);
-        refs.templatesOverlay.replaceChildren(...newContent);
+        const nextPanel = refreshed.element.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const currentPanel = refs.templatesOverlay.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const nextHeader = nextPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        const currentHeader = currentPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        if (currentHeader && nextHeader) {
+          currentHeader.replaceChildren(...nextHeader.children);
+        }
+        const nextContent = nextPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        const currentContent = currentPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        if (currentContent && nextContent) {
+          const preservedScrollTop = currentContent.scrollTop;
+          currentContent.replaceChildren(...nextContent.children);
+          currentContent.scrollTop = preservedScrollTop;
+        }
         refs.templatesOverlay.dataset.templateFilter =
           refreshed.element.dataset.templateFilter || refs.templatesOverlay.dataset.templateFilter;
         refs.templatesOverlay.dataset.templateQuery =
