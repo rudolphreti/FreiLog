@@ -615,6 +615,13 @@ body {
   box-shadow: 2px 0 0 #c7d2fe, 4px 0 0 #e0e7ff;
 }
 
+.weekly-table__offers-row th {
+  background: #fff4e5;
+  color: #8a4b14;
+  border-color: #f7c68f;
+  box-shadow: 2px 0 0 #f7c68f, 4px 0 0 #fff4e5;
+}
+
 .weekly-table tbody th::after {
   content: '';
   position: absolute;
@@ -625,6 +632,10 @@ body {
   background: #e0e7ff;
 }
 
+.weekly-table__offers-row th::after {
+  background: #fff4e5;
+}
+
 .weekly-table tbody th::before {
   content: '';
   position: absolute;
@@ -633,6 +644,10 @@ body {
   bottom: -1px;
   width: 1px;
   background: #e0e7ff;
+}
+
+.weekly-table__offers-row th::before {
+  background: #fff4e5;
 }
 
 .weekly-table thead th::after {
@@ -661,16 +676,6 @@ body {
 
 .weekly-table tbody tr:not(.weekly-table__offers-row):nth-child(even) td {
   background: #f9fafb;
-}
-
-.weekly-table tbody tr:hover td {
-  background: #e8f1ff;
-  transition: background-color 0.15s ease;
-}
-
-.weekly-table tbody tr:hover th {
-  background: #e2e8f0;
-  transition: background-color 0.15s ease;
 }
 
 .weekly-table-overlay-open {
