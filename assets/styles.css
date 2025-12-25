@@ -521,13 +521,6 @@ body {
   overflow: auto;
 }
 
-.weekly-table__offers-row {
-  background: #fff4e5;
-  font-weight: 700;
-  color: #8a4b14;
-  box-shadow: inset 0 -1px 0 #f7c68f;
-}
-
 .weekly-table {
   border-collapse: separate;
   border-spacing: 0;
@@ -545,11 +538,13 @@ body {
   vertical-align: middle;
 }
 
-.weekly-table__offers-row th,
-.weekly-table__offers-row td {
+.weekly-table .weekly-table__offers-row th,
+.weekly-table .weekly-table__offers-row td {
   background: #fff4e5;
   border-color: #f7c68f;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.03);
+  color: #8a4b14;
+  font-weight: 700;
 }
 
 .weekly-table__pill-list {
@@ -615,7 +610,7 @@ body {
   box-shadow: 2px 0 0 #c7d2fe, 4px 0 0 #e0e7ff;
 }
 
-.weekly-table__offers-row th {
+.weekly-table .weekly-table__offers-row th {
   background: #fff4e5;
   color: #8a4b14;
   border-color: #f7c68f;
@@ -632,7 +627,7 @@ body {
   background: #e0e7ff;
 }
 
-.weekly-table__offers-row th::after {
+.weekly-table .weekly-table__offers-row th::after {
   background: #fff4e5;
 }
 
@@ -646,7 +641,7 @@ body {
   background: #e0e7ff;
 }
 
-.weekly-table__offers-row th::before {
+.weekly-table .weekly-table__offers-row th::before {
   background: #fff4e5;
 }
 
