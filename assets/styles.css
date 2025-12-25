@@ -558,6 +558,28 @@ body {
   font-size: 0.9rem;
 }
 
+.weekly-table__observation-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.weekly-table__observation-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.weekly-table__observation-text {
+  line-height: 1.25;
+}
+
+.weekly-table__observation-item .observation-group-dots {
+  margin-right: 0.15rem;
+}
+
 .weekly-table thead th {
   position: sticky;
   top: 0;

@@ -154,16 +154,20 @@ export const renderApp = (root, state) => {
         observationCatalog,
         observationGroups,
         savedObsFilters,
-      });
+    });
   if (!weeklyTableViewBinding) {
     weeklyTableViewBinding = createWeeklyTableView({
       days: weeklyDays,
       children: sortedChildren,
+      observationCatalog,
+      observationGroups,
     });
   } else {
     weeklyTableViewBinding.update({
       days: weeklyDays,
       children: sortedChildren,
+      observationCatalog,
+      observationGroups,
     });
   }
 

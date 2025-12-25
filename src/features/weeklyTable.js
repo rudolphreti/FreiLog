@@ -4,6 +4,10 @@ import {
   getLatestWeekForYear,
   getSchoolWeeks,
 } from '../utils/schoolWeeks.js';
+import {
+  normalizeObservationGroups,
+  normalizeObservationKey,
+} from '../utils/observationCatalog.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -96,7 +100,115 @@ const buildPillList = (values) => {
   return list;
 };
 
-const buildWeeklyTable = (week, days, children) => {
+const buildObservationCatalogGroupMap = (catalog) => {
+  const entries = Array.isArray(catalog) ? catalog : [];
+  const groups = new Map();
+
+  entries.forEach((entry) => {
+    const text =
+      typeof entry === 'string'
+        ? entry.trim()
+        : typeof entry?.text === 'string'
+          ? entry.text.trim()
+          : '';
+    if (!text) {
+      return;
+    }
+    const normalizedGroups = normalizeObservationGroups(entry?.groups || []);
+    groups.set(normalizeObservationKey(text), normalizedGroups);
+  });
+
+  return groups;
+};
+
+const getOrderedObservationGroups = (groups) => {
+  const normalized = normalizeObservationGroups(groups);
+  if (!normalized.length) {
+    return [];
+  }
+  if (!normalized.includes('SCHWARZ')) {
+    return normalized;
+  }
+  return ['SCHWARZ', ...normalized.filter((group) => group !== 'SCHWARZ')];
+};
+
+const buildObservationGroupDots = (groups, observationGroups) => {
+  const ordered = getOrderedObservationGroups(groups);
+  if (!ordered.length) {
+    return null;
+  }
+
+  const maxDots = 3;
+  const showOverflow = ordered.length > maxDots;
+  const visible = showOverflow ? ordered.slice(0, maxDots - 1) : ordered;
+
+  const wrapper = createEl('span', { className: 'observation-group-dots' });
+
+  visible.forEach((group) => {
+    const color =
+      observationGroups && observationGroups[group]?.color
+        ? observationGroups[group].color
+        : '#6c757d';
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot',
+        attrs: { style: `--group-color: ${color};`, 'aria-hidden': 'true' },
+      }),
+    );
+  });
+
+  if (showOverflow) {
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot observation-group-dot--overflow',
+        text: '+',
+        attrs: { 'aria-hidden': 'true' },
+      }),
+    );
+  }
+
+  return wrapper;
+};
+
+const buildObservationList = (values, getGroupsForLabel, observationGroups) => {
+  const list = createEl('div', {
+    className: 'weekly-table__observation-list',
+  });
+  if (!values.length) {
+    list.append(
+      createEl('span', {
+        className: 'text-muted small',
+        text: '—',
+      }),
+    );
+    return list;
+  }
+
+  values.forEach((value, index) => {
+    const groups = typeof getGroupsForLabel === 'function' ? getGroupsForLabel(value) : [];
+    const dots = buildObservationGroupDots(groups, observationGroups);
+    const item = createEl('span', { className: 'weekly-table__observation-item' });
+    if (dots) {
+      item.append(dots);
+    }
+    const isLast = index === values.length - 1;
+    const textValue = isLast ? value : `${value},`;
+    item.append(
+      createEl('span', { className: 'weekly-table__observation-text', text: textValue }),
+    );
+    list.append(item);
+  });
+
+  return list;
+};
+
+const buildWeeklyTable = ({
+  week,
+  days,
+  children,
+  getGroupsForLabel,
+  observationGroups,
+}) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
   });
@@ -136,7 +248,11 @@ const buildWeeklyTable = (week, days, children) => {
     weekDays.forEach((item) => {
       const dayEntry = normalizeDayEntry(days, item.dateKey);
       const obs = dayEntry.observations[child] || [];
-      row.append(createEl('td', { children: [buildPillList(obs)] }));
+      row.append(
+        createEl('td', {
+          children: [buildObservationList(obs, getGroupsForLabel, observationGroups)],
+        }),
+      );
     });
     tbody.append(row);
   });
@@ -158,12 +274,22 @@ const buildSelectGroup = ({ id, label }) => {
   return { wrapper, select };
 };
 
-export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
+export const createWeeklyTableView = ({
+  days = {},
+  children = [],
+  observationCatalog = [],
+  observationGroups = {},
+} = {}) => {
   let schoolYears = getSchoolWeeks(days);
   let selectedYear = schoolYears.length ? schoolYears[schoolYears.length - 1].label : null;
   let selectedWeekId = selectedYear ? getLatestWeekForYear(schoolYears, selectedYear)?.id : null;
   let currentDays = days || {};
   let currentChildren = Array.isArray(children) ? [...children] : [];
+  let currentObservationCatalog = Array.isArray(observationCatalog) ? [...observationCatalog] : [];
+  let currentObservationGroups = observationGroups || {};
+  let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
+  const getGroupsForLabel = (label) =>
+    observationGroupMap.get(normalizeObservationKey(label)) || [];
 
   const overlay = createEl('div', {
     className: 'weekly-table-overlay',
@@ -292,7 +418,13 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
       );
       return;
     }
-    const table = buildWeeklyTable(week, currentDays, currentChildren);
+    const table = buildWeeklyTable({
+      week,
+      days: currentDays,
+      children: currentChildren,
+      getGroupsForLabel,
+      observationGroups: currentObservationGroups,
+    });
     tableContainer.append(table);
   };
 
@@ -346,9 +478,19 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
     }
   });
 
-  const update = ({ days: nextDays = {}, children: nextChildren = [] } = {}) => {
+  const update = ({
+    days: nextDays = {},
+    children: nextChildren = [],
+    observationCatalog: nextObservationCatalog = [],
+    observationGroups: nextObservationGroups = {},
+  } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
+    currentObservationCatalog = Array.isArray(nextObservationCatalog)
+      ? [...nextObservationCatalog]
+      : [];
+    currentObservationGroups = nextObservationGroups || {};
+    observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     schoolYears = getSchoolWeeks(currentDays);
     if (!schoolYears.length) {
       selectedYear = null;
