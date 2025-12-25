@@ -191,12 +191,12 @@ export const renderApp = (root, state) => {
 
     bindDateEntry(header.refs.dateInput);
     bindImportExport({
-      exportButton: drawerContentRefs?.exportButton,
-      importButton: drawerContentRefs?.importButton,
-      fileInput: drawerContentRefs?.importInput,
+      exportButton: header.refs.exportButton,
+      importButton: header.refs.importButton,
+      fileInput: header.refs.importInput,
     });
-    if (drawerContentRefs?.weeklyTableButton && weeklyTableViewBinding) {
-      drawerContentRefs.weeklyTableButton.addEventListener('click', () => {
+    if (header.refs.weeklyTableButton && weeklyTableViewBinding) {
+      header.refs.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
       });
     }
@@ -255,12 +255,12 @@ export const renderApp = (root, state) => {
   }
 
   bindImportExport({
-    exportButton: drawerContentRefs?.exportButton,
-    importButton: drawerContentRefs?.importButton,
-    fileInput: drawerContentRefs?.importInput,
+    exportButton: header.refs.exportButton,
+    importButton: header.refs.importButton,
+    fileInput: header.refs.importInput,
   });
-  if (drawerContentRefs?.weeklyTableButton && weeklyTableViewBinding) {
-    drawerContentRefs.weeklyTableButton.addEventListener('click', () => {
+  if (header.refs.weeklyTableButton && weeklyTableViewBinding) {
+    header.refs.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();
     });
   }

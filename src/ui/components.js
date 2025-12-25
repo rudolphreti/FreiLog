@@ -16,12 +16,24 @@ export const buildHeader = ({ selectedDate }) => {
     className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top',
   });
 
+  const createIconButton = ({ icon, label, attrs = {} }) =>
+    createEl('button', {
+      className: 'btn btn-outline-primary header-action-btn',
+      attrs: { type: 'button', ...attrs },
+      children: [
+        createEl('span', { className: 'header-action-icon', text: icon }),
+        createEl('span', { className: 'visually-hidden', text: label }),
+      ],
+    });
+
   const menuButton = createEl('button', {
-    className: 'btn btn-outline-primary d-inline-flex align-items-center',
-    text: '☰',
+    className: 'btn btn-outline-primary d-inline-flex align-items-center header-menu-btn',
+    children: [
+      createEl('span', { text: '☰' }),
+      createEl('span', { className: 'visually-hidden', text: 'Menü öffnen' }),
+    ],
     attrs: {
       type: 'button',
-      'aria-label': 'Menü öffnen',
       'data-bs-toggle': 'offcanvas',
       'data-bs-target': '#mainDrawer',
       'aria-controls': 'mainDrawer',
@@ -32,27 +44,54 @@ export const buildHeader = ({ selectedDate }) => {
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
   });
   const dateGroup = createEl('div', {
-    className: 'd-flex flex-column',
+    className: 'd-flex flex-column flex-grow-1',
     children: [dateInput],
   });
-  const titleGroup = createEl('div', {
-    className: 'd-flex align-items-start gap-2',
+
+  const weeklyTableButton = createIconButton({
+    icon: '📅',
+    label: 'Wochentabelle öffnen',
+  });
+  const exportButton = createIconButton({
+    icon: '⬇️',
+    label: 'Exportieren',
+  });
+  const importButton = createIconButton({
+    icon: '⬆️',
+    label: 'Importieren',
+  });
+  const importInput = createEl('input', {
+    attrs: { type: 'file', accept: 'application/json' },
+    className: 'd-none',
+  });
+
+  const leftGroup = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-wrap flex-grow-1',
     children: [menuButton, dateGroup],
+  });
+
+  const actionsGroup = createEl('div', {
+    className: 'd-flex align-items-center gap-2 header-actions',
+    children: [weeklyTableButton, exportButton, importButton],
   });
 
   const headerContent = createEl('div', {
     className:
-      'd-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3',
-    children: [titleGroup, dateGroup],
+      'd-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 header-content',
+    children: [leftGroup, actionsGroup],
   });
 
-  header.append(headerContent);
+  header.append(headerContent, importInput);
 
   return {
     element: header,
     refs: {
       dateInput,
       menuButton,
+      weeklyTableButton,
+      exportButton,
+      importButton,
+      importInput,
     },
   };
 };
@@ -147,47 +186,8 @@ export const buildDrawerContent = ({
   drawerSections,
   angebotSection,
 }) => {
-  const createActionButton = ({ icon, label, className = '', attrs = {} }) =>
-    createEl('button', {
-      className: `drawer-action-btn ${className}`.trim(),
-      attrs: { type: 'button', ...attrs },
-      children: [
-        createEl('span', { className: 'drawer-action-btn__icon', text: icon }),
-        createEl('span', { className: 'drawer-action-btn__label', text: label }),
-      ],
-    });
-
-  const weeklyTableButton = createActionButton({
-    icon: '📅',
-    label: 'Wochentabelle',
-    className: 'drawer-action-btn--outline',
-    attrs: { 'data-bs-dismiss': 'offcanvas' },
-  });
-  const exportButton = createActionButton({
-    icon: '⬇️',
-    label: 'Exportieren',
-    className: 'drawer-action-btn--outline',
-  });
-  const importButton = createActionButton({
-    icon: '⬆️',
-    label: 'Importieren',
-    className: 'drawer-action-btn--outline',
-  });
-  const actionsGroup = createEl('div', {
-    className: 'drawer-actions',
-    children: [weeklyTableButton, exportButton, importButton],
-  });
-
   const accordionId = 'drawerAccordion';
   const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
-
-  const actionsSection = buildAccordionItem({
-    id: 'actions',
-    title: 'Aktionen',
-    defaultOpen: Boolean(drawerSections?.actions),
-    contentNode: actionsGroup,
-    accordionId,
-  });
 
   const offersContent =
     angebotSection ||
@@ -203,22 +203,12 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSection.element, offersSectionItem.element);
-
-  const importInput = createEl('input', {
-    attrs: { type: 'file', accept: 'application/json' },
-    className: 'd-none',
-  });
+  accordion.append(offersSectionItem.element);
 
   return {
-    nodes: [accordion, importInput],
+    nodes: [accordion],
     refs: {
-      exportButton,
-      importButton,
-      importInput,
-      weeklyTableButton,
       sections: {
-        actions: actionsSection,
         angebote: offersSectionItem,
       },
     },
