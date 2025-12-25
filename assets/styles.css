@@ -522,8 +522,10 @@ body {
 }
 
 .weekly-table__offers-row {
-  background: #eef2ff;
-  font-weight: 600;
+  background: #fff4e5;
+  font-weight: 700;
+  color: #8a4b14;
+  box-shadow: inset 0 -1px 0 #f7c68f;
 }
 
 .weekly-table {
@@ -534,7 +536,7 @@ body {
 
 .weekly-table th,
 .weekly-table td {
-  border: 1px solid #e2e8f0;
+  border: 1px solid #d7deed;
   background: #ffffff;
 }
 
@@ -545,7 +547,9 @@ body {
 
 .weekly-table__offers-row th,
 .weekly-table__offers-row td {
-  background: #eef2ff;
+  background: #fff4e5;
+  border-color: #f7c68f;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.03);
 }
 
 .weekly-table__pill-list {
@@ -584,21 +588,31 @@ body {
   position: sticky;
   top: 0;
   z-index: 5;
-  background: #f8fafc;
-  box-shadow: inset 0 -1px 0 #e2e8f0, 0 2px 0 #f8fafc;
+  color: #f8fafc;
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+  border-color: #1e40af;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.3), 0 2px 0 #dbeafe;
+}
+
+.weekly-table thead th .text-muted {
+  color: rgba(255, 255, 255, 0.82) !important;
 }
 
 .weekly-table thead th:first-child {
   left: 0;
   z-index: 6;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.2), 0 2px 0 #dbeafe;
 }
 
 .weekly-table tbody th {
   position: sticky;
   left: 0;
   z-index: 4;
-  background: #f8fafc;
-  box-shadow: 2px 0 0 #e2e8f0, 4px 0 0 #f8fafc;
+  background: #e0e7ff;
+  color: #0f172a;
+  font-weight: 700;
+  border-color: #c7d2fe;
+  box-shadow: 2px 0 0 #c7d2fe, 4px 0 0 #e0e7ff;
 }
 
 .weekly-table tbody th::after {
@@ -608,7 +622,7 @@ body {
   bottom: -1px;
   right: -1px;
   width: 1px;
-  background: #f8fafc;
+  background: #e0e7ff;
 }
 
 .weekly-table tbody th::before {
@@ -618,7 +632,7 @@ body {
   left: -1px;
   bottom: -1px;
   width: 1px;
-  background: #f8fafc;
+  background: #e0e7ff;
 }
 
 .weekly-table thead th::after {
@@ -628,7 +642,7 @@ body {
   right: -1px;
   bottom: -1px;
   height: 1px;
-  background: #f8fafc;
+  background: #1d4ed8;
 }
 
 .weekly-table thead th:first-child::before {
@@ -638,7 +652,7 @@ body {
   bottom: -1px;
   left: -1px;
   width: 1px;
-  background: #f8fafc;
+  background: #1d4ed8;
 }
 
 .weekly-table tbody tr:not(.weekly-table__offers-row):nth-child(odd) td {
