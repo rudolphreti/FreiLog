@@ -48,26 +48,14 @@ export const buildHeader = ({ selectedDate }) => {
     children: [dateInput],
   });
 
-  const weeklyTableButton = createIconButton({
-    icon: '📅',
-    label: 'Wochentabelle öffnen',
-  });
   const exportButton = createIconButton({
     icon: '⬇️',
     label: 'Exportieren',
   });
-  const importButton = createIconButton({
-    icon: '⬆️',
-    label: 'Importieren',
-  });
-  const importInput = createEl('input', {
-    attrs: { type: 'file', accept: 'application/json' },
-    className: 'd-none',
-  });
 
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions',
-    children: [weeklyTableButton, exportButton, importButton, menuButton],
+    children: [exportButton, menuButton],
   });
 
   const headerContent = createEl('div', {
@@ -76,17 +64,14 @@ export const buildHeader = ({ selectedDate }) => {
     children: [dateGroup, actionsGroup],
   });
 
-  header.append(headerContent, importInput);
+  header.append(headerContent);
 
   return {
     element: header,
     refs: {
       dateInput,
       menuButton,
-      weeklyTableButton,
       exportButton,
-      importButton,
-      importInput,
     },
   };
 };
@@ -184,6 +169,32 @@ export const buildDrawerContent = ({
   const accordionId = 'drawerAccordion';
   const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
 
+  const actionsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const actionButton = (text, icon, attrs = {}) =>
+    createEl('button', {
+      className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2',
+      attrs: { type: 'button', ...attrs },
+      children: [createEl('span', { text: icon }), createEl('span', { text })],
+    });
+
+  const weeklyTableButton = actionButton('Wochentabelle öffnen', '📅');
+  const exportButton = actionButton('Exportieren', '⬇️');
+  const importButton = actionButton('Importieren', '⬆️');
+  const importInput = createEl('input', {
+    attrs: { type: 'file', accept: 'application/json' },
+    className: 'd-none',
+  });
+
+  actionsList.append(weeklyTableButton, exportButton, importButton, importInput);
+
+  const actionsSectionItem = buildAccordionItem({
+    id: 'actions',
+    title: 'Aktionen',
+    defaultOpen: Boolean(drawerSections?.actions),
+    contentNode: actionsList,
+    accordionId,
+  });
+
   const offersContent =
     angebotSection ||
     createEl('p', {
@@ -198,12 +209,19 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(offersSectionItem.element);
+  accordion.append(actionsSectionItem.element, offersSectionItem.element);
 
   return {
     nodes: [accordion],
     refs: {
+      actions: {
+        weeklyTableButton,
+        exportButton,
+        importButton,
+        importInput,
+      },
       sections: {
+        actions: actionsSectionItem,
         angebote: offersSectionItem,
       },
     },

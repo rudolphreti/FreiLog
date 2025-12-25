@@ -190,13 +190,14 @@ export const renderApp = (root, state) => {
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
+    const actions = drawerContentRefs?.actions;
     bindImportExport({
-      exportButton: header.refs.exportButton,
-      importButton: header.refs.importButton,
-      fileInput: header.refs.importInput,
+      exportButton: actions?.exportButton || header.refs.exportButton,
+      importButton: actions?.importButton,
+      fileInput: actions?.importInput,
     });
-    if (header.refs.weeklyTableButton && weeklyTableViewBinding) {
-      header.refs.weeklyTableButton.addEventListener('click', () => {
+    if (weeklyTableViewBinding && actions?.weeklyTableButton) {
+      actions.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
       });
     }
@@ -254,13 +255,14 @@ export const renderApp = (root, state) => {
     observationsBinding.updateDate(selectedDate);
   }
 
+  const actions = drawerContentRefs?.actions;
   bindImportExport({
-    exportButton: header.refs.exportButton,
-    importButton: header.refs.importButton,
-    fileInput: header.refs.importInput,
+    exportButton: actions?.exportButton || header.refs.exportButton,
+    importButton: actions?.importButton,
+    fileInput: actions?.importInput,
   });
-  if (header.refs.weeklyTableButton && weeklyTableViewBinding) {
-    header.refs.weeklyTableButton.addEventListener('click', () => {
+  if (weeklyTableViewBinding && actions?.weeklyTableButton) {
+    actions.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();
     });
   }
