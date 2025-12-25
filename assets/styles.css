@@ -21,15 +21,14 @@ body {
 
 .header-date {
   flex: 0 0 auto;
-  min-width: 150px;
-  width: fit-content;
+  min-width: 0;
+  width: auto;
 }
 
 .header-date .form-control {
-  width: 11ch;
+  width: 12ch;
   min-width: 0;
-  padding-inline: 0.75rem;
-  text-align: center;
+  padding-inline: 0.75rem 0.5rem;
 }
 
 .header-actions {
