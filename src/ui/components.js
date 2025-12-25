@@ -44,7 +44,7 @@ export const buildHeader = ({ selectedDate }) => {
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
   });
   const dateGroup = createEl('div', {
-    className: 'd-flex flex-column flex-grow-1',
+    className: 'd-flex flex-column flex-grow-1 header-date',
     children: [dateInput],
   });
 
@@ -65,20 +65,15 @@ export const buildHeader = ({ selectedDate }) => {
     className: 'd-none',
   });
 
-  const leftGroup = createEl('div', {
-    className: 'd-flex align-items-center gap-2 flex-wrap flex-grow-1',
-    children: [menuButton, dateGroup],
-  });
-
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions',
-    children: [weeklyTableButton, exportButton, importButton],
+    children: [weeklyTableButton, exportButton, importButton, menuButton],
   });
 
   const headerContent = createEl('div', {
     className:
       'd-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 header-content',
-    children: [leftGroup, actionsGroup],
+    children: [dateGroup, actionsGroup],
   });
 
   header.append(headerContent, importInput);

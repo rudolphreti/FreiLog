@@ -16,23 +16,19 @@ body {
 
 .header-content {
   gap: 1rem;
+  align-items: center;
 }
 
-.header-menu-btn {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  font-size: 1.1rem;
+.header-date {
+  flex: 1;
+  min-width: 240px;
 }
 
 .header-actions {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
+  flex-wrap: nowrap;
 }
 
 .header-action-btn {
@@ -59,6 +55,27 @@ body {
 .header-action-icon {
   font-size: 1.2rem;
   line-height: 1;
+}
+
+.header-menu-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-size: 1.1rem;
+  background: #f8fafc;
+  border: 1px solid #d8dee9;
+  color: #2563eb;
+}
+
+.header-menu-btn:hover,
+.header-menu-btn:focus-visible {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
 }
 
 .section-title {
