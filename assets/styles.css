@@ -17,18 +17,20 @@ body {
 .header-content {
   gap: 1rem;
   align-items: center;
+  flex-wrap: wrap;
 }
 
 .header-date {
-  flex: 0 0 auto;
-  min-width: 0;
-  width: auto;
+  flex: 1 1 180px;
+  min-width: 12ch;
+  max-width: 280px;
 }
 
 .header-date .form-control {
-  width: 12ch;
-  min-width: 0;
-  padding-inline: 0.75rem 0.5rem;
+  width: 100%;
+  min-width: 12ch;
+  max-width: 18ch;
+  padding-inline: 0.75rem 0.75rem;
 }
 
 .header-actions {
@@ -36,6 +38,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: nowrap;
+  flex: 0 0 auto;
 }
 
 .header-action-btn {

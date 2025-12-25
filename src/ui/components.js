@@ -72,7 +72,7 @@ export const buildHeader = ({ selectedDate }) => {
 
   const headerContent = createEl('div', {
     className:
-      'd-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 header-content',
+      'd-flex flex-row flex-wrap align-items-center justify-content-between gap-3 header-content',
     children: [dateGroup, actionsGroup],
   });
 
