@@ -420,8 +420,8 @@ const buildTopList = (items, getGroups, observationGroups) => {
       attrs: { type: 'button' },
       dataset: { role: 'observation-top-add', value: label },
       children: [
-        groupDots,
         createEl('span', { className: 'observation-top-plus', text: '+' }),
+        groupDots,
         createEl('span', { text: label }),
         createEl('span', {
           className: 'badge text-bg-light border observation-top-count',
@@ -623,20 +623,16 @@ const buildObservationTemplatesOverlay = ({
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
-  const closeButton = createEl('button', {
-    className: 'btn btn-link p-0 observation-templates-overlay__close',
-    attrs: { type: 'button' },
-    dataset: { role: 'observation-template-close' },
-    children: [
-      createEl('span', { className: 'me-2', text: '×' }),
-      createEl('span', { text: 'Zurück' }),
-    ],
-  });
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Gespeicherte Beobachtungen',
   });
-  header.append(closeButton, title);
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-templates-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'observation-template-close' },
+  });
+  header.append(title, closeButton);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
@@ -982,7 +978,7 @@ const createDetailPanel = ({
   const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups);
 
   const todayTitle = createEl('p', {
-    className: 'text-muted small mb-0',
+    className: 'observation-section__title mb-0',
     text: 'Heutige Beobachtungen',
     dataset: { role: 'observation-today-title' },
   });
@@ -990,22 +986,41 @@ const createDetailPanel = ({
   const todayList = rebuildTodayList([], getGroupsForLabel, observationGroups);
   todayList.dataset.role = 'observation-today-list';
 
+  const todaySection = createEl('div', {
+    className: 'observation-section',
+    children: [todayTitle, todayList],
+  });
+
   topList.dataset.role = 'observation-top-list';
 
   const actionRow = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
+    className: 'observation-action-grid',
   });
 
   const templatesButton = createEl('button', {
-    className: 'btn btn-primary btn-sm observation-template-open align-self-start',
-    text: 'Beobachtungen hinzufügen...',
+    className: 'observation-action-card observation-action-card--catalog observation-template-open',
+    children: [
+      createEl('span', {
+        className: 'observation-action-icon',
+        attrs: { 'aria-hidden': 'true' },
+        text: '⌕',
+      }),
+      createEl('span', { className: 'observation-action-label', text: 'Beobachtungen-Katalog' }),
+    ],
     attrs: { type: 'button' },
     dataset: { role: 'observation-template-open' },
   });
 
   const createButton = createEl('button', {
-    className: 'btn btn-outline-secondary btn-sm observation-create-open align-self-start',
-    text: '+ Erstelle Beobachtung',
+    className: 'observation-action-card observation-action-card--create observation-create-open',
+    children: [
+      createEl('span', {
+        className: 'observation-action-icon',
+        attrs: { 'aria-hidden': 'true' },
+        text: '+',
+      }),
+      createEl('span', { className: 'observation-action-label', text: 'Erstelle Beobachtung' }),
+    ],
     attrs: { type: 'button' },
     dataset: { role: 'observation-create-open' },
   });
@@ -1019,6 +1034,21 @@ const createDetailPanel = ({
   });
   feedback.hidden = true;
 
+  const addTitle = createEl('p', {
+    className: 'observation-section__title mb-0',
+    text: 'Beobachtungen hinzufügen',
+  });
+
+  const topTitle = createEl('p', {
+    className: 'observation-section__subtitle mb-0',
+    text: 'Top 10',
+  });
+
+  const addSection = createEl('div', {
+    className: 'observation-section observation-section--add d-flex flex-column gap-2',
+    children: [addTitle, topTitle, topList, actionRow],
+  });
+
   const detail = createEl('div', {
     className: 'observation-detail d-flex flex-column gap-3 d-none',
     dataset: {
@@ -1027,7 +1057,7 @@ const createDetailPanel = ({
       templateQuery: '',
       absent: isAbsent ? 'true' : 'false',
     },
-    children: [todayTitle, todayList, topList, actionRow, feedback],
+    children: [todaySection, addSection, feedback],
   });
 
   let absentNotice = null;
@@ -1037,10 +1067,8 @@ const createDetailPanel = ({
       text: 'Abwesend – Beobachtungen deaktiviert.',
       dataset: { role: 'observation-absent-notice' },
     });
-    topList.hidden = true;
-    todayTitle.hidden = true;
-    todayList.hidden = true;
-    actionRow.hidden = true;
+    todaySection.hidden = true;
+    addSection.hidden = true;
     feedback.hidden = true;
     detail.append(absentNotice);
   }
@@ -1049,6 +1077,8 @@ const createDetailPanel = ({
     detail,
     refs: {
       topList,
+      todaySection,
+      addSection,
       todayTitle,
       todayList,
       templatesButton,
@@ -1164,20 +1194,16 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
   const header = createEl('div', {
     className: 'observation-create-overlay__header',
   });
-  const closeButton = createEl('button', {
-    className: 'btn btn-link p-0 observation-create-overlay__close',
-    attrs: { type: 'button' },
-    dataset: { role: 'observation-create-close' },
-    children: [
-      createEl('span', { className: 'me-2', text: '←' }),
-      createEl('span', { text: 'Zurück' }),
-    ],
-  });
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Neue Beobachtung',
   });
-  header.append(closeButton, title);
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-create-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'observation-create-close' },
+  });
+  header.append(title, closeButton);
 
   const inputLabel = createEl('label', {
     className: 'form-label text-muted small mb-0',
@@ -1330,21 +1356,17 @@ export const buildObservationsSection = ({
   const overlayHeader = createEl('div', {
     className: 'observation-overlay__header',
   });
-  const closeButton = createEl('button', {
-    className: 'btn btn-link p-0 observation-overlay__close',
-    attrs: { type: 'button' },
-    dataset: { role: 'observation-close' },
-    children: [
-      createEl('span', { className: 'me-2', text: '←' }),
-      createEl('span', { text: 'Zurück' }),
-    ],
-  });
   const overlayTitle = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Kind',
     dataset: { role: 'observation-child-title' },
   });
-  overlayHeader.append(closeButton, overlayTitle);
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'observation-close' },
+  });
+  overlayHeader.append(overlayTitle, closeButton);
 
   const overlayContent = createEl('div', {
     className: 'observation-overlay__content',
@@ -1442,6 +1464,8 @@ export const buildObservationsSection = ({
     refs.todayList.hidden = isHidden;
     refs.actionRow.hidden = isHidden;
     refs.feedback.hidden = isHidden;
+    refs.todaySection.hidden = isHidden;
+    refs.addSection.hidden = isHidden;
 
     if (isAbsent) {
       const notice = createEl('p', {

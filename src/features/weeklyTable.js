@@ -171,13 +171,12 @@ export const createWeeklyTableView = ({ days = {}, children = [] } = {}) => {
   });
   const panel = createEl('div', { className: 'weekly-table-overlay__panel' });
   const header = createEl('div', { className: 'weekly-table-overlay__header' });
-  const closeButton = createEl('button', {
-    className: 'btn btn-link p-0 weekly-table-overlay__close',
-    attrs: { type: 'button' },
-    text: '← Zurück',
-  });
   const title = createEl('h3', { className: 'h4 mb-0', text: 'Wochentabelle' });
-  header.append(closeButton, title);
+  const closeButton = createEl('button', {
+    className: 'btn-close weekly-table-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+  });
+  header.append(title, closeButton);
 
   const content = createEl('div', { className: 'weekly-table-overlay__content' });
   const controls = createEl('div', {
