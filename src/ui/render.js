@@ -192,7 +192,10 @@ export const renderApp = (root, state) => {
     bindDateEntry(header.refs.dateInput);
     const actions = drawerContentRefs?.actions;
     bindImportExport({
-      exportButton: actions?.exportButton || header.refs.exportButton,
+      exportButton: header.refs.exportButton,
+    });
+    bindImportExport({
+      exportButton: actions?.exportButton,
       importButton: actions?.importButton,
       fileInput: actions?.importInput,
     });
@@ -257,7 +260,10 @@ export const renderApp = (root, state) => {
 
   const actions = drawerContentRefs?.actions;
   bindImportExport({
-    exportButton: actions?.exportButton || header.refs.exportButton,
+    exportButton: header.refs.exportButton,
+  });
+  bindImportExport({
+    exportButton: actions?.exportButton,
     importButton: actions?.importButton,
     fileInput: actions?.importInput,
   });
