@@ -526,6 +526,17 @@ body {
   font-weight: 600;
 }
 
+.weekly-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.weekly-table th,
+.weekly-table td {
+  border: 1px solid #e2e8f0;
+  background-clip: padding-box;
+}
+
 .weekly-table__offers-row th,
 .weekly-table__offers-row td {
   background: #eef2ff;
@@ -565,6 +576,36 @@ body {
   z-index: 2;
   background: #f8fafc;
   box-shadow: 2px 0 0 #e2e8f0;
+}
+
+.weekly-table tbody th::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  right: -1px;
+  width: 1px;
+  background: #f8fafc;
+}
+
+.weekly-table thead th::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -1px;
+  height: 1px;
+  background: #f8fafc;
+}
+
+.weekly-table thead th:first-child::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: -1px;
+  width: 1px;
+  background: #f8fafc;
 }
 
 .weekly-table tbody tr:not(.weekly-table__offers-row):nth-child(odd) td {
