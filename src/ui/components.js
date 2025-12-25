@@ -160,13 +160,13 @@ export const buildDrawerContent = ({
   const weeklyTableButton = createActionButton({
     icon: '📅',
     label: 'Wochentabelle',
-    className: 'drawer-action-btn--secondary',
+    className: 'drawer-action-btn--outline',
     attrs: { 'data-bs-dismiss': 'offcanvas' },
   });
   const exportButton = createActionButton({
     icon: '⬇️',
     label: 'Exportieren',
-    className: 'drawer-action-btn--primary',
+    className: 'drawer-action-btn--outline',
   });
   const importButton = createActionButton({
     icon: '⬆️',
