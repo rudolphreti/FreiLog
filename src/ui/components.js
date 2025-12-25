@@ -44,7 +44,7 @@ export const buildHeader = ({ selectedDate }) => {
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
   });
   const dateGroup = createEl('div', {
-    className: 'd-flex flex-column flex-grow-1 header-date',
+    className: 'd-flex flex-column header-date',
     children: [dateInput],
   });
 
