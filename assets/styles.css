@@ -119,7 +119,7 @@ body {
   align-items: center;
   gap: 0.5rem;
   padding: 0.85rem;
-  font-weight: 700;
+  font-weight: 500;
   color: #1f2937;
   text-decoration: none;
   width: 100%;
@@ -134,28 +134,30 @@ body {
 }
 
 .observation-action-icon {
-  width: 2.6rem;
-  height: 2.6rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 10px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.3rem;
-  font-weight: 800;
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: 1.5px solid currentColor;
+  background: transparent;
 }
 
 .observation-action-card--catalog .observation-action-icon {
-  background: #eef2ff;
   color: #312e81;
+  box-shadow: inset 0 0 0 1px rgba(49, 46, 129, 0.18);
 }
 
 .observation-action-card--create .observation-action-icon {
-  background: #ecfdf3;
   color: #166534;
+  box-shadow: inset 0 0 0 1px rgba(22, 101, 52, 0.2);
 }
 
 .observation-action-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .observation-group-dots {
