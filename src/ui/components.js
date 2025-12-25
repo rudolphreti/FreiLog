@@ -147,23 +147,34 @@ export const buildDrawerContent = ({
   drawerSections,
   angebotSection,
 }) => {
-  const weeklyTableButton = createEl('button', {
-    className: 'btn btn-outline-secondary w-100',
-    text: 'Daten als Wochentabelle anzeigen…',
-    attrs: { type: 'button', 'data-bs-dismiss': 'offcanvas' },
+  const createActionButton = ({ icon, label, className = '', attrs = {} }) =>
+    createEl('button', {
+      className: `drawer-action-btn ${className}`.trim(),
+      attrs: { type: 'button', ...attrs },
+      children: [
+        createEl('span', { className: 'drawer-action-btn__icon', text: icon }),
+        createEl('span', { className: 'drawer-action-btn__label', text: label }),
+      ],
+    });
+
+  const weeklyTableButton = createActionButton({
+    icon: '📅',
+    label: 'Wochentabelle',
+    className: 'drawer-action-btn--secondary',
+    attrs: { 'data-bs-dismiss': 'offcanvas' },
   });
-  const exportButton = createEl('button', {
-    className: 'btn btn-primary w-100',
-    text: 'Exportieren',
-    attrs: { type: 'button' },
+  const exportButton = createActionButton({
+    icon: '⬇️',
+    label: 'Exportieren',
+    className: 'drawer-action-btn--primary',
   });
-  const importButton = createEl('button', {
-    className: 'btn btn-outline-primary w-100',
-    text: 'Importieren (Alles)',
-    attrs: { type: 'button' },
+  const importButton = createActionButton({
+    icon: '⬆️',
+    label: 'Importieren',
+    className: 'drawer-action-btn--outline',
   });
   const actionsGroup = createEl('div', {
-    className: 'd-grid gap-2',
+    className: 'drawer-actions',
     children: [weeklyTableButton, exportButton, importButton],
   });
 
