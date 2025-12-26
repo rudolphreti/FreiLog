@@ -445,6 +445,41 @@ export const clearDay = (date) => {
   });
 };
 
+const normalizeChildName = (value) =>
+  typeof value === 'string' && value.trim() ? value.trim() : '';
+
+export const removeChildFromClass = (childName) => {
+  const target = normalizeChildName(childName);
+  if (!target) {
+    return;
+  }
+
+  updateAppData((data) => {
+    const current = Array.isArray(data.children) ? data.children : [];
+    if (!current.includes(target)) {
+      return;
+    }
+
+    data.children = current.filter((child) => child !== target);
+
+    if (data.days && typeof data.days === 'object') {
+      Object.values(data.days).forEach((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return;
+        }
+
+        if (Array.isArray(entry.absentChildIds)) {
+          entry.absentChildIds = entry.absentChildIds.filter((name) => name !== target);
+        }
+
+        if (entry.observations && typeof entry.observations === 'object') {
+          delete entry.observations[target];
+        }
+      });
+    }
+  });
+};
+
 export const resetOverlay = async () => {
   clearAppData();
   await initStore();

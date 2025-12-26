@@ -165,6 +165,7 @@ const buildAccordionItem = ({
 export const buildDrawerContent = ({
   drawerSections,
   angebotSection,
+  classSettingsSection,
 }) => {
   const accordionId = 'drawerAccordion';
   const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
@@ -209,7 +210,25 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  const settingsContent =
+    classSettingsSection ||
+    createEl('p', {
+      className: 'text-muted mb-0',
+      text: 'Einstellungen folgen bald.',
+    });
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Einstellungen',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsContent,
+    accordionId,
+  });
+
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -220,10 +239,133 @@ export const buildDrawerContent = ({
         importButton,
         importInput,
       },
+      classSettings: classSettingsSection?.refs,
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
       },
+    },
+  };
+};
+
+export const buildClassSettingsSection = ({ children }) => {
+  const title = createEl('h3', {
+    className: 'h6 mb-0',
+    text: 'Meine Klasse',
+  });
+  const description = createEl('p', {
+    className: 'text-muted small mb-2',
+    text: 'Verwalte die Liste deiner Kinder.',
+  });
+
+  const childrenList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    dataset: { role: 'class-settings-children' },
+  });
+  if (Array.isArray(children) && children.length) {
+    children.forEach((child) => {
+      childrenList.appendChild(
+        createEl('span', { className: 'badge text-bg-light text-secondary', text: child }),
+      );
+    });
+  } else {
+    childrenList.appendChild(
+      createEl('p', { className: 'text-muted small mb-0', text: 'Keine Kinder vorhanden.' }),
+    );
+  }
+
+  const cautionTitle = createEl('p', {
+    className: 'fw-semibold text-danger mb-1',
+    text: 'Vorsicht',
+  });
+  const cautionIntro = createEl('p', {
+    className: 'text-muted small mb-2',
+    text: 'Diese Aktionen können Daten dauerhaft entfernen.',
+  });
+  const removeLabel = createEl('label', {
+    className: 'form-label mb-1',
+    attrs: { for: 'class-remove-select' },
+    text: 'Kind aus der Liste entfernen',
+  });
+  const removeHint = createEl('p', {
+    className: 'text-muted small mb-2',
+    text: 'Beim Entfernen werden alle verknüpften Einträge mit gelöscht.',
+  });
+  const childSelect = createEl('select', {
+    className: 'form-select form-select-sm',
+    attrs: { id: 'class-remove-select' },
+    dataset: { role: 'class-remove-select' },
+  });
+  childSelect.appendChild(
+    createEl('option', { attrs: { value: '' }, text: 'Kind auswählen...' }),
+  );
+  (Array.isArray(children) ? children : []).forEach((child) => {
+    childSelect.appendChild(createEl('option', { attrs: { value: child }, text: child }));
+  });
+
+  const removeButton = createEl('button', {
+    className: 'btn btn-warning btn-sm align-self-start',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-remove-trigger' },
+    text: 'Kind entfernen',
+  });
+
+  const confirmMessage = createEl('p', {
+    className: 'mb-0',
+    dataset: { role: 'class-remove-message' },
+    text: 'Bist du sicher, dass dieses Kind entfernt werden soll?',
+  });
+  const confirmYes = createEl('button', {
+    className: 'btn btn-danger btn-sm',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-remove-yes' },
+    text: 'Ja',
+  });
+  const confirmNo = createEl('button', {
+    className: 'btn btn-outline-secondary btn-sm',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-remove-no' },
+    text: 'Nein',
+  });
+  const confirmActions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    children: [confirmYes, confirmNo],
+  });
+  const confirmBox = createEl('div', {
+    className: 'alert alert-warning d-flex flex-column gap-2 mb-0',
+    dataset: { role: 'class-remove-confirm' },
+    hidden: true,
+    children: [confirmMessage, confirmActions],
+  });
+
+  const cautionBox = createEl('div', {
+    className: 'alert alert-light border border-warning-subtle class-settings__danger',
+    children: [
+      cautionTitle,
+      cautionIntro,
+      removeLabel,
+      removeHint,
+      childSelect,
+      removeButton,
+      confirmBox,
+    ],
+  });
+
+  const content = createEl('div', {
+    className: 'd-flex flex-column gap-3',
+    children: [title, description, childrenList, cautionBox],
+  });
+
+  return {
+    element: content,
+    refs: {
+      childSelect,
+      removeButton,
+      confirmBox,
+      confirmMessage,
+      confirmYes,
+      confirmNo,
     },
   };
 };

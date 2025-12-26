@@ -1160,3 +1160,11 @@ body.observation-overlay-open {
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }
 }
+
+.class-settings__danger .form-select {
+  max-width: 320px;
+}
+
+.class-settings__danger .btn {
+  width: fit-content;
+}
