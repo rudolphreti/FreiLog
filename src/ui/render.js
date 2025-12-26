@@ -13,6 +13,7 @@ import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
+import { bindSettings } from '../features/settings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -230,6 +231,7 @@ export const renderApp = (root, state) => {
     });
 
     bindDrawerSections(drawerContentRefs?.sections);
+    bindSettings(drawerContentRefs?.settings);
 
     appShell = {
       container,
@@ -285,4 +287,5 @@ export const renderApp = (root, state) => {
     date: selectedDate,
   });
   bindDrawerSections(drawerContentRefs?.sections);
+  bindSettings(drawerContentRefs?.settings);
 };

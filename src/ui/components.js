@@ -209,7 +209,38 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  const dangerTitle = createEl('h3', {
+    className: 'h6 text-danger mb-1',
+    text: 'Vorsicht',
+  });
+  const dangerText = createEl('p', {
+    className: 'text-muted small mb-2',
+    text: 'Das Löschen der Kinderliste entfernt auch alle zugehörigen Einträge und Beobachtungen.',
+  });
+  const removeChildrenButton = createEl('button', {
+    className: 'btn btn-danger d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '⚠️' }), createEl('span', { text: 'Kinderliste löschen' })],
+    dataset: { role: 'remove-children' },
+  });
+  const settingsContent = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    children: [dangerTitle, dangerText, removeChildrenButton],
+  });
+
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Einstellungen',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsContent,
+    accordionId,
+  });
+
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -223,6 +254,10 @@ export const buildDrawerContent = ({
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
+      },
+      settings: {
+        removeChildrenButton,
       },
     },
   };
