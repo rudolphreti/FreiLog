@@ -192,6 +192,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let rowCounter = 0;
   let rows = [];
   const rowElements = new Map();
+  let newChildName = '';
+  let newChildNote = '';
+  let newChildErrors = [];
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -281,6 +284,63 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       createEl('div', {
         className: 'alert alert-light border small mb-0',
         text: 'Hier verwaltest du alle Kinder, denen Beobachtungen zugeordnet werden.',
+      }),
+      createEl('div', {
+        className: 'card border-0 shadow-sm',
+        children: [
+          createEl('div', {
+            className: 'card-body d-flex flex-column gap-2',
+            children: [
+              createEl('div', {
+                className: 'row g-2 align-items-start',
+                children: [
+                  createEl('div', { className: 'col-12 col-md-5', children: [
+                    createFormGroup({
+                      id: 'new-child-name',
+                      label: 'Neues Kind',
+                      control: createEl('input', {
+                        className: 'form-control form-control-sm',
+                        attrs: {
+                          type: 'text',
+                          placeholder: 'Name eingeben',
+                          'aria-label': 'Neues Kind',
+                        },
+                        dataset: { role: 'new-child-name' },
+                      }),
+                    }),
+                  ] }),
+                  createEl('div', { className: 'col-12 col-md-5', children: [
+                    createFormGroup({
+                      id: 'new-child-note',
+                      label: 'Notizen',
+                      control: createEl('textarea', {
+                        className: 'form-control form-control-sm',
+                        attrs: {
+                          rows: '1',
+                          placeholder: 'Notizen',
+                          'aria-label': 'Notizen zum Kind',
+                        },
+                        dataset: { role: 'new-child-note' },
+                      }),
+                    }),
+                  ] }),
+                  createEl('div', {
+                    className: 'col-12 col-md-2 d-flex align-items-end justify-content-start',
+                    children: [
+                      createEl('button', {
+                        className: 'btn btn-primary btn-sm w-100',
+                        attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
+                        dataset: { role: 'new-child-submit' },
+                        text: 'Dodaj',
+                      }),
+                    ],
+                  }),
+                ],
+              }),
+              createEl('div', { className: 'text-danger small d-none', dataset: { role: 'new-child-errors' } }),
+            ],
+          }),
+        ],
       }),
       table,
     ],
@@ -508,9 +568,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
 
     rows = [...nextRows, ...drafts];
-    if (!rows.length) {
-      rows.push(createRowState(++rowCounter));
-    }
     renderRows();
   };
 
@@ -519,14 +576,68 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   mottoInput.addEventListener('input', persistProfile);
   notesInput.addEventListener('input', persistProfile);
 
-  addRowButton.addEventListener('click', () => {
-    const newRow = createRowState(++rowCounter);
-    rows.push(newRow);
-    renderRows();
-    window.requestAnimationFrame(() => {
-      const newRowRefs = rowElements.get(newRow.id);
-      newRowRefs?.nameInputEl?.focus();
+  const newChildNameInput = content.querySelector('[data-role="new-child-name"]');
+  const newChildNoteInput = content.querySelector('[data-role="new-child-note"]');
+  const newChildErrorsBox = content.querySelector('[data-role="new-child-errors"]');
+  const newChildSubmit = content.querySelector('[data-role="new-child-submit"]');
+
+  const renderNewChildErrors = () => {
+    if (!newChildErrorsBox) {
+      return;
+    }
+    newChildErrorsBox.replaceChildren();
+    newChildErrors.forEach((msg) => {
+      newChildErrorsBox.append(createEl('div', { text: msg }));
     });
+    newChildErrorsBox.classList.toggle('d-none', !newChildErrors.length);
+  };
+
+  const resetNewChildForm = () => {
+    newChildName = '';
+    newChildNote = '';
+    newChildErrors = [];
+    if (newChildNameInput) {
+      newChildNameInput.value = '';
+    }
+    if (newChildNoteInput) {
+      newChildNoteInput.value = '';
+    }
+    renderNewChildErrors();
+  };
+
+  const handleAddNewChild = () => {
+    const canonicalExisting = rows
+      .map((row) => (row.name ? row.name.toLocaleLowerCase() : ''))
+      .filter(Boolean);
+    const { normalized, errors } = validateName(newChildName, canonicalExisting);
+    const nextErrors = [...errors];
+    if (!normalized) {
+      nextErrors.push('Name darf nicht leer sein.');
+    }
+    newChildErrors = Array.from(new Set(nextErrors));
+    renderNewChildErrors();
+    if (newChildErrors.length) {
+      return;
+    }
+    const newRow = {
+      id: `class-row-${++rowCounter}`,
+      name: normalized,
+      originalName: normalized,
+      note: typeof newChildNote === 'string' ? newChildNote : '',
+      persisted: true,
+      validationMessages: [],
+    };
+    rows = [...rows, newRow];
+    saveClassChildren(rows);
+    renderRows();
+    resetNewChildForm();
+    window.requestAnimationFrame(() => {
+      newChildNameInput?.focus();
+    });
+  };
+
+  addRowButton.addEventListener('click', () => {
+    handleAddNewChild();
   });
 
   const open = () => {
@@ -553,6 +664,28 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       close();
     }
   });
+
+  if (newChildNameInput) {
+    newChildNameInput.addEventListener('input', (event) => {
+      newChildName = event.target.value;
+      newChildErrors = [];
+      renderNewChildErrors();
+    });
+    newChildNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleAddNewChild();
+      }
+    });
+  }
+  if (newChildNoteInput) {
+    newChildNoteInput.addEventListener('input', (event) => {
+      newChildNote = event.target.value;
+    });
+  }
+  if (newChildSubmit) {
+    newChildSubmit.addEventListener('click', handleAddNewChild);
+  }
 
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
