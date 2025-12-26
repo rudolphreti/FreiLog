@@ -12,6 +12,7 @@ import { bindAngebot } from '../features/angebot.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
+import { createClassSettingsOverlay } from '../features/classSettings.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
 
 const createFallbackEntry = (date) => ({
@@ -85,6 +86,7 @@ let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
 let weeklyTableViewBinding = null;
+let classSettingsBinding = null;
 
 const renderDrawerContent = (
   state,
@@ -171,6 +173,12 @@ export const renderApp = (root, state) => {
     });
   }
 
+  if (!classSettingsBinding) {
+    classSettingsBinding = createClassSettingsOverlay({ children: sortedChildren });
+  } else {
+    classSettingsBinding.update({ children: sortedChildren });
+  }
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -191,6 +199,9 @@ export const renderApp = (root, state) => {
     contentWrap.append(header.element, observationsSection.element);
 
     container.append(contentWrap, drawerShell.element, weeklyTableViewBinding.element);
+    if (classSettingsBinding?.element) {
+      container.append(classSettingsBinding.element);
+    }
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
@@ -203,6 +214,11 @@ export const renderApp = (root, state) => {
       importButton: actions?.importButton,
       fileInput: actions?.importInput,
     });
+    if (classSettingsBinding && actions?.settingsButton) {
+      actions.settingsButton.addEventListener('click', () => {
+        classSettingsBinding.open();
+      });
+    }
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
       actions.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
@@ -271,6 +287,11 @@ export const renderApp = (root, state) => {
     importButton: actions?.importButton,
     fileInput: actions?.importInput,
   });
+  if (classSettingsBinding && actions?.settingsButton) {
+    actions.settingsButton.addEventListener('click', () => {
+      classSettingsBinding.open();
+    });
+  }
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {
     actions.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();

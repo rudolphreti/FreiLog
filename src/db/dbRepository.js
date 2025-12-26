@@ -436,6 +436,49 @@ export const addPreset = (type, value) => {
   });
 };
 
+export const deleteChildWithData = (childName) => {
+  const normalized =
+    typeof childName === 'string' ? childName.trim().toLocaleLowerCase('de') : '';
+  if (!normalized) {
+    return { status: 'invalid' };
+  }
+
+  let result = { status: 'not_found' };
+  updateAppData((data) => {
+    const currentChildren = Array.isArray(data.children) ? data.children : [];
+    const matchedChild =
+      currentChildren.find(
+        (child) => child.toLocaleLowerCase('de') === normalized,
+      ) || null;
+
+    if (!matchedChild) {
+      return;
+    }
+
+    data.children = currentChildren.filter((child) => child !== matchedChild);
+
+    if (data.days && typeof data.days === 'object') {
+      Object.values(data.days).forEach((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return;
+        }
+        if (Array.isArray(entry.absentChildIds)) {
+          entry.absentChildIds = entry.absentChildIds.filter(
+            (child) => child !== matchedChild,
+          );
+        }
+        if (entry.observations && typeof entry.observations === 'object') {
+          delete entry.observations[matchedChild];
+        }
+      });
+    }
+
+    result = { status: 'removed', child: matchedChild };
+  });
+
+  return result;
+};
+
 export const clearDay = (date) => {
   const ymd = ensureYmd(date, todayYmd());
 
