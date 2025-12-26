@@ -317,7 +317,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     text: 'Dodaj',
   });
 
-  const newChildErrorsBox = createEl('div', {
+  const newChildErrorsEl = createEl('div', {
     className: 'text-danger small d-none',
     dataset: { role: 'new-child-errors' },
   });
@@ -352,7 +352,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         }),
       ],
     }),
-    newChildErrorsBox,
+    newChildErrorsEl,
   );
 
   newChildCard.append(newChildCardBody);
@@ -602,7 +602,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
   const newChildNameInputField = content.querySelector('[data-role="new-child-name"]');
   const newChildNoteInputField = content.querySelector('[data-role="new-child-note"]');
-  const newChildErrorsBox = content.querySelector('[data-role="new-child-errors"]');
+  const newChildErrorsBox = newChildErrorsEl;
   const newChildSubmit = content.querySelector('[data-role="new-child-submit"]');
   const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
 
