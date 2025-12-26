@@ -3,6 +3,130 @@ import { normalizeChildName } from '../db/dbSchema.js';
 import { createEl } from '../ui/dom.js';
 import { debounce } from '../utils/debounce.js';
 
+const SEPARATORS = [' ', '-', '\u2010', "'", '’', 'ʼ', '.'];
+const isLatinLetter = (ch) => /\p{Letter}/u.test(ch) && /\p{Script=Latin}/u.test(ch);
+const isCombiningMark = (ch) => /\p{M}/u.test(ch);
+const isSeparator = (ch) => SEPARATORS.includes(ch);
+
+const normalizeNameInput = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  return value
+    .normalize('NFC')
+    .trim()
+    .replace(/\s+/g, ' ');
+};
+
+const getFirstLetter = (text) => {
+  for (let i = 0; i < text.length; i += 1) {
+    if (isLatinLetter(text[i])) {
+      return text[i];
+    }
+  }
+  return '';
+};
+
+const hasInvalidCharacters = (text) => !/^[\p{Script=Latin}\p{M}\s\-\u2010'’ʼ.]*$/u.test(text);
+
+const findSeparatorIssues = (text) => {
+  let previousWasSeparator = false;
+  for (let i = 0; i < text.length; i += 1) {
+    const ch = text[i];
+    if (!isSeparator(ch)) {
+      previousWasSeparator = false;
+      continue;
+    }
+
+    if (i === 0 || i === text.length - 1) {
+      return true;
+    }
+    if (previousWasSeparator) {
+      return true;
+    }
+    if (ch === '.') {
+      const prevChar = text[i - 1];
+      const nextChar = text[i + 1];
+      if (!isLatinLetter(prevChar)) {
+        return true;
+      }
+      if (nextChar && nextChar !== ' ' && !isSeparator(nextChar) && !isLatinLetter(nextChar)) {
+        return true;
+      }
+      if (nextChar === '.') {
+        return true;
+      }
+    }
+
+    previousWasSeparator = true;
+  }
+  return false;
+};
+
+const validateParts = (parts) => {
+  const errors = [];
+  if (parts.length > 6) {
+    errors.push('Name darf höchstens 6 Teile haben.');
+  }
+
+  parts.forEach((part) => {
+    if (!part) {
+      errors.push('Ungültige Trennzeichen im Namen.');
+      return;
+    }
+    const first = getFirstLetter(part);
+    if (!first || !/\p{Lu}/u.test(first)) {
+      errors.push('Jeder Teil muss mit einem Großbuchstaben beginnen.');
+    }
+    const segments = part.split(/[-\u2010'’ʼ]/);
+    segments.forEach((segment) => {
+      const initial = getFirstLetter(segment);
+      if (segment && !(/\p{Lu}/u.test(initial))) {
+        errors.push('Jeder Teil muss mit einem Großbuchstaben beginnen.');
+      }
+    });
+  });
+
+  return errors;
+};
+
+const validateName = (rawName, otherNames = []) => {
+  const normalized = normalizeNameInput(rawName);
+  const errors = [];
+
+  if (!normalized) {
+    errors.push('Name darf nicht leer sein.');
+    return { normalized, errors };
+  }
+
+  if (normalized.length > 100) {
+    errors.push('Name darf höchstens 100 Zeichen haben.');
+  }
+
+  if (hasInvalidCharacters(normalized)) {
+    errors.push('Only Latin letters are allowed.');
+  }
+
+  if (findSeparatorIssues(normalized)) {
+    errors.push('Invalid separator usage.');
+  }
+
+  const parts = normalized.split(' ');
+  errors.push(...validateParts(parts));
+
+  const firstLetter = getFirstLetter(normalized);
+  if (!firstLetter || !/\p{Lu}/u.test(firstLetter)) {
+    errors.push('Name must start with a capital letter.');
+  }
+
+  const canonical = normalized.toLocaleLowerCase();
+  if (canonical && otherNames.includes(canonical)) {
+    errors.push('Duplicate name already exists.');
+  }
+
+  return { normalized, errors };
+};
+
 const createFormGroup = ({ id, label, control }) => {
   const wrapper = createEl('div', { className: 'd-flex flex-column gap-1' });
   const labelEl = createEl('label', {
@@ -61,6 +185,7 @@ const createRowState = (counter) => ({
   originalName: '',
   note: '',
   persisted: false,
+  validationMessages: [],
 });
 
 export const createClassSettingsView = ({ profile = {}, children = [] } = {}) => {
@@ -202,9 +327,27 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
   }, 200);
 
+  const applyValidation = () => {
+    const seenNames = [];
+    rows.forEach((row) => {
+      const { normalized, errors } = validateName(row.name, seenNames);
+      row.validationMessages = errors;
+      row.normalizedName = normalized;
+      if (!errors.length && normalized) {
+        seenNames.push(normalized.toLocaleLowerCase());
+      }
+    });
+    return rows.some((row) => row.validationMessages.length);
+  };
+
   const persistRows = debounce(() => {
+    const hasErrors = applyValidation();
+    renderRows();
+    if (hasErrors) {
+      return;
+    }
     const nextRows = rows.map((row) => {
-      const normalizedName = normalizeChildName(row.name);
+      const normalizedName = row.normalizedName || normalizeChildName(row.name);
       const normalizedNote = typeof row.note === 'string' ? row.note : '';
       if (normalizedName) {
         return {
@@ -213,6 +356,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           originalName: normalizedName,
           note: normalizedNote,
           persisted: true,
+          validationMessages: [],
         };
       }
       return {
@@ -262,9 +406,14 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       className: 'form-control form-control-sm',
       attrs: { rows: '1', placeholder: 'Notizen', 'aria-label': 'Notizen' },
     });
+    const errorBox = createEl('div', {
+      className: 'form-text text-danger small pt-1 class-settings__errors',
+    });
 
     nameInputEl.addEventListener('input', (event) => {
       handleRowInput(row.id, 'name', event.target.value);
+      row.validationMessages = [];
+      updateRowInputs({ nameInputEl, noteInputEl, errorBox }, row);
     });
     nameInputEl.addEventListener('blur', handleRowBlur);
     noteInputEl.addEventListener('input', (event) => {
@@ -273,9 +422,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     noteInputEl.addEventListener('blur', handleRowBlur);
 
     const nameCell = createEl('td', { children: [nameInputEl] });
-    const noteCell = createEl('td', { children: [noteInputEl] });
+    const noteCell = createEl('td', { children: [noteInputEl, errorBox] });
     tr.append(nameCell, noteCell);
-    return { rowEl: tr, nameInputEl, noteInputEl };
+    return { rowEl: tr, nameInputEl, noteInputEl, errorBox };
   };
 
   const updateRowInputs = (rowElRefs, row) => {
@@ -284,6 +433,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
     if (rowElRefs.noteInputEl.value !== row.note) {
       rowElRefs.noteInputEl.value = row.note;
+    }
+    if (rowElRefs.errorBox) {
+      rowElRefs.errorBox.replaceChildren();
+      (row.validationMessages || []).forEach((msg) => {
+        rowElRefs.errorBox.append(createEl('div', { text: msg }));
+      });
+      rowElRefs.errorBox.classList.toggle('d-none', !row.validationMessages?.length);
     }
   };
 
