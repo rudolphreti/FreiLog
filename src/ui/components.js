@@ -187,6 +187,10 @@ export const buildDrawerContent = ({
 
   actionsList.append(weeklyTableButton, exportButton, importButton, importInput);
 
+  const settingsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const settingsButton = actionButton('Meine Klasse', '⚙️');
+  settingsList.append(settingsButton);
+
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
     title: 'Aktionen',
@@ -208,8 +212,19 @@ export const buildDrawerContent = ({
     contentNode: offersContent,
     accordionId,
   });
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Einstellungen',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsList,
+    accordionId,
+  });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -218,11 +233,14 @@ export const buildDrawerContent = ({
         weeklyTableButton,
         exportButton,
         importButton,
+        settingsButton,
         importInput,
       },
+      settings: settingsSectionItem,
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
       },
     },
   };
