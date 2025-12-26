@@ -153,6 +153,43 @@ export const getChildrenList = () => {
   return getState().db?.children || [];
 };
 
+export const removeChild = (name) => {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!trimmed) {
+    return { status: 'invalid', value: '' };
+  }
+
+  let removed = false;
+
+  updateAppData((data) => {
+    const children = Array.isArray(data.children) ? [...data.children] : [];
+    const filtered = children.filter((child) => child !== trimmed);
+    if (filtered.length === children.length) {
+      return;
+    }
+    removed = true;
+    data.children = filtered;
+    if (data.days && typeof data.days === 'object') {
+      Object.values(data.days).forEach((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return;
+        }
+        if (entry.observations && typeof entry.observations === 'object') {
+          delete entry.observations[trimmed];
+        }
+        if (Array.isArray(entry.absentChildIds)) {
+          entry.absentChildIds = entry.absentChildIds.filter((child) => child !== trimmed);
+        }
+      });
+    }
+  });
+
+  if (removed) {
+    return { status: 'removed', value: trimmed };
+  }
+  return { status: 'not_found', value: trimmed };
+};
+
 export const getPresets = (type) => {
   const presets = getState().db;
   if (!presets) {

@@ -6,6 +6,7 @@ import {
   buildDrawerContent,
   buildAngebotSection,
   buildObservationsSection,
+  buildClassSettingsOverlay,
 } from './components.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
@@ -13,6 +14,7 @@ import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
+import { createClassSettings } from '../features/classSettings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -85,6 +87,7 @@ let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
 let weeklyTableViewBinding = null;
+let classSettingsBinding = null;
 
 const renderDrawerContent = (
   state,
@@ -171,6 +174,9 @@ export const renderApp = (root, state) => {
     });
   }
 
+  const classSettingsOverlay =
+    classSettingsBinding?.element || buildClassSettingsOverlay({ children: sortedChildren });
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -190,7 +196,12 @@ export const renderApp = (root, state) => {
     contentWrap.className = 'container d-flex flex-column gap-3';
     contentWrap.append(header.element, observationsSection.element);
 
-    container.append(contentWrap, drawerShell.element, weeklyTableViewBinding.element);
+    container.append(
+      contentWrap,
+      drawerShell.element,
+      weeklyTableViewBinding.element,
+      classSettingsOverlay.element,
+    );
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
@@ -214,6 +225,22 @@ export const renderApp = (root, state) => {
       selectedList: angebotSection.refs.selectedList,
       date: selectedDate,
     });
+    classSettingsBinding = createClassSettings({
+      overlay: classSettingsOverlay.element,
+      closeButton: classSettingsOverlay.refs.closeButton,
+      openButton: drawerContentRefs?.settings?.classButton,
+      updateChildren: classSettingsOverlay.updateChildren,
+      deleteInput: classSettingsOverlay.refs.deleteInput,
+      deleteTrigger: classSettingsOverlay.refs.deleteTrigger,
+      deleteFeedback: classSettingsOverlay.refs.deleteFeedback,
+      confirmDialog: classSettingsOverlay.refs.confirmDialog,
+      confirmMessage: classSettingsOverlay.refs.confirmMessage,
+      confirmAccept: classSettingsOverlay.refs.confirmAccept,
+      confirmCancel: classSettingsOverlay.refs.confirmCancel,
+    });
+    if (classSettingsBinding?.updateChildren) {
+      classSettingsBinding.updateChildren(sortedChildren);
+    }
     observationsBinding = bindObservations({
       list: observationsSection.refs.list,
       overlay: observationsSection.refs.overlay,
@@ -275,6 +302,10 @@ export const renderApp = (root, state) => {
     actions.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();
     });
+  }
+  if (classSettingsBinding) {
+    classSettingsBinding.updateChildren(sortedChildren);
+    classSettingsBinding.bindOpenButton(drawerContentRefs?.settings?.classButton);
   }
 
   appShell.angebotEl = angebotSection.element;
