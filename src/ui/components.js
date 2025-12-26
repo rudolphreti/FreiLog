@@ -180,12 +180,19 @@ export const buildDrawerContent = ({
   const weeklyTableButton = actionButton('Wochentabelle öffnen', '📅');
   const exportButton = actionButton('Exportieren', '⬇️');
   const importButton = actionButton('Importieren', '⬆️');
+  const settingsButton = actionButton('Einstellungen', '⚙️');
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
   });
 
-  actionsList.append(weeklyTableButton, exportButton, importButton, importInput);
+  actionsList.append(
+    weeklyTableButton,
+    exportButton,
+    importButton,
+    settingsButton,
+    importInput,
+  );
 
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
@@ -218,6 +225,7 @@ export const buildDrawerContent = ({
         weeklyTableButton,
         exportButton,
         importButton,
+        settingsButton,
         importInput,
       },
       sections: {

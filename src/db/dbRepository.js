@@ -170,6 +170,35 @@ export const getPresets = (type) => {
   return [];
 };
 
+export const removeChildWithData = (name) => {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (!trimmed) {
+    return { status: 'invalid', value: '' };
+  }
+
+  let removed = '';
+  updateAppData((data) => {
+    const list = Array.isArray(data.children) ? [...data.children] : [];
+    const index = list.findIndex(
+      (child) => child.toLocaleLowerCase() === trimmed.toLocaleLowerCase(),
+    );
+    if (index === -1) {
+      return;
+    }
+    removed = list.splice(index, 1)[0];
+    data.children = list;
+    if (data.days) {
+      data.days = sanitizeDaysByDate(data.days, list);
+    }
+  });
+
+  if (!removed) {
+    return { status: 'not-found', value: '' };
+  }
+
+  return { status: 'deleted', value: removed };
+};
+
 export const getEntry = (date) => {
   const ymd = ensureYmd(date, todayYmd());
   const days = getState().db?.days || {};

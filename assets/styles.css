@@ -484,7 +484,8 @@ body {
 .observation-overlay__close,
 .observation-templates-overlay__close,
 .observation-create-overlay__close,
-.weekly-table-overlay__close {
+.weekly-table-overlay__close,
+.class-settings-overlay__close {
   margin-left: auto;
 }
 
@@ -497,6 +498,59 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+.class-settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-in-out;
+  z-index: 1100;
+}
+
+.class-settings-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.class-settings-overlay__panel {
+  width: min(720px, 92vw);
+  max-height: 92vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow:
+    0 20px 48px rgba(15, 23, 42, 0.18),
+    0 2px 8px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  transform: translateY(12px);
+  transition: transform 0.2s ease-in-out;
+}
+
+.class-settings-overlay.is-open .class-settings-overlay__panel {
+  transform: translateY(0);
+}
+
+.class-settings-overlay__header {
+  padding: 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.class-settings-overlay__content {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-height: calc(92vh - 60px);
+  overflow: auto;
 }
 
 .weekly-table__controls {
@@ -1082,7 +1136,43 @@ body {
   padding: 0.35rem 0.8rem;
 }
 
+.class-settings__card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.class-settings__card--danger {
+  background: #fff1f2;
+  border-color: #fca5a5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.class-settings__children {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.class-settings__child-pill {
+  color: #334155;
+  border-color: #e2e8f0;
+  background: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.class-settings__confirm {
+  background: #ffe4e6;
+  border-color: #f87171;
+  color: #7f1d1d;
+}
+
 body.observation-overlay-open {
+  overflow: hidden;
+}
+
+body.class-settings-overlay-open {
   overflow: hidden;
 }
 
@@ -1133,6 +1223,14 @@ body.observation-overlay-open {
   .observation-edit-overlay__content {
     padding: 1rem;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .class-settings-overlay__header {
+    padding: calc(0.85rem + env(safe-area-inset-top)) 1rem 0.85rem;
+  }
+
+  .class-settings-overlay__content {
+    padding: 1rem;
   }
 
   .observation-templates__filters-shell {
