@@ -600,8 +600,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   mottoInput.addEventListener('input', persistProfile);
   notesInput.addEventListener('input', persistProfile);
 
-  const newChildNameInput = content.querySelector('[data-role="new-child-name"]');
-  const newChildNoteInput = content.querySelector('[data-role="new-child-note"]');
+  const newChildNameInputField = content.querySelector('[data-role="new-child-name"]');
+  const newChildNoteInputField = content.querySelector('[data-role="new-child-note"]');
   const newChildErrorsBox = content.querySelector('[data-role="new-child-errors"]');
   const newChildSubmit = content.querySelector('[data-role="new-child-submit"]');
   const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
@@ -621,11 +621,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     newChildName = '';
     newChildNote = '';
     newChildErrors = [];
-    if (newChildNameInput) {
-      newChildNameInput.value = '';
+    if (newChildNameInputField) {
+      newChildNameInputField.value = '';
     }
-    if (newChildNoteInput) {
-      newChildNoteInput.value = '';
+    if (newChildNoteInputField) {
+      newChildNoteInputField.value = '';
     }
     renderNewChildErrors();
     isNewChildOpen = false;
@@ -673,7 +673,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     if (isNewChildOpen) {
       resetNewChildForm();
       window.requestAnimationFrame(() => {
-        newChildNameInput?.focus();
+        newChildNameInputField?.focus();
       });
     }
   });
@@ -703,21 +703,21 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
   });
 
-  if (newChildNameInput) {
-    newChildNameInput.addEventListener('input', (event) => {
+  if (newChildNameInputField) {
+    newChildNameInputField.addEventListener('input', (event) => {
       newChildName = event.target.value;
       newChildErrors = [];
       renderNewChildErrors();
     });
-    newChildNameInput.addEventListener('keydown', (event) => {
+    newChildNameInputField.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
         event.preventDefault();
         handleAddNewChild();
       }
     });
   }
-  if (newChildNoteInput) {
-    newChildNoteInput.addEventListener('input', (event) => {
+  if (newChildNoteInputField) {
+    newChildNoteInputField.addEventListener('input', (event) => {
       newChildNote = event.target.value;
     });
   }
