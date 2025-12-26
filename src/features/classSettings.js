@@ -361,10 +361,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     className: 'd-flex flex-column gap-3',
     children: [
       childrenHeader,
-      createEl('div', {
-        className: 'alert alert-light border small mb-0',
-        text: 'Hier verwaltest du alle Kinder, denen Beobachtungen zugeordnet werden.',
-      }),
       newChildCard,
       table,
     ],
@@ -603,7 +599,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const newChildNameInputField = content.querySelector('[data-role="new-child-name"]');
   const newChildNoteInputField = content.querySelector('[data-role="new-child-note"]');
   const newChildErrorsBox = newChildErrorsEl;
-  const newChildSubmit = content.querySelector('[data-role="new-child-submit"]');
+  const newChildSubmitControl = content.querySelector('[data-role="new-child-submit"]');
   const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
 
   const renderNewChildErrors = () => {
@@ -628,6 +624,20 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       newChildNoteInputField.value = '';
     }
     renderNewChildErrors();
+  };
+
+  const showNewChildForm = () => {
+    isNewChildOpen = true;
+    resetNewChildForm();
+    if (newChildCardEl) {
+      newChildCardEl.classList.remove('d-none');
+    }
+    window.requestAnimationFrame(() => {
+      newChildNameInputField?.focus();
+    });
+  };
+
+  const hideNewChildForm = () => {
     isNewChildOpen = false;
     if (newChildCardEl) {
       newChildCardEl.classList.add('d-none');
@@ -660,22 +670,15 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     saveClassChildren(rows);
     renderRows();
     resetNewChildForm();
-    window.requestAnimationFrame(() => {
-      newChildNameInput?.focus();
-    });
+    showNewChildForm();
   };
 
   addRowButton.addEventListener('click', () => {
-    isNewChildOpen = !isNewChildOpen;
-    if (newChildCardEl) {
-      newChildCardEl.classList.toggle('d-none', !isNewChildOpen);
-    }
     if (isNewChildOpen) {
-      resetNewChildForm();
-      window.requestAnimationFrame(() => {
-        newChildNameInputField?.focus();
-      });
+      hideNewChildForm();
+      return;
     }
+    showNewChildForm();
   });
 
   const open = () => {
@@ -721,8 +724,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       newChildNote = event.target.value;
     });
   }
-  if (newChildSubmit) {
-    newChildSubmit.addEventListener('click', handleAddNewChild);
+  if (newChildSubmitControl) {
+    newChildSubmitControl.addEventListener('click', handleAddNewChild);
   }
 
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
