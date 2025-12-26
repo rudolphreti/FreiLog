@@ -9,7 +9,15 @@ import {
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
+
+const DEFAULT_CLASS_PROFILE = {
+  name: '',
+  badge: '',
+  motto: '',
+  notes: '',
+  childrenNotes: {},
+};
 
 const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
 export const DEFAULT_SAVED_OBSERVATION_FILTERS = {
@@ -72,6 +80,87 @@ export const ensureUniqueSortedStrings = (arr) => {
   });
 
   return Array.from(unique).sort((a, b) => a.localeCompare(b));
+};
+
+export const normalizeChildName = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value.trim().replace(/\s+/g, ' ');
+};
+
+const normalizeChildNotes = (value, childrenList = []) => {
+  const source = isPlainObject(value) ? value : {};
+  const allowed = Array.isArray(childrenList)
+    ? new Set(childrenList.map((child) => normalizeChildName(child)).filter(Boolean))
+    : null;
+  const result = {};
+
+  Object.entries(source).forEach(([child, note]) => {
+    const normalizedChild = normalizeChildName(child);
+    if (!normalizedChild || (allowed && !allowed.has(normalizedChild))) {
+      return;
+    }
+    const normalizedNote = typeof note === 'string' ? note : '';
+    result[normalizedChild] = normalizedNote;
+  });
+
+  if (allowed) {
+    allowed.forEach((child) => {
+      if (!result[child]) {
+        result[child] = '';
+      }
+    });
+  }
+
+  return result;
+};
+
+const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) => {
+  const source = isPlainObject(value) ? value : {};
+  const fallback = isPlainObject(fallbackProfile) ? fallbackProfile : DEFAULT_CLASS_PROFILE;
+  const baseProfile = { ...DEFAULT_CLASS_PROFILE, ...fallback };
+
+  const name =
+    typeof source.name === 'string' && source.name.trim()
+      ? source.name.trim()
+      : typeof baseProfile.name === 'string'
+        ? baseProfile.name.trim()
+        : '';
+  const badge =
+    typeof source.badge === 'string' && source.badge.trim()
+      ? source.badge.trim()
+      : typeof baseProfile.badge === 'string'
+        ? baseProfile.badge.trim()
+        : '';
+  const motto =
+    typeof source.motto === 'string' && source.motto.trim()
+      ? source.motto.trim()
+      : typeof baseProfile.motto === 'string'
+        ? baseProfile.motto.trim()
+        : '';
+  const notes =
+    typeof source.notes === 'string'
+      ? source.notes
+      : typeof baseProfile.notes === 'string'
+        ? baseProfile.notes
+        : '';
+
+  const primaryNotes = normalizeChildNotes(
+    source.childrenNotes || source.childNotes,
+    childrenList,
+  );
+  const fallbackNotes = normalizeChildNotes(baseProfile.childrenNotes, childrenList);
+  const mergedNotes = { ...fallbackNotes, ...primaryNotes };
+
+  return {
+    name,
+    badge,
+    motto,
+    notes,
+    childrenNotes: mergedNotes,
+  };
 };
 
 const ensureUniqueStrings = (arr) => {
@@ -251,6 +340,10 @@ const normalizeUi = (ui) => {
           typeof drawerSections.angebote === 'boolean'
             ? drawerSections.angebote
             : DEFAULT_DRAWER_SECTIONS.angebote,
+        einstellungen:
+          typeof drawerSections.einstellungen === 'boolean'
+            ? drawerSections.einstellungen
+            : DEFAULT_DRAWER_SECTIONS.einstellungen,
       },
     },
   };
@@ -372,6 +465,7 @@ export const buildObservationStats = (days) => {
 export const createEmptyAppData = () => ({
   schemaVersion: SCHEMA_VERSION,
   children: [],
+  classProfile: { ...DEFAULT_CLASS_PROFILE },
   angebote: [],
   observationTemplates: [],
   observationCatalog: [],
@@ -393,8 +487,19 @@ export const normalizeAppData = (source, fallback = {}) => {
   const base = isPlainObject(source) ? source : {};
   const fallbackData = isPlainObject(fallback) ? fallback : {};
 
+  const childrenSource = Array.isArray(base.children)
+    ? base.children
+    : fallbackData.children;
   const children = ensureUniqueSortedStrings(
-    Array.isArray(base.children) ? base.children : fallbackData.children,
+    Array.isArray(childrenSource)
+      ? childrenSource.map((child) => normalizeChildName(child)).filter(Boolean)
+      : [],
+  );
+
+  const classProfile = normalizeClassProfile(
+    base.classProfile || { childrenNotes: base.childNotes },
+    children,
+    fallbackData.classProfile || { childrenNotes: fallbackData.childNotes },
   );
 
   const angebote = ensureUniqueSortedStrings(
@@ -435,6 +540,7 @@ export const normalizeAppData = (source, fallback = {}) => {
   return {
     schemaVersion: SCHEMA_VERSION,
     children,
+    classProfile,
     angebote,
     observationTemplates: getObservationCatalogLabels(observationCatalog),
     observationCatalog,

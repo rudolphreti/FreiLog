@@ -21,4 +21,5 @@ export const bindDrawerSections = (sections) => {
 
   bindDrawerSection('actions', sections.actions);
   bindDrawerSection('angebote', sections.angebote);
+  bindDrawerSection('einstellungen', sections.einstellungen);
 };

@@ -13,6 +13,7 @@ import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
+import { createClassSettingsView } from '../features/classSettings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -85,6 +86,7 @@ let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
 let weeklyTableViewBinding = null;
+let classSettingsView = null;
 
 const renderDrawerContent = (
   state,
@@ -123,6 +125,7 @@ export const renderApp = (root, state) => {
   const entry = getEntryForDate(db, selectedDate);
   const children = db.children || [];
   const sortedChildren = getSortedChildren(children);
+  const classProfile = db.classProfile || {};
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
@@ -171,6 +174,18 @@ export const renderApp = (root, state) => {
     });
   }
 
+  if (!classSettingsView) {
+    classSettingsView = createClassSettingsView({
+      profile: classProfile,
+      children: sortedChildren,
+    });
+  } else {
+    classSettingsView.update({
+      profile: classProfile,
+      children: sortedChildren,
+    });
+  }
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -190,7 +205,12 @@ export const renderApp = (root, state) => {
     contentWrap.className = 'container d-flex flex-column gap-3';
     contentWrap.append(header.element, observationsSection.element);
 
-    container.append(contentWrap, drawerShell.element, weeklyTableViewBinding.element);
+    container.append(
+      contentWrap,
+      drawerShell.element,
+      weeklyTableViewBinding.element,
+      classSettingsView.element,
+    );
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
@@ -198,6 +218,7 @@ export const renderApp = (root, state) => {
     bindImportExport({
       exportButton: header.refs.exportButton,
     });
+    const settingsActions = drawerContentRefs?.settings;
     bindImportExport({
       exportButton: actions?.exportButton,
       importButton: actions?.importButton,
@@ -206,6 +227,11 @@ export const renderApp = (root, state) => {
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
       actions.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
+      });
+    }
+    if (classSettingsView && settingsActions?.classButton) {
+      settingsActions.classButton.addEventListener('click', () => {
+        classSettingsView.open();
       });
     }
     bindAngebot({
@@ -266,6 +292,7 @@ export const renderApp = (root, state) => {
   bindImportExport({
     exportButton: header.refs.exportButton,
   });
+  const settingsActions = drawerContentRefs?.settings;
   bindImportExport({
     exportButton: actions?.exportButton,
     importButton: actions?.importButton,
@@ -274,6 +301,11 @@ export const renderApp = (root, state) => {
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {
     actions.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();
+    });
+  }
+  if (classSettingsView && settingsActions?.classButton) {
+    settingsActions.classButton.addEventListener('click', () => {
+      classSettingsView.open();
     });
   }
 

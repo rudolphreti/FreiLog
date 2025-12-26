@@ -4,4 +4,5 @@ export const DEFAULT_EXPORT_MODE = 'day';
 export const DEFAULT_DRAWER_SECTIONS = {
   actions: false,
   angebote: false,
+  einstellungen: false,
 };

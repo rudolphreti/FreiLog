@@ -68,6 +68,10 @@ export const getState = () => {
             typeof drawerSections.angebote === 'boolean'
               ? drawerSections.angebote
               : DEFAULT_DRAWER_SECTIONS.angebote,
+          einstellungen:
+            typeof drawerSections.einstellungen === 'boolean'
+              ? drawerSections.einstellungen
+              : DEFAULT_DRAWER_SECTIONS.einstellungen,
         },
       },
     },

@@ -1,5 +1,6 @@
 import {
   ensureUniqueSortedStrings,
+  normalizeChildName,
   normalizeAppData,
   sanitizeDaysByDate,
 } from './dbSchema.js';
@@ -43,6 +44,40 @@ const normalizeObservationList = (value) => {
 
   return result;
 };
+
+const createEmptyClassProfile = () => ({
+  name: '',
+  badge: '',
+  motto: '',
+  notes: '',
+  childrenNotes: {},
+});
+
+const ensureClassProfileDraft = (data) => {
+  if (!data.classProfile || typeof data.classProfile !== 'object') {
+    data.classProfile = createEmptyClassProfile();
+  }
+  if (!data.classProfile.childrenNotes || typeof data.classProfile.childrenNotes !== 'object') {
+    data.classProfile.childrenNotes = {};
+  }
+  if (typeof data.classProfile.name !== 'string') {
+    data.classProfile.name = '';
+  }
+  if (typeof data.classProfile.badge !== 'string') {
+    data.classProfile.badge = '';
+  }
+  if (typeof data.classProfile.motto !== 'string') {
+    data.classProfile.motto = '';
+  }
+  if (typeof data.classProfile.notes !== 'string') {
+    data.classProfile.notes = '';
+  }
+};
+
+const normalizeInlineText = (value) =>
+  typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : '';
+
+const normalizeNoteText = (value) => (typeof value === 'string' ? value : '');
 
 const replaceObservationReferences = (days, fromKey, toText) => {
   if (!days || typeof days !== 'object') {
@@ -143,6 +178,41 @@ const mergeObservations = (currentObservations, patchObservations) => {
   return base;
 };
 
+const applyChildMappingToEntry = (entry, renameMap, allowedSet) => {
+  if (!entry || typeof entry !== 'object') {
+    return;
+  }
+
+  const nextObservations = {};
+  if (entry.observations && typeof entry.observations === 'object') {
+    Object.entries(entry.observations).forEach(([child, value]) => {
+      const target = renameMap.get(child) || child;
+      if (!allowedSet.has(target)) {
+        return;
+      }
+      const merged = normalizeObservationList([
+        ...(nextObservations[target] || []),
+        ...normalizeObservationList(value),
+      ]);
+      if (merged.length) {
+        nextObservations[target] = merged;
+      }
+    });
+  }
+  entry.observations = nextObservations;
+
+  const absentList = Array.isArray(entry.absentChildIds) ? entry.absentChildIds : [];
+  const updatedAbsent = [];
+  absentList.forEach((child) => {
+    const target = renameMap.get(child) || child;
+    if (!allowedSet.has(target) || updatedAbsent.includes(target)) {
+      return;
+    }
+    updatedAbsent.push(target);
+  });
+  entry.absentChildIds = updatedAbsent;
+};
+
 const ensureDaysContainer = (data) => {
   if (!data.days) {
     data.days = {};
@@ -151,6 +221,112 @@ const ensureDaysContainer = (data) => {
 
 export const getChildrenList = () => {
   return getState().db?.children || [];
+};
+
+export const getClassProfile = () => {
+  const state = getState();
+  const profile = state.db?.classProfile || createEmptyClassProfile();
+  const children = state.db?.children || [];
+  const notesSource =
+    (profile && typeof profile.childrenNotes === 'object' && profile.childrenNotes) || {};
+  const childrenNotes = {};
+
+  children.forEach((child) => {
+    const normalizedChild = normalizeChildName(child);
+    if (!normalizedChild) {
+      return;
+    }
+    const note =
+      typeof notesSource[normalizedChild] === 'string' ? notesSource[normalizedChild] : '';
+    childrenNotes[normalizedChild] = note;
+  });
+
+  return {
+    name: typeof profile.name === 'string' ? profile.name : '',
+    badge: typeof profile.badge === 'string' ? profile.badge : '',
+    motto: typeof profile.motto === 'string' ? profile.motto : '',
+    notes: typeof profile.notes === 'string' ? profile.notes : '',
+    childrenNotes,
+  };
+};
+
+export const saveClassProfileFields = ({
+  name,
+  badge,
+  motto,
+  notes,
+} = {}) => {
+  updateAppData((data) => {
+    ensureClassProfileDraft(data);
+    if (name !== undefined) {
+      data.classProfile.name = normalizeInlineText(name);
+    }
+    if (badge !== undefined) {
+      data.classProfile.badge = normalizeInlineText(badge);
+    }
+    if (motto !== undefined) {
+      data.classProfile.motto = normalizeInlineText(motto);
+    }
+    if (notes !== undefined) {
+      data.classProfile.notes = typeof notes === 'string' ? notes : '';
+    }
+  });
+};
+
+export const saveClassChildren = (rows = []) => {
+  const entries = Array.isArray(rows) ? rows : [];
+  const renameMap = new Map();
+  const desiredChildren = [];
+  const noteMap = new Map();
+
+  entries.forEach((row) => {
+    if (!row) {
+      return;
+    }
+    const normalizedName = normalizeChildName(row.name);
+    const normalizedOriginal = normalizeChildName(row.originalName);
+    const normalizedNote = normalizeNoteText(row.note);
+    if (normalizedName) {
+      desiredChildren.push(normalizedName);
+      noteMap.set(normalizedName, normalizedNote);
+    }
+    if (normalizedOriginal && normalizedName && normalizedOriginal !== normalizedName) {
+      renameMap.set(normalizedOriginal, normalizedName);
+    }
+  });
+
+  const normalizedChildren = ensureUniqueSortedStrings(desiredChildren);
+  const allowedSet = new Set(normalizedChildren);
+
+  updateAppData((data) => {
+    ensureClassProfileDraft(data);
+    const existingNotes = data.classProfile.childrenNotes || {};
+    const mergedNotes = {};
+
+    Object.entries(existingNotes).forEach(([child, note]) => {
+      const target = renameMap.get(child) || child;
+      if (!allowedSet.has(target)) {
+        return;
+      }
+      mergedNotes[target] = normalizeNoteText(note);
+    });
+
+    noteMap.forEach((note, child) => {
+      mergedNotes[child] = normalizeNoteText(note);
+    });
+
+    if (data.days && typeof data.days === 'object') {
+      Object.values(data.days).forEach((entry) => {
+        applyChildMappingToEntry(entry, renameMap, allowedSet);
+      });
+    }
+
+    data.children = normalizedChildren;
+    data.classProfile.childrenNotes = {};
+    normalizedChildren.forEach((child) => {
+      data.classProfile.childrenNotes[child] = mergedNotes[child] || '';
+    });
+  });
 };
 
 export const getPresets = (type) => {
