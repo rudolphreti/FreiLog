@@ -13,6 +13,7 @@ import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
+import { createClassSettingsView } from '../features/classSettings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -85,6 +86,7 @@ let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
 let weeklyTableViewBinding = null;
+let classSettingsView = null;
 
 const renderDrawerContent = (
   state,
@@ -170,6 +172,15 @@ export const renderApp = (root, state) => {
       observationGroups,
     });
   }
+  if (!classSettingsView) {
+    classSettingsView = createClassSettingsView({
+      children: sortedChildren,
+    });
+  } else {
+    classSettingsView.update({
+      children: sortedChildren,
+    });
+  }
 
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
@@ -190,7 +201,12 @@ export const renderApp = (root, state) => {
     contentWrap.className = 'container d-flex flex-column gap-3';
     contentWrap.append(header.element, observationsSection.element);
 
-    container.append(contentWrap, drawerShell.element, weeklyTableViewBinding.element);
+    container.append(
+      contentWrap,
+      drawerShell.element,
+      weeklyTableViewBinding.element,
+      classSettingsView.element,
+    );
     root.appendChild(container);
 
     bindDateEntry(header.refs.dateInput);
@@ -206,6 +222,12 @@ export const renderApp = (root, state) => {
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
       actions.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
+      });
+    }
+    const settingsActions = drawerContentRefs?.settings;
+    if (classSettingsView && settingsActions?.classSettingsButton) {
+      settingsActions.classSettingsButton.addEventListener('click', () => {
+        classSettingsView.open();
       });
     }
     bindAngebot({
@@ -274,6 +296,12 @@ export const renderApp = (root, state) => {
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {
     actions.weeklyTableButton.addEventListener('click', () => {
       weeklyTableViewBinding.open();
+    });
+  }
+  const settingsActions = drawerContentRefs?.settings;
+  if (classSettingsView && settingsActions?.classSettingsButton) {
+    settingsActions.classSettingsButton.addEventListener('click', () => {
+      classSettingsView.open();
     });
   }
 
