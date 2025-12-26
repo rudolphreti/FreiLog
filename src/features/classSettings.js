@@ -196,6 +196,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let newChildNote = '';
   let newChildErrors = [];
   let isNewChildOpen = false;
+  let toastContainer = null;
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -356,6 +357,50 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   );
 
   newChildCard.append(newChildCardBody);
+
+  const buildToastContainer = () => {
+    if (toastContainer) {
+      return toastContainer;
+    }
+    toastContainer = createEl('div', {
+      className: 'toast-container position-fixed top-0 start-50 translate-middle-x p-3',
+      attrs: { style: 'z-index: 2000;' },
+    });
+    overlay.append(toastContainer);
+    return toastContainer;
+  };
+
+  const showChildAddedToast = (message) => {
+    const container = buildToastContainer();
+    const toastEl = createEl('div', {
+      className: 'toast align-items-center text-bg-success border-0',
+      attrs: { role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' },
+    });
+    const body = createEl('div', {
+      className: 'd-flex',
+      children: [
+        createEl('div', { className: 'toast-body', text: message }),
+        createEl('button', {
+          className: 'btn-close btn-close-white me-2 m-auto',
+          attrs: { type: 'button', 'data-bs-dismiss': 'toast', 'aria-label': 'Schließen' },
+        }),
+      ],
+    });
+    toastEl.append(body);
+    container.append(toastEl);
+
+    let toastInstance = null;
+    if (window.bootstrap?.Toast) {
+      toastInstance = new window.bootstrap.Toast(toastEl, { autohide: true, delay: 2500 });
+      toastInstance.show();
+    } else {
+      toastEl.classList.add('show');
+      window.setTimeout(() => toastEl.classList.remove('show'), 2500);
+    }
+    toastEl.addEventListener('hidden.bs.toast', () => {
+      toastEl.remove();
+    });
+  };
 
   const childrenContent = createEl('div', {
     className: 'd-flex flex-column gap-3',
@@ -671,6 +716,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     renderRows();
     resetNewChildForm();
     showNewChildForm();
+    showChildAddedToast('Neues Kind wurde hinzugefügt.');
   };
 
   addRowButton.addEventListener('click', () => {
