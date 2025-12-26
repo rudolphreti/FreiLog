@@ -310,7 +310,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     dataset: { role: 'new-child-note' },
   });
 
-  const newChildSubmit = createEl('button', {
+  const newChildSubmitButton = createEl('button', {
     className: 'btn btn-primary btn-sm w-100',
     attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
     dataset: { role: 'new-child-submit' },
@@ -348,7 +348,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         }),
         createEl('div', {
           className: 'col-12 col-md-2 d-flex align-items-end justify-content-start',
-          children: [newChildSubmit],
+          children: [newChildSubmitButton],
         }),
       ],
     }),
