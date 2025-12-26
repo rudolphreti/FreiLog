@@ -195,6 +195,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let newChildName = '';
   let newChildNote = '';
   let newChildErrors = [];
+  let isNewChildOpen = false;
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -270,12 +271,91 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const addRowButton = createEl('button', {
     className: 'btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2',
     attrs: { type: 'button' },
-    children: [createEl('span', { text: '＋' }), createEl('span', { text: 'Kind hinzufügen' })],
+    children: [
+      createEl('span', { text: '＋' }),
+      createEl('span', { text: 'Neues Kind hinzufügen' }),
+    ],
   });
   const childrenHeader = createEl('div', {
     className: 'd-flex justify-content-between align-items-center gap-2',
     children: [createEl('h4', { className: 'h6 mb-0 text-muted', text: 'Kinderliste' }), addRowButton],
   });
+
+  const newChildCard = createEl('div', {
+    className: 'card border-0 shadow-sm d-none',
+    dataset: { role: 'new-child-card' },
+  });
+
+  const newChildCardBody = createEl('div', {
+    className: 'card-body d-flex flex-column gap-2',
+  });
+
+  const newChildNameInput = createEl('input', {
+    className: 'form-control form-control-sm',
+    attrs: {
+      type: 'text',
+      placeholder: 'Name eingeben',
+      'aria-label': 'Neues Kind',
+    },
+    dataset: { role: 'new-child-name' },
+  });
+
+  const newChildNoteInput = createEl('textarea', {
+    className: 'form-control form-control-sm',
+    attrs: {
+      rows: '1',
+      placeholder: 'Notizen',
+      'aria-label': 'Notizen zum Kind',
+    },
+    dataset: { role: 'new-child-note' },
+  });
+
+  const newChildSubmit = createEl('button', {
+    className: 'btn btn-primary btn-sm w-100',
+    attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
+    dataset: { role: 'new-child-submit' },
+    text: 'Dodaj',
+  });
+
+  const newChildErrorsBox = createEl('div', {
+    className: 'text-danger small d-none',
+    dataset: { role: 'new-child-errors' },
+  });
+
+  newChildCardBody.append(
+    createEl('div', {
+      className: 'row g-2 align-items-start',
+      children: [
+        createEl('div', {
+          className: 'col-12 col-md-5',
+          children: [
+            createFormGroup({
+              id: 'new-child-name',
+              label: 'Neues Kind',
+              control: newChildNameInput,
+            }),
+          ],
+        }),
+        createEl('div', {
+          className: 'col-12 col-md-5',
+          children: [
+            createFormGroup({
+              id: 'new-child-note',
+              label: 'Notizen',
+              control: newChildNoteInput,
+            }),
+          ],
+        }),
+        createEl('div', {
+          className: 'col-12 col-md-2 d-flex align-items-end justify-content-start',
+          children: [newChildSubmit],
+        }),
+      ],
+    }),
+    newChildErrorsBox,
+  );
+
+  newChildCard.append(newChildCardBody);
 
   const childrenContent = createEl('div', {
     className: 'd-flex flex-column gap-3',
@@ -285,63 +365,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         className: 'alert alert-light border small mb-0',
         text: 'Hier verwaltest du alle Kinder, denen Beobachtungen zugeordnet werden.',
       }),
-      createEl('div', {
-        className: 'card border-0 shadow-sm',
-        children: [
-          createEl('div', {
-            className: 'card-body d-flex flex-column gap-2',
-            children: [
-              createEl('div', {
-                className: 'row g-2 align-items-start',
-                children: [
-                  createEl('div', { className: 'col-12 col-md-5', children: [
-                    createFormGroup({
-                      id: 'new-child-name',
-                      label: 'Neues Kind',
-                      control: createEl('input', {
-                        className: 'form-control form-control-sm',
-                        attrs: {
-                          type: 'text',
-                          placeholder: 'Name eingeben',
-                          'aria-label': 'Neues Kind',
-                        },
-                        dataset: { role: 'new-child-name' },
-                      }),
-                    }),
-                  ] }),
-                  createEl('div', { className: 'col-12 col-md-5', children: [
-                    createFormGroup({
-                      id: 'new-child-note',
-                      label: 'Notizen',
-                      control: createEl('textarea', {
-                        className: 'form-control form-control-sm',
-                        attrs: {
-                          rows: '1',
-                          placeholder: 'Notizen',
-                          'aria-label': 'Notizen zum Kind',
-                        },
-                        dataset: { role: 'new-child-note' },
-                      }),
-                    }),
-                  ] }),
-                  createEl('div', {
-                    className: 'col-12 col-md-2 d-flex align-items-end justify-content-start',
-                    children: [
-                      createEl('button', {
-                        className: 'btn btn-primary btn-sm w-100',
-                        attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
-                        dataset: { role: 'new-child-submit' },
-                        text: 'Dodaj',
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              createEl('div', { className: 'text-danger small d-none', dataset: { role: 'new-child-errors' } }),
-            ],
-          }),
-        ],
-      }),
+      newChildCard,
       table,
     ],
   });
@@ -580,6 +604,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const newChildNoteInput = content.querySelector('[data-role="new-child-note"]');
   const newChildErrorsBox = content.querySelector('[data-role="new-child-errors"]');
   const newChildSubmit = content.querySelector('[data-role="new-child-submit"]');
+  const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
 
   const renderNewChildErrors = () => {
     if (!newChildErrorsBox) {
@@ -603,6 +628,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       newChildNoteInput.value = '';
     }
     renderNewChildErrors();
+    isNewChildOpen = false;
+    if (newChildCardEl) {
+      newChildCardEl.classList.add('d-none');
+    }
   };
 
   const handleAddNewChild = () => {
@@ -637,7 +666,16 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   addRowButton.addEventListener('click', () => {
-    handleAddNewChild();
+    isNewChildOpen = !isNewChildOpen;
+    if (newChildCardEl) {
+      newChildCardEl.classList.toggle('d-none', !isNewChildOpen);
+    }
+    if (isNewChildOpen) {
+      resetNewChildForm();
+      window.requestAnimationFrame(() => {
+        newChildNameInput?.focus();
+      });
+    }
   });
 
   const open = () => {
