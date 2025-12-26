@@ -180,19 +180,16 @@ export const buildDrawerContent = ({
   const weeklyTableButton = actionButton('Wochentabelle öffnen', '📅');
   const exportButton = actionButton('Exportieren', '⬇️');
   const importButton = actionButton('Importieren', '⬆️');
-  const settingsButton = actionButton('Einstellungen', '⚙️');
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
   });
 
-  actionsList.append(
-    weeklyTableButton,
-    exportButton,
-    importButton,
-    settingsButton,
-    importInput,
-  );
+  actionsList.append(weeklyTableButton, exportButton, importButton, importInput);
+
+  const settingsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const settingsButton = actionButton('Meine Klasse', '⚙️');
+  settingsList.append(settingsButton);
 
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
@@ -215,8 +212,19 @@ export const buildDrawerContent = ({
     contentNode: offersContent,
     accordionId,
   });
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Einstellungen',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsList,
+    accordionId,
+  });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -228,9 +236,11 @@ export const buildDrawerContent = ({
         settingsButton,
         importInput,
       },
+      settings: settingsSectionItem,
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
       },
     },
   };
