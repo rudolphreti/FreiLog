@@ -376,6 +376,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('class-settings-overlay-open');
+    window.requestAnimationFrame(() => {
+      nameInput.focus({ preventScroll: true });
+    });
   };
 
   const close = () => {

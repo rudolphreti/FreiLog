@@ -88,6 +88,20 @@ let observationsBinding = null;
 let weeklyTableViewBinding = null;
 let classSettingsView = null;
 
+const closeDrawer = () => {
+  const closeButton = drawerShell?.refs?.closeButton;
+  if (closeButton) {
+    closeButton.click();
+    return;
+  }
+  const drawerEl = document.getElementById('mainDrawer');
+  if (!drawerEl) {
+    return;
+  }
+  drawerEl.classList.remove('show');
+  drawerEl.setAttribute('aria-hidden', 'true');
+};
+
 const renderDrawerContent = (
   state,
   drawerBody,
@@ -231,6 +245,7 @@ export const renderApp = (root, state) => {
     }
     if (classSettingsView && settingsActions?.classButton) {
       settingsActions.classButton.addEventListener('click', () => {
+        closeDrawer();
         classSettingsView.open();
       });
     }
@@ -305,6 +320,7 @@ export const renderApp = (root, state) => {
   }
   if (classSettingsView && settingsActions?.classButton) {
     settingsActions.classButton.addEventListener('click', () => {
+      closeDrawer();
       classSettingsView.open();
     });
   }
