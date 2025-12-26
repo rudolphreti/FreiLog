@@ -503,7 +503,6 @@ export const createWeeklyTableView = ({
           return;
         }
         const safeDate = dateKey;
-        close();
         setSelectedDate(safeDate);
 
         const safeChildSelector = (() => {

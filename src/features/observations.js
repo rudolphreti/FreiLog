@@ -10,6 +10,7 @@ import {
 import { debounce } from '../utils/debounce.js';
 import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 import { setSavedObservationFilters } from '../state/store.js';
+import { formatDisplayDate } from '../utils/schoolWeeks.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -684,6 +685,21 @@ export const bindObservations = ({
 
   let currentDate = date;
   const getDate = () => currentDate;
+  const setOverlayTitle = (child) => {
+    const dateLabel = formatDisplayDate(getDate());
+    if (!overlayTitle) {
+      return;
+    }
+    if (child && dateLabel) {
+      overlayTitle.textContent = `${child} – ${dateLabel}`;
+      return;
+    }
+    if (child) {
+      overlayTitle.textContent = child;
+      return;
+    }
+    overlayTitle.textContent = dateLabel;
+  };
 
   let activeChild = null;
   let isOverlayOpen = false;
@@ -726,7 +742,7 @@ export const bindObservations = ({
         activePanel = panel;
       }
     });
-    overlayTitle.textContent = activePanel ? child : '';
+    setOverlayTitle(activePanel ? child : '');
     overlayContent.scrollTop = 0;
     return activePanel;
   };
@@ -1538,6 +1554,9 @@ export const bindObservations = ({
   return {
     updateDate: (nextDate) => {
       currentDate = nextDate;
+      if (isOverlayOpen) {
+        setOverlayTitle(activeChild);
+      }
     },
   };
 };

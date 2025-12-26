@@ -392,7 +392,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 1055;
+  z-index: 1075;
 }
 
 .observation-overlay.is-open {
