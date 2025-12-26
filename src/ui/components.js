@@ -184,6 +184,7 @@ export const buildDrawerContent = ({
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
   });
+  const classSettingsButton = actionButton('Meine Klasse', '⚙️');
 
   actionsList.append(weeklyTableButton, exportButton, importButton, importInput);
 
@@ -209,7 +210,30 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  const settingsList = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    children: [
+      createEl('p', {
+        className: 'text-muted small mb-1',
+        text: 'Einstellungen für deine Klasse.',
+      }),
+      classSettingsButton,
+    ],
+  });
+
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Settings',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsList,
+    accordionId,
+  });
+
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -220,9 +244,13 @@ export const buildDrawerContent = ({
         importButton,
         importInput,
       },
+      settings: {
+        classSettingsButton,
+      },
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
       },
     },
   };
