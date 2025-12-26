@@ -579,6 +579,27 @@ body {
   margin-right: 0.15rem;
 }
 
+.weekly-table__cell-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.weekly-table__cell-content--editable {
+  padding-right: 0.35rem;
+}
+
+.weekly-table__edit-button {
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0.25rem 0.45rem;
+}
+
+.weekly-table__toggle {
+  align-self: flex-start;
+}
+
 .weekly-table thead th {
   position: sticky;
   top: 0;

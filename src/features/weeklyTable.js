@@ -8,6 +8,7 @@ import {
   normalizeObservationGroups,
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
+import { setSelectedDate } from '../state/store.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -202,12 +203,49 @@ const buildObservationList = (values, getGroupsForLabel, observationGroups) => {
   return list;
 };
 
+const buildCellContent = ({
+  content,
+  child,
+  dateKey,
+  displayDate,
+  isEditMode,
+  onEditCell,
+}) => {
+  const wrapper = createEl('div', { className: 'weekly-table__cell-content' });
+  if (content) {
+    wrapper.append(content);
+  }
+
+  const canEdit = isEditMode && typeof onEditCell === 'function' && child && dateKey;
+  if (canEdit) {
+    wrapper.classList.add('weekly-table__cell-content--editable');
+    const editButton = createEl('button', {
+      className: 'btn btn-light btn-sm weekly-table__edit-button',
+      attrs: {
+        type: 'button',
+        'aria-label': `Bearbeiten: ${child} – ${displayDate || dateKey}`,
+      },
+      text: '✎',
+    });
+    editButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onEditCell({ child, dateKey });
+    });
+    wrapper.append(editButton);
+  }
+
+  return wrapper;
+};
+
 const buildWeeklyTable = ({
   week,
   days,
   children,
   getGroupsForLabel,
   observationGroups,
+  onEditCell,
+  isEditMode,
 }) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
@@ -236,7 +274,19 @@ const buildWeeklyTable = ({
   );
   weekDays.forEach((item) => {
     const dayEntry = normalizeDayEntry(days, item.dateKey);
-    angeboteRow.append(createEl('td', { children: [buildPillList(dayEntry.angebote)] }));
+    angeboteRow.append(
+      createEl('td', {
+        children: [
+          buildCellContent({
+            content: buildPillList(dayEntry.angebote),
+            dateKey: item.dateKey,
+            displayDate: item.displayDate,
+            isEditMode,
+            onEditCell,
+          }),
+        ],
+      }),
+    );
   });
   tbody.append(angeboteRow);
 
@@ -250,7 +300,16 @@ const buildWeeklyTable = ({
       const obs = dayEntry.observations[child] || [];
       row.append(
         createEl('td', {
-          children: [buildObservationList(obs, getGroupsForLabel, observationGroups)],
+          children: [
+            buildCellContent({
+              content: buildObservationList(obs, getGroupsForLabel, observationGroups),
+              child,
+              dateKey: item.dateKey,
+              displayDate: item.displayDate,
+              isEditMode,
+              onEditCell,
+            }),
+          ],
         }),
       );
     });
@@ -288,6 +347,7 @@ export const createWeeklyTableView = ({
   let currentObservationCatalog = Array.isArray(observationCatalog) ? [...observationCatalog] : [];
   let currentObservationGroups = observationGroups || {};
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
+  let isEditMode = false;
   const getGroupsForLabel = (label) =>
     observationGroupMap.get(normalizeObservationKey(label)) || [];
 
@@ -316,7 +376,21 @@ export const createWeeklyTableView = ({
     id: 'weekly-table-week',
     label: 'Schulwoche wählen',
   });
-  controls.append(yearSelectGroup.wrapper, weekSelectGroup.wrapper);
+  const editToggleId = 'weekly-table-edit-toggle';
+  const editToggle = createEl('input', {
+    className: 'form-check-input',
+    attrs: { type: 'checkbox', id: editToggleId },
+  });
+  const editToggleLabel = createEl('label', {
+    className: 'form-check-label',
+    attrs: { for: editToggleId },
+    text: 'Bearbeiten',
+  });
+  const editToggleWrapper = createEl('div', {
+    className: 'form-check form-switch weekly-table__control weekly-table__toggle',
+    children: [editToggle, editToggleLabel],
+  });
+  controls.append(yearSelectGroup.wrapper, weekSelectGroup.wrapper, editToggleWrapper);
 
   const infoText = createEl('div', { className: 'text-muted small' });
   const tableContainer = createEl('div', { className: 'weekly-table__container' });
@@ -424,6 +498,38 @@ export const createWeeklyTableView = ({
       children: currentChildren,
       getGroupsForLabel,
       observationGroups: currentObservationGroups,
+      onEditCell: ({ child, dateKey }) => {
+        if (!child || !dateKey) {
+          return;
+        }
+        const safeDate = dateKey;
+        close();
+        setSelectedDate(safeDate);
+
+        const safeChildSelector = (() => {
+          if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            return CSS.escape(child);
+          }
+          return child;
+        })();
+
+        const openChild = (remaining = 8) => {
+          const button = document.querySelector(
+            `[data-role="observation-child"][data-child="${safeChildSelector}"]`,
+          );
+          if (button) {
+            button.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            button.click();
+            return;
+          }
+          if (remaining > 0) {
+            window.setTimeout(() => openChild(remaining - 1), 80);
+          }
+        };
+
+        window.setTimeout(() => openChild(8), 120);
+      },
+      isEditMode,
     });
     tableContainer.append(table);
   };
@@ -450,6 +556,11 @@ export const createWeeklyTableView = ({
       selectedWeekId,
     });
     render();
+  });
+
+  editToggle.addEventListener('change', (event) => {
+    isEditMode = event.target.checked;
+    renderTable();
   });
 
   const open = () => {
