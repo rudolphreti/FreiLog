@@ -5,6 +5,7 @@ import {
   buildDrawerShell,
   buildDrawerContent,
   buildAngebotSection,
+  buildClassSettingsSection,
   buildObservationsSection,
 } from './components.js';
 import { bindDateEntry } from '../features/dateEntry.js';
@@ -13,6 +14,7 @@ import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
+import { bindClassSettings } from '../features/classSettings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -90,6 +92,7 @@ const renderDrawerContent = (
   state,
   drawerBody,
   angebotSection,
+  classSettingsSection,
   preservedScrollTop,
 ) => {
   if (!drawerBody) {
@@ -102,6 +105,7 @@ const renderDrawerContent = (
   const content = buildDrawerContent({
     drawerSections,
     angebotSection: angebotSection?.element,
+    classSettingsSection: classSettingsSection?.element,
   });
 
   drawerBody.replaceChildren(...content.nodes);
@@ -143,6 +147,9 @@ export const renderApp = (root, state) => {
     selectedAngebote,
     newValue: preservedUi.angebotInputValue,
   });
+  const classSettingsSection = buildClassSettingsSection({
+    children: sortedChildren,
+  });
   const observationsSection = appShell?.observationsView
     ? appShell.observationsView
     : buildObservationsSection({
@@ -179,6 +186,7 @@ export const renderApp = (root, state) => {
     state,
     drawerShell.refs.body,
     angebotSection,
+    classSettingsSection,
     preservedUi.drawerScrollTop,
   );
 
@@ -214,6 +222,7 @@ export const renderApp = (root, state) => {
       selectedList: angebotSection.refs.selectedList,
       date: selectedDate,
     });
+    bindClassSettings(drawerContentRefs?.classSettings);
     observationsBinding = bindObservations({
       list: observationsSection.refs.list,
       overlay: observationsSection.refs.overlay,
@@ -284,5 +293,6 @@ export const renderApp = (root, state) => {
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
   });
+  bindClassSettings(drawerContentRefs?.classSettings);
   bindDrawerSections(drawerContentRefs?.sections);
 };
