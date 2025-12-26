@@ -450,6 +450,15 @@ export const resetOverlay = async () => {
   await initStore();
 };
 
+export const removeChildrenAndRelatedEntries = () => {
+  updateAppData((data) => {
+    data.children = [];
+    if (data.days) {
+      data.days = sanitizeDaysByDate(data.days, data.children);
+    }
+  });
+};
+
 export const exportJson = (mode) => {
   const { db, ui } = getState();
   const exportMode = mode === 'all' ? 'all' : 'day';
