@@ -134,7 +134,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   headerRow.append(
     createEl('th', { className: 'small text-muted', text: 'Kinder' }),
     createEl('th', { className: 'small text-muted', text: 'Notizen' }),
-    createEl('th', { className: 'small text-muted text-end', text: '' }),
   );
   thead.append(headerRow);
   const tbody = createEl('tbody');
@@ -204,8 +203,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   }, 200);
 
   const persistRows = debounce(() => {
-    saveClassChildren(rows);
-    rows = rows.map((row) => {
+    const nextRows = rows.map((row) => {
       const normalizedName = normalizeChildName(row.name);
       const normalizedNote = typeof row.note === 'string' ? row.note : '';
       if (normalizedName) {
@@ -222,15 +220,31 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         note: normalizedNote,
       };
     });
-    renderRows();
+    rows = nextRows;
+    saveClassChildren(rows);
+    rows.forEach((row) => {
+      const rowRefs = rowElements.get(row.id);
+      if (!rowRefs) {
+        return;
+      }
+      if (rowRefs.nameInputEl.value !== row.name) {
+        rowRefs.nameInputEl.value = row.name;
+      }
+      if (rowRefs.noteInputEl.value !== row.note) {
+        rowRefs.noteInputEl.value = row.note;
+      }
+    });
   }, 220);
 
-  const handleRowChange = (rowId, key, value) => {
+  const handleRowInput = (rowId, key, value) => {
     const row = rows.find((item) => item.id === rowId);
     if (!row) {
       return;
     }
     row[key] = value;
+  };
+
+  const handleRowBlur = () => {
     persistRows();
   };
 
@@ -248,34 +262,19 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       className: 'form-control form-control-sm',
       attrs: { rows: '1', placeholder: 'Notizen', 'aria-label': 'Notizen' },
     });
-    const removeButton = createEl('button', {
-      className: 'btn btn-link text-danger p-0 class-settings__remove',
-      attrs: { type: 'button', 'aria-label': 'Entfernen' },
-      text: '✕',
-    });
 
     nameInputEl.addEventListener('input', (event) => {
-      handleRowChange(row.id, 'name', event.target.value);
+      handleRowInput(row.id, 'name', event.target.value);
     });
+    nameInputEl.addEventListener('blur', handleRowBlur);
     noteInputEl.addEventListener('input', (event) => {
-      handleRowChange(row.id, 'note', event.target.value);
+      handleRowInput(row.id, 'note', event.target.value);
     });
-    removeButton.addEventListener('click', () => {
-      rows = rows.filter((item) => item.id !== row.id);
-      if (!rows.length) {
-        rows.push(createRowState(++rowCounter));
-      }
-      renderRows();
-      persistRows();
-    });
+    noteInputEl.addEventListener('blur', handleRowBlur);
 
     const nameCell = createEl('td', { children: [nameInputEl] });
     const noteCell = createEl('td', { children: [noteInputEl] });
-    const removeCell = createEl('td', {
-      className: 'text-end',
-      children: [removeButton],
-    });
-    tr.append(nameCell, noteCell, removeCell);
+    tr.append(nameCell, noteCell);
     return { rowEl: tr, nameInputEl, noteInputEl };
   };
 
@@ -289,6 +288,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   const renderRows = () => {
+    const previousScrollTop = content.scrollTop;
     const existingIds = new Set();
     rows.forEach((row) => {
       let rowRefs = rowElements.get(row.id);
@@ -310,6 +310,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         rowElements.delete(id);
       }
     });
+    content.scrollTop = previousScrollTop;
   };
 
   const syncRows = (nextProfile = {}, nextChildren = []) => {
