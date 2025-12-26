@@ -251,6 +251,10 @@ const normalizeUi = (ui) => {
           typeof drawerSections.angebote === 'boolean'
             ? drawerSections.angebote
             : DEFAULT_DRAWER_SECTIONS.angebote,
+        settings:
+          typeof drawerSections.settings === 'boolean'
+            ? drawerSections.settings
+            : DEFAULT_DRAWER_SECTIONS.settings,
       },
     },
   };

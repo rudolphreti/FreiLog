@@ -209,7 +209,23 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  const settingsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const classSettingsButton = actionButton('Meine Klasse', '👥');
+  settingsList.append(classSettingsButton);
+
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Settings',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsList,
+    accordionId,
+  });
+
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -220,11 +236,209 @@ export const buildDrawerContent = ({
         importButton,
         importInput,
       },
+      settings: {
+        classButton: classSettingsButton,
+      },
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
       },
     },
+  };
+};
+
+export const buildClassSettingsOverlay = ({ children = [] } = {}) => {
+  const overlay = createEl('div', {
+    className: 'class-settings-overlay',
+    attrs: { 'aria-hidden': 'true', tabindex: '-1' },
+    dataset: { role: 'class-settings-overlay' },
+  });
+  const panel = createEl('div', {
+    className: 'class-settings-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true', tabindex: '-1' },
+  });
+  const header = createEl('div', { className: 'class-settings-overlay__header' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: 'Meine Klasse' });
+  const closeButton = createEl('button', {
+    className: 'btn-close class-settings-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'class-settings-close' },
+  });
+  header.append(title, closeButton);
+
+  const buildSectionHeading = (text, subtitle = '') =>
+    createEl('div', {
+      className: 'd-flex flex-column gap-1',
+      children: [
+        createEl('h4', { className: 'class-settings__section-title mb-0', text }),
+        subtitle
+          ? createEl('p', {
+              className: 'class-settings__section-subtitle mb-0',
+              text: subtitle,
+            })
+          : null,
+      ].filter(Boolean),
+    });
+
+  const generalSection = createEl('section', {
+    className: 'class-settings__section',
+    dataset: { role: 'class-settings-general' },
+    children: [
+      buildSectionHeading('Allgemein'),
+      createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Stammdaten und Hinweise zu deiner Klasse.',
+      }),
+    ],
+  });
+
+  const childrenList = createEl('div', {
+    className: 'class-settings__child-list',
+    dataset: { role: 'class-settings-children' },
+  });
+  const childrenEmpty = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Keine Kinder eingetragen.',
+    dataset: { role: 'class-settings-children-empty' },
+  });
+  const childrenSection = createEl('section', {
+    className: 'class-settings__section',
+    dataset: { role: 'class-settings-children-section' },
+    children: [
+      buildSectionHeading('Kinderliste'),
+      createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Aktuelle Namen der Kinder in deiner Klasse.',
+      }),
+      childrenList,
+      childrenEmpty,
+    ],
+  });
+
+  const deleteInputId = 'class-settings-delete-input';
+  // More operations will be added in the future.
+  const dangerSection = createEl('section', {
+    className: 'class-settings__section class-settings__section--danger',
+    dataset: { role: 'class-settings-danger' },
+  });
+  const dangerHeading = buildSectionHeading(
+    'Vorsicht',
+    'Gefährliche Operationen, bitte sorgfältig prüfen.',
+  );
+
+  const deleteLabel = createEl('label', {
+    className: 'form-label mb-1',
+    attrs: { for: deleteInputId },
+    text: 'Kinder aus der Liste löschen',
+  });
+  const deleteHelp = createEl('p', {
+    className: 'text-muted small mb-2',
+    text: 'Gib den exakten Namen ein und klicke anschließend auf „Löschen…“.',
+  });
+  const deleteInput = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      id: deleteInputId,
+      placeholder: 'Namen zur Bestätigung eingeben',
+      autocomplete: 'off',
+    },
+    dataset: { role: 'class-delete-input' },
+  });
+  const deleteButton = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-delete-trigger' },
+    text: 'Löschen…',
+  });
+  const deleteFeedback = createEl('p', {
+    className: 'text-danger small mb-0 class-settings__feedback',
+    dataset: { role: 'class-delete-feedback' },
+  });
+  deleteFeedback.hidden = true;
+
+  const confirmMessage = createEl('p', {
+    className: 'mb-3 class-settings__dialog-message',
+    dataset: { role: 'class-delete-message' },
+  });
+  const confirmAccept = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-delete-confirm' },
+    text: 'Ich bin mir des Risikos bewusst und möchte diese Daten löschen',
+  });
+  const confirmCancel = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    dataset: { role: 'class-delete-cancel' },
+    text: 'Abbrechen',
+  });
+  const confirmDialog = createEl('div', {
+    className: 'class-settings__dialog',
+    dataset: { role: 'class-delete-dialog' },
+    hidden: true,
+    children: [
+      confirmMessage,
+      createEl('div', {
+        className: 'd-flex flex-wrap gap-2',
+        children: [confirmAccept, confirmCancel],
+      }),
+    ],
+  });
+
+  dangerSection.append(
+    dangerHeading,
+    createEl('p', {
+      className: 'text-muted small mb-2',
+      text: 'Beim Löschen eines Kindes werden alle verknüpften Einträge und Daten mitgelöscht.',
+    }),
+    deleteLabel,
+    deleteHelp,
+    deleteInput,
+    createEl('div', { className: 'd-flex gap-2 align-items-center', children: [deleteButton] }),
+    deleteFeedback,
+    confirmDialog,
+  );
+
+  const content = createEl('div', {
+    className: 'class-settings-overlay__content',
+    children: [generalSection, childrenSection, dangerSection],
+  });
+
+  panel.append(header, content);
+  overlay.append(panel);
+
+  const renderChildren = (list) => {
+    const normalized = Array.isArray(list) ? [...list] : [];
+    normalized.sort((a, b) => a.localeCompare(b, 'de'));
+    const pills = normalized.map((child) =>
+      createEl('span', {
+        className: 'class-settings__child-pill',
+        text: child,
+      }),
+    );
+    childrenList.replaceChildren(...pills);
+    childrenEmpty.hidden = pills.length > 0;
+  };
+
+  renderChildren(children);
+
+  return {
+    element: overlay,
+    refs: {
+      closeButton,
+      childrenList,
+      childrenEmpty,
+      deleteInput,
+      deleteTrigger: deleteButton,
+      deleteFeedback,
+      confirmDialog,
+      confirmMessage,
+      confirmAccept,
+      confirmCancel,
+    },
+    updateChildren: renderChildren,
   };
 };
 
