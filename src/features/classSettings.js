@@ -200,6 +200,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let deleteChildName = '';
   let deleteChildFeedbackMessage = '';
   let deleteChildFeedbackState = 'idle';
+  let deleteChildConfirmationTarget = '';
+  let deleteChildConfirmationLabel = '';
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -477,6 +479,55 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   });
   cautionContent.append(deleteChildCard);
 
+  const deleteChildConfirmDialog = createEl('div', {
+    className: 'class-settings-confirm d-none',
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'delete-child-confirm-title',
+      'aria-describedby': 'delete-child-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const deleteChildConfirmPanel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const deleteChildConfirmTitle = createEl('h4', {
+    className: 'h6 mb-2 text-danger',
+    attrs: { id: 'delete-child-confirm-title' },
+    text: 'Warnung',
+  });
+  const deleteChildConfirmMessage = createEl('p', {
+    className: 'mb-2',
+    attrs: { id: 'delete-child-confirm-message' },
+    text: 'Beim Löschen dieses Kindes werden alle Daten zu diesem Kind gelöscht.',
+  });
+  const deleteChildConfirmName = createEl('p', {
+    className: 'fw-semibold mb-3 text-danger',
+  });
+  const deleteChildConfirmActions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+  });
+  const deleteChildConfirmSubmit = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    text: 'Ich bin mir des Risikos bewusst und möchte diese Daten löschen',
+  });
+  const deleteChildConfirmCancel = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    text: 'Abbrechen',
+  });
+  deleteChildConfirmActions.append(deleteChildConfirmSubmit, deleteChildConfirmCancel);
+  deleteChildConfirmPanel.append(
+    deleteChildConfirmTitle,
+    deleteChildConfirmMessage,
+    deleteChildConfirmName,
+    deleteChildConfirmActions,
+  );
+  deleteChildConfirmDialog.append(deleteChildConfirmPanel);
+
   const cautionItem = buildAccordionItem({
     id: 'class-caution',
     title: 'Vorsicht!',
@@ -487,7 +538,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   accordion.append(generalItem.element, childrenItem.element, cautionItem.element);
   content.append(intro, accordion);
   panel.append(header, content);
-  overlay.append(panel);
+  overlay.append(panel, deleteChildConfirmDialog);
 
   const updateProfileInputs = (nextProfile = {}) => {
     const nextName = typeof nextProfile.name === 'string' ? nextProfile.name : '';
@@ -764,6 +815,39 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     renderDeleteChildFeedback();
   };
 
+  const updateDeleteConfirmationDialog = () => {
+    if (!deleteChildConfirmDialog) {
+      return;
+    }
+    const hasLabel = Boolean(deleteChildConfirmationLabel);
+    deleteChildConfirmName.textContent = hasLabel ? `„${deleteChildConfirmationLabel}“` : '';
+    deleteChildConfirmName.classList.toggle('d-none', !hasLabel);
+  };
+
+  const hideDeleteConfirmationDialog = () => {
+    deleteChildConfirmDialog.classList.add('d-none');
+    deleteChildConfirmDialog.setAttribute('aria-hidden', 'true');
+  };
+
+  const clearDeleteConfirmation = () => {
+    deleteChildConfirmationTarget = '';
+    deleteChildConfirmationLabel = '';
+  };
+
+  const closeDeleteConfirmation = () => {
+    hideDeleteConfirmationDialog();
+    clearDeleteConfirmation();
+  };
+
+  const showDeleteConfirmationDialog = () => {
+    updateDeleteConfirmationDialog();
+    deleteChildConfirmDialog.classList.remove('d-none');
+    deleteChildConfirmDialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => {
+      deleteChildConfirmSubmit?.focus();
+    });
+  };
+
   const showNewChildForm = () => {
     isNewChildOpen = true;
     resetNewChildForm();
@@ -812,6 +896,26 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     showChildAddedToast('Neues Kind wurde hinzugefügt.');
   };
 
+  const performDeleteChild = (normalizedTarget) => {
+    if (!normalizedTarget) {
+      return;
+    }
+    rows = rows.filter((row) => {
+      const normalizedName = normalizeChildName(row.name);
+      const normalizedOriginal = normalizeChildName(row.originalName);
+      return normalizedName !== normalizedTarget && normalizedOriginal !== normalizedTarget;
+    });
+    saveClassChildren(rows);
+    renderRows();
+    deleteChildName = '';
+    if (deleteChildNameInput) {
+      deleteChildNameInput.value = '';
+    }
+    deleteChildFeedbackMessage = 'Das Kind und die zugehörigen Daten wurden gelöscht.';
+    deleteChildFeedbackState = 'success';
+    renderDeleteChildFeedback();
+  };
+
   const handleDeleteChild = () => {
     const normalizedTarget = normalizeChildName(deleteChildName);
     if (!normalizedTarget) {
@@ -831,20 +935,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       renderDeleteChildFeedback();
       return;
     }
-    rows = rows.filter((row) => {
-      const normalizedName = normalizeChildName(row.name);
-      const normalizedOriginal = normalizeChildName(row.originalName);
-      return normalizedName !== normalizedTarget && normalizedOriginal !== normalizedTarget;
-    });
-    saveClassChildren(rows);
-    renderRows();
-    deleteChildName = '';
-    if (deleteChildNameInput) {
-      deleteChildNameInput.value = '';
-    }
-    deleteChildFeedbackMessage = 'Das Kind und die zugehörigen Daten wurden gelöscht.';
-    deleteChildFeedbackState = 'success';
-    renderDeleteChildFeedback();
+    deleteChildConfirmationTarget = normalizedTarget;
+    deleteChildConfirmationLabel = existingRow.name || existingRow.originalName || deleteChildName;
+    resetDeleteChildFeedback();
+    showDeleteConfirmationDialog();
   };
 
   addRowButton.addEventListener('click', () => {
@@ -865,6 +959,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   const close = () => {
+    closeDeleteConfirmation();
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('class-settings-overlay-open');
@@ -916,6 +1011,28 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   if (deleteChildSubmitControl) {
     deleteChildSubmitControl.addEventListener('click', handleDeleteChild);
   }
+  if (deleteChildConfirmCancel) {
+    deleteChildConfirmCancel.addEventListener('click', () => {
+      closeDeleteConfirmation();
+    });
+  }
+  if (deleteChildConfirmSubmit) {
+    deleteChildConfirmSubmit.addEventListener('click', () => {
+      performDeleteChild(deleteChildConfirmationTarget);
+      closeDeleteConfirmation();
+    });
+  }
+  deleteChildConfirmDialog.addEventListener('click', (event) => {
+    if (event.target === deleteChildConfirmDialog) {
+      closeDeleteConfirmation();
+    }
+  });
+  deleteChildConfirmDialog.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDeleteConfirmation();
+    }
+  });
 
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);

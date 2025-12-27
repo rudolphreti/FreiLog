@@ -592,6 +592,43 @@ body {
   font-size: 1.05rem;
 }
 
+.class-settings-confirm {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 1080;
+  padding: 1rem;
+  backdrop-filter: blur(1px);
+}
+
+.class-settings-confirm__panel {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow:
+    0 20px 50px rgba(15, 23, 42, 0.2),
+    0 8px 20px rgba(15, 23, 42, 0.12);
+  max-width: 520px;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+.class-settings-confirm__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.class-settings-confirm__actions .btn {
+  width: 100%;
+}
+
+.class-settings-confirm .btn-danger {
+  color: #ffffff;
+}
+
 @media (min-width: 992px) {
   .class-settings-overlay__panel {
     max-width: 1100px;
