@@ -995,7 +995,12 @@ const getObservationCount = (observationsByChild, child) => {
   return 0;
 };
 
-const rebuildChildButton = ({ child, isAbsent, observationsByChild }) => {
+const rebuildChildButton = ({
+  child,
+  isAbsent,
+  observationsByChild,
+  readOnly = false,
+}) => {
   const count = getObservationCount(observationsByChild, child);
   const badge = isAbsent
     ? createEl('span', {
@@ -1013,8 +1018,13 @@ const rebuildChildButton = ({ child, isAbsent, observationsByChild }) => {
   return createEl('button', {
     className:
       `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
-    attrs: { type: 'button' },
-    dataset: { role: 'observation-child', child, absent: isAbsent ? 'true' : 'false' },
+    attrs: { type: 'button', disabled: readOnly ? 'true' : null },
+    dataset: {
+      role: 'observation-child',
+      child,
+      absent: isAbsent ? 'true' : 'false',
+      readonly: readOnly ? 'true' : 'false',
+    },
     children: badge
       ? [
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
@@ -1423,7 +1433,12 @@ export const buildObservationsSection = ({
   children.forEach((child) => {
     const isAbsent = absentSet.has(child);
     list.appendChild(
-      rebuildChildButton({ child, isAbsent, observationsByChild: observations }),
+      rebuildChildButton({
+        child,
+        isAbsent,
+        observationsByChild: observations,
+        readOnly: isReadOnly,
+      }),
     );
   });
 
@@ -1645,6 +1660,7 @@ export const buildObservationsSection = ({
           child,
           isAbsent: absentSetNext.has(child),
           observationsByChild: nextObservations,
+          readOnly: isReadOnly,
         }),
       ),
     );

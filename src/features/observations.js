@@ -1078,6 +1078,9 @@ export const bindObservations = ({
     if (!isHtmlElement(target)) {
       return;
     }
+    if (isReadOnly) {
+      return;
+    }
     if (suppressNextClick) {
       return;
     }

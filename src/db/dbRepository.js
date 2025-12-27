@@ -5,7 +5,7 @@ import {
   sanitizeDaysByDate,
 } from './dbSchema.js';
 import { clearAppData } from '../state/persistence.js';
-import { getState, initStore, updateAppData } from '../state/store.js';
+import { getState, initStore, setSelectedDate, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 import {
   buildObservationId,
@@ -677,6 +677,7 @@ export const importJson = (obj) => {
     return;
   }
 
+  let applied = false;
   const childrenList = getState().db?.children || [];
   const hasSchemaVersion = typeof obj.schemaVersion === 'number';
   const hasCatalog = Array.isArray(obj.observationCatalog);
@@ -717,18 +718,23 @@ export const importJson = (obj) => {
       Object.assign(data, merged);
     });
 
-    return;
+    applied = true;
+  } else {
+    const payload = obj;
+    if (!isValidYmd(payload.date) || typeof payload.entry !== 'object') {
+      return;
+    }
+
+    const sanitizedDay =
+      sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList)[
+        payload.date
+      ] || createDefaultDay(payload.date, childrenList);
+
+    updateEntry(payload.date, sanitizedDay);
+    applied = true;
   }
 
-  const payload = obj;
-  if (!isValidYmd(payload.date) || typeof payload.entry !== 'object') {
-    return;
+  if (applied) {
+    setSelectedDate(todayYmd());
   }
-
-  const sanitizedDay =
-    sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList)[
-      payload.date
-    ] || createDefaultDay(payload.date, childrenList);
-
-  updateEntry(payload.date, sanitizedDay);
 };
