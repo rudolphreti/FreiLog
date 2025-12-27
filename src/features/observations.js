@@ -1351,11 +1351,6 @@ export const bindObservations = ({
           templateState: getTemplateUiState(templatesOverlay),
         };
         templatesOverlay.dataset.pendingScrollTop = `${scrollTop}`;
-        console.log('freilog: template-scroll/save', {
-          child: activeChild,
-          scrollTop,
-          focusSearch: false,
-        });
         updateTemplateButtonState(templateButton, !isSelected);
         if (isSelected) {
           removeObservationForChild(getDate(), activeChild, tag);
@@ -1594,12 +1589,6 @@ export const bindObservations = ({
       );
       if (scroll) {
         scroll.scrollTop = scrollTop || 0;
-        console.log('freilog: template-scroll/restore', {
-          child,
-          scrollTop: scrollTop || 0,
-          focusSearch,
-          templateState,
-        });
       }
     });
   }

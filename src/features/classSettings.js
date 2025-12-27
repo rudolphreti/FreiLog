@@ -320,7 +320,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     className: 'btn btn-primary btn-sm w-100',
     attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
     dataset: { role: 'new-child-submit' },
-    text: 'Dodaj',
+    text: '+ Hinzufügen',
   });
 
   const newChildErrorsEl = createEl('div', {

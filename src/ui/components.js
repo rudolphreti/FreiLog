@@ -1629,8 +1629,6 @@ export const buildObservationsSection = ({
           ? templateContent.scrollTop
           : 0;
     delete refs.templatesOverlay.dataset.pendingScrollTop;
-    // eslint-disable-next-line no-console
-    console.log('freilog: template-scroll/preserve-start', { previousScrollTop });
 
     const absentSetNext = new Set(nextAbsentChildren || []);
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
@@ -1756,8 +1754,6 @@ export const buildObservationsSection = ({
       templateContent.scrollTop = previousScrollTop;
       requestAnimationFrame(() => {
         templateContent.scrollTop = previousScrollTop;
-        // eslint-disable-next-line no-console
-        console.log('freilog: template-scroll/preserve-end', { previousScrollTop });
       });
     }
   };
