@@ -1,4 +1,6 @@
 import { exportJson, importJson } from '../db/dbRepository.js';
+import { setSelectedDate } from '../state/store.js';
+import { todayYmd } from '../utils/date.js';
 
 const downloadJson = (filename, jsonString) => {
   const blob = new Blob([jsonString], { type: 'application/json' });
@@ -26,6 +28,7 @@ const handleImport = async (file) => {
     const text = await file.text();
     const parsed = JSON.parse(text);
     importJson(parsed);
+    setSelectedDate(todayYmd());
   } catch (error) {
     console.warn('Import fehlgeschlagen', error);
     alert('Import fehlgeschlagen. Bitte eine gültige JSON-Datei wählen.');

@@ -1,4 +1,6 @@
 import { importJson } from '../db/dbRepository.js';
+import { setSelectedDate } from '../state/store.js';
+import { todayYmd } from '../utils/date.js';
 
 const DUMMY_DATA_PATH = 'data/appData.dummy.json';
 
@@ -9,6 +11,7 @@ const loadDummyData = async () => {
   }
   const parsed = await response.json();
   importJson(parsed);
+  setSelectedDate(todayYmd());
 };
 
 export const bindDummyDataLoader = ({ button, onLoaded } = {}) => {
