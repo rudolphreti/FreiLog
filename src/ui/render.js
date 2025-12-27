@@ -232,6 +232,8 @@ export const renderApp = (root, state) => {
     const actions = drawerContentRefs?.actions;
     bindImportExport({
       exportButton: header.refs.exportButton,
+      importButton: header.refs.importButton,
+      fileInput: header.refs.importInput,
     });
     const settingsActions = drawerContentRefs?.settings;
     bindImportExport({
@@ -241,6 +243,10 @@ export const renderApp = (root, state) => {
     });
     bindDummyDataLoader({
       button: actions?.dummyDataButton,
+      onLoaded: closeDrawer,
+    });
+    bindDummyDataLoader({
+      button: header.refs.dummyDataButton,
       onLoaded: closeDrawer,
     });
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
@@ -311,6 +317,8 @@ export const renderApp = (root, state) => {
   const actions = drawerContentRefs?.actions;
   bindImportExport({
     exportButton: header.refs.exportButton,
+    importButton: header.refs.importButton,
+    fileInput: header.refs.importInput,
   });
   const settingsActions = drawerContentRefs?.settings;
   bindImportExport({
@@ -320,6 +328,10 @@ export const renderApp = (root, state) => {
   });
   bindDummyDataLoader({
     button: actions?.dummyDataButton,
+    onLoaded: closeDrawer,
+  });
+  bindDummyDataLoader({
+    button: header.refs.dummyDataButton,
     onLoaded: closeDrawer,
   });
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {

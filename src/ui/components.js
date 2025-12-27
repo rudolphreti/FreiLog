@@ -48,14 +48,32 @@ export const buildHeader = ({ selectedDate }) => {
     children: [dateInput],
   });
 
-  const exportButton = createIconButton({
-    icon: '⬇️',
-    label: 'Exportieren',
+  const importButton = createEl('button', {
+    className: 'btn btn-outline-secondary d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '⬆️' }), createEl('span', { text: 'DB importieren...' })],
+  });
+
+  const dummyDataButton = createEl('button', {
+    className: 'btn btn-outline-secondary d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '🧪' }), createEl('span', { text: 'Dummy-Daten laden' })],
+  });
+
+  const exportButton = createEl('button', {
+    className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2 header-action-btn',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '⬇️' }), createEl('span', { text: 'Exportieren' })],
+  });
+
+  const importInput = createEl('input', {
+    attrs: { type: 'file', accept: 'application/json' },
+    className: 'd-none',
   });
 
   const actionsGroup = createEl('div', {
-    className: 'd-flex align-items-center gap-2 header-actions',
-    children: [exportButton, menuButton],
+    className: 'd-flex align-items-center gap-2 header-actions flex-wrap',
+    children: [importButton, dummyDataButton, exportButton, menuButton, importInput],
   });
 
   const headerContent = createEl('div', {
@@ -72,6 +90,9 @@ export const buildHeader = ({ selectedDate }) => {
       dateInput,
       menuButton,
       exportButton,
+      importButton,
+      dummyDataButton,
+      importInput,
     },
   };
 };
@@ -179,8 +200,8 @@ export const buildDrawerContent = ({
 
   const weeklyTableButton = actionButton('Wochentabelle öffnen', '📅');
   const exportButton = actionButton('Exportieren', '⬇️');
-  const importButton = actionButton('Importieren', '⬆️');
-  const dummyDataButton = actionButton('Dummy data laden', '🧪');
+  const importButton = actionButton('DB importieren...', '⬆️');
+  const dummyDataButton = actionButton('Dummy-Daten laden', '🧪');
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',

@@ -5,14 +5,7 @@ import {
   normalizeAppData,
 } from '../db/dbSchema.js';
 
-const loadDefaults = async () => {
-  const response = await fetch('data/appData.default.json', {
-    cache: 'no-store',
-  });
-  const text = await response.text();
-  const parsed = JSON.parse(text);
-  return normalizeAppData(parsed, createEmptyAppData());
-};
+const loadDefaults = () => normalizeAppData(createEmptyAppData(), createEmptyAppData());
 
 const readLocalStorage = () => {
   if (typeof localStorage === 'undefined') {
@@ -33,11 +26,10 @@ const readLocalStorage = () => {
 };
 
 export const loadAppData = async () => {
-  const defaults = await loadDefaults();
+  const defaults = loadDefaults();
   const stored = readLocalStorage();
 
   if (!stored) {
-    saveAppData(defaults);
     return defaults;
   }
 

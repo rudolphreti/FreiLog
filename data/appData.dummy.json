@@ -35,32 +35,211 @@
     "childrenNotes": {}
   },
   "angebote": [
-    "Freispiel",
-    "Musikraum",
+    "Ausflug",
+    "Basteln",
     "Bau-Ecke",
     "Bewegung",
-    "Theater",
-    "Lesen",
     "Forschen",
+    "Freispiel",
+    "Kochen",
     "Kreativatelier",
-    "Ausflug",
-    "Kochen"
+    "Lernzeit",
+    "Lesen",
+    "Musik",
+    "Musikraum",
+    "Spiele",
+    "Sport",
+    "Theater"
   ],
   "observationTemplates": [
-    "Konzentriert gearbeitet",
-    "Teamfähig",
-    "Neue Ideen eingebracht",
-    "Mutig ausprobiert",
-    "Musikalisch beteiligt",
-    "Ruhige Pause gebraucht",
+    "Aggression",
+    "App gemeinsam bauen",
+    "Bewegung zu Musik",
     "Bewegungsfreude",
-    "Neugierig gefragt",
+    "Eigene Figuren erfinden",
+    "Eigenständiges Bauen",
+    "Empathisches Verhalten",
+    "Experimentieren und Zeichnen",
+    "Feinmotorik geübt",
+    "Fragen stellen",
+    "Freies Basteln",
+    "Freudiges Laufen",
+    "Gerechtigkeitssinn",
     "Hilfsbereit",
-    "Selbstständig gestartet",
+    "Hoher Bewegungsdrang",
+    "Hysterie Anfall",
+    "Klettern ohne Angst",
+    "Konflikte vermitteln",
+    "Konzentriert gearbeitet",
+    "Kreatives Konstruieren",
+    "Körperliche Grenze Übertretung",
+    "Lieder singen",
+    "Melodien nachsingen",
+    "Musikalisch beteiligt",
+    "Mutig ausprobiert",
+    "Neue Ideen eingebracht",
+    "Neugierig gefragt",
+    "Respektlosigkeit",
+    "Rhythm wiederholen",
+    "Ruhige Pause gebraucht",
     "Rücksichtsvoll",
-    "Feinmotorik geübt"
+    "Schimpfwörter",
+    "Selbstständig gestartet",
+    "Stabilität testen",
+    "Tanzen",
+    "Teamfähig",
+    "Theater spielen",
+    "Zeichnen"
   ],
   "observationCatalog": [
+    {
+      "id": "aggression",
+      "text": "Aggression",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "app-gemeinsam-bauen",
+      "text": "App gemeinsam bauen",
+      "groups": [
+        "ROT",
+        "GRUEN",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "bewegung-zu-musik",
+      "text": "Bewegung zu Musik",
+      "groups": [
+        "BLAU",
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "bewegungsfreude",
+      "text": "Bewegungsfreude",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "eigene-figuren-erfinden",
+      "text": "Eigene Figuren erfinden",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "eigenständiges-bauen",
+      "text": "Eigenständiges Bauen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "empathisches-verhalten",
+      "text": "Empathisches Verhalten",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "experimentieren-und-zeichnen",
+      "text": "Experimentieren und Zeichnen",
+      "groups": [
+        "GRUEN",
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "feinmotorik-geuebt",
+      "text": "Feinmotorik geübt",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "fragen-stellen",
+      "text": "Fragen stellen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "freies-basteln",
+      "text": "Freies Basteln",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "freudiges-laufen",
+      "text": "Freudiges Laufen",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "gerechtigkeitssinn",
+      "text": "Gerechtigkeitssinn",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "hilfsbereit",
+      "text": "Hilfsbereit",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "hoher-bewegungsdrang",
+      "text": "Hoher Bewegungsdrang",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "hysterie-anfall",
+      "text": "Hysterie Anfall",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "klettern-ohne-angst",
+      "text": "Klettern ohne Angst",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "konflikte-vermitteln",
+      "text": "Konflikte vermitteln",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
     {
       "id": "konzentriert-gearbeitet",
       "text": "Konzentriert gearbeitet",
@@ -70,18 +249,43 @@
       "createdAt": "2024-09-01T00:00:00Z"
     },
     {
-      "id": "teamfaehig",
-      "text": "Teamfähig",
+      "id": "kreatives-konstruieren",
+      "text": "Kreatives Konstruieren",
       "groups": [
-        "LILA"
+        "ROT",
+        "GRUEN"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-01-01T00:00:00Z"
     },
     {
-      "id": "neue-ideen-eingebracht",
-      "text": "Neue Ideen eingebracht",
+      "id": "körperliche-grenze-übertretung",
+      "text": "Körperliche Grenze Übertretung",
       "groups": [
-        "ROT"
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "lieder-singen",
+      "text": "Lieder singen",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "melodien-nachsingen",
+      "text": "Melodien nachsingen",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "musikalisch-beteiligt",
+      "text": "Musikalisch beteiligt",
+      "groups": [
+        "BLAU"
       ],
       "createdAt": "2024-09-01T00:00:00Z"
     },
@@ -94,26 +298,10 @@
       "createdAt": "2024-09-01T00:00:00Z"
     },
     {
-      "id": "musikalisch-beteiligt",
-      "text": "Musikalisch beteiligt",
+      "id": "neue-ideen-eingebracht",
+      "text": "Neue Ideen eingebracht",
       "groups": [
-        "BLAU"
-      ],
-      "createdAt": "2024-09-01T00:00:00Z"
-    },
-    {
-      "id": "ruhige-pause-gebraucht",
-      "text": "Ruhige Pause gebraucht",
-      "groups": [
-        "LILA"
-      ],
-      "createdAt": "2024-09-01T00:00:00Z"
-    },
-    {
-      "id": "bewegungsfreude",
-      "text": "Bewegungsfreude",
-      "groups": [
-        "ORANGE"
+        "ROT"
       ],
       "createdAt": "2024-09-01T00:00:00Z"
     },
@@ -126,18 +314,26 @@
       "createdAt": "2024-09-01T00:00:00Z"
     },
     {
-      "id": "hilfsbereit",
-      "text": "Hilfsbereit",
+      "id": "respektlosigkeit",
+      "text": "Respektlosigkeit",
       "groups": [
-        "LILA"
+        "SCHWARZ"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-01-01T00:00:00Z"
     },
     {
-      "id": "selbstaendig-gestartet",
-      "text": "Selbstständig gestartet",
+      "id": "rhythm-wiederholen",
+      "text": "Rhythm wiederholen",
       "groups": [
-        "GRUEN"
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "ruhige-pause-gebraucht",
+      "text": "Ruhige Pause gebraucht",
+      "groups": [
+        "LILA"
       ],
       "createdAt": "2024-09-01T00:00:00Z"
     },
@@ -150,12 +346,62 @@
       "createdAt": "2024-09-01T00:00:00Z"
     },
     {
-      "id": "feinmotorik-geuebt",
-      "text": "Feinmotorik geübt",
+      "id": "schimpfwörter",
+      "text": "Schimpfwörter",
+      "groups": [
+        "SCHWARZ"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "selbstaendig-gestartet",
+      "text": "Selbstständig gestartet",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "stabilität-testen",
+      "text": "Stabilität testen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "tanzen",
+      "text": "Tanzen",
+      "groups": [
+        "BLAU",
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "teamfaehig",
+      "text": "Teamfähig",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "theater-spielen",
+      "text": "Theater spielen",
+      "groups": [
+        "ROT",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "zeichnen",
+      "text": "Zeichnen",
       "groups": [
         "ROT"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-01-01T00:00:00Z"
     }
   ],
   "observationGroups": {
