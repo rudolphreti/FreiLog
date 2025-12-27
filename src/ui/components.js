@@ -34,13 +34,13 @@ export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayI
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
   });
   const dateGroup = createEl('div', {
-    className: 'd-flex flex-column header-date',
+    className: 'd-flex flex-wrap align-items-center gap-2 header-date',
     children: [dateInput],
   });
   if (freeDayInfo) {
     const label = freeDayInfo.label || 'Schulfrei';
     const badge = createEl('span', {
-      className: 'free-day-pill mt-2',
+      className: 'free-day-pill',
       children: [
         createEl('span', { text: '🏖️' }),
         createEl('span', { text: `${label}` }),

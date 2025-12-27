@@ -21,9 +21,9 @@ body {
 }
 
 .header-date {
-  flex: 1 1 180px;
-  min-width: 12ch;
-  max-width: 280px;
+  flex: 1 1 320px;
+  min-width: 14ch;
+  max-width: 100%;
 }
 
 .header-date .form-control {
