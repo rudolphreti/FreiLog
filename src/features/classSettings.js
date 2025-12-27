@@ -418,7 +418,18 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     accordionId,
   });
 
-  accordion.append(generalItem.element, childrenItem.element);
+  const cautionContent = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+  });
+
+  const cautionItem = buildAccordionItem({
+    id: 'class-caution',
+    title: 'Vorsicht!',
+    content: cautionContent,
+    accordionId,
+  });
+
+  accordion.append(generalItem.element, childrenItem.element, cautionItem.element);
   content.append(intro, accordion);
   panel.append(header, content);
   overlay.append(panel);
