@@ -52,6 +52,15 @@ const normalizeDayEntry = (days, dateKey) => {
   const entry = days?.[dateKey] && typeof days[dateKey] === 'object' ? days[dateKey] : {};
   const angebote = normalizeValueList(entry.angebote);
   const observations = typeof entry.observations === 'object' ? entry.observations : {};
+  const absentChildren = Array.isArray(entry.absentChildIds)
+    ? entry.absentChildIds
+        .map((child) => (typeof child === 'string' ? child.trim() : ''))
+        .filter(Boolean)
+    : Array.isArray(entry.absentChildren)
+      ? entry.absentChildren
+          .map((child) => (typeof child === 'string' ? child.trim() : ''))
+          .filter(Boolean)
+      : [];
   const normalizedObs = Object.entries(observations || {}).reduce((acc, [child, value]) => {
     const normalized = normalizeObservationEntry(value);
     if (normalized.length) {
@@ -63,6 +72,7 @@ const normalizeDayEntry = (days, dateKey) => {
   return {
     angebote,
     observations: normalizedObs,
+    absentChildren: [...new Set(absentChildren)],
   };
 };
 
@@ -204,6 +214,13 @@ const buildObservationList = (values, getGroupsForLabel, observationGroups) => {
   return list;
 };
 
+const buildAbsenceBadge = () =>
+  createEl('span', {
+    className:
+      'badge text-bg-light text-secondary observation-absent-badge weekly-table__absence-badge',
+    text: 'Abwesend',
+  });
+
 const buildCellContent = ({
   content,
   child,
@@ -212,6 +229,7 @@ const buildCellContent = ({
   isEditMode,
   onEditCell,
   isFreeDay,
+  isAbsent,
 }) => {
   const wrapper = createEl('div', { className: 'weekly-table__cell-content' });
   if (content) {
@@ -219,7 +237,12 @@ const buildCellContent = ({
   }
 
   const canEdit =
-    isEditMode && typeof onEditCell === 'function' && child && dateKey && !isFreeDay;
+    isEditMode &&
+    typeof onEditCell === 'function' &&
+    child &&
+    dateKey &&
+    !isFreeDay &&
+    !isAbsent;
   if (canEdit) {
     wrapper.classList.add('weekly-table__cell-content--editable');
     const editButton = createEl('button', {
@@ -290,8 +313,15 @@ const buildWeeklyTable = ({
   angeboteRow.append(
     createEl('th', { scope: 'row', className: 'text-nowrap', text: 'Angebote' }),
   );
+  const dayEntryByDateKey = new Map();
+  const getDayEntry = (dateKey) => {
+    if (!dayEntryByDateKey.has(dateKey)) {
+      dayEntryByDateKey.set(dateKey, normalizeDayEntry(days, dateKey));
+    }
+    return dayEntryByDateKey.get(dateKey);
+  };
   weekDays.forEach((item) => {
-    const dayEntry = normalizeDayEntry(days, item.dateKey);
+    const dayEntry = getDayEntry(item.dateKey);
     const freeInfo = item.freeInfo;
     angeboteRow.append(
       createEl('td', {
@@ -317,21 +347,36 @@ const buildWeeklyTable = ({
     const row = createEl('tr');
     row.append(createEl('th', { scope: 'row', className: 'text-nowrap', text: child }));
     weekDays.forEach((item) => {
-      const dayEntry = normalizeDayEntry(days, item.dateKey);
+      const dayEntry = getDayEntry(item.dateKey);
       const obs = dayEntry.observations[child] || [];
       const freeInfo = item.freeInfo;
+      const isAbsent = dayEntry.absentChildren.includes(child);
+      const cellClasses = [
+        freeInfo ? 'weekly-table__cell--free-day' : '',
+        isAbsent ? 'weekly-table__cell--absent' : '',
+      ]
+        .filter(Boolean)
+        .join(' ');
+      const cellBody = createEl('div', {
+        className: 'weekly-table__cell-body',
+        children: [
+          isAbsent ? buildAbsenceBadge() : null,
+          buildObservationList(obs, getGroupsForLabel, observationGroups),
+        ],
+      });
       row.append(
         createEl('td', {
-          className: freeInfo ? 'weekly-table__cell--free-day' : '',
+          className: cellClasses,
           children: [
             buildCellContent({
-              content: buildObservationList(obs, getGroupsForLabel, observationGroups),
+              content: cellBody,
               child,
               dateKey: item.dateKey,
               displayDate: item.displayDate,
               isEditMode,
               onEditCell,
               isFreeDay: Boolean(freeInfo),
+              isAbsent,
             }),
           ],
         }),
