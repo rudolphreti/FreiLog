@@ -484,8 +484,63 @@ body {
 .observation-overlay__close,
 .observation-templates-overlay__close,
 .observation-create-overlay__close,
-.weekly-table-overlay__close {
+.weekly-table-overlay__close,
+.class-settings-overlay__close {
   margin-left: auto;
+}
+
+.class-settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1070;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.class-settings-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.class-settings-overlay__panel {
+  background: #ffffff;
+  width: min(780px, 100%);
+  max-height: min(780px, 100%);
+  border-radius: 1rem;
+  box-shadow:
+    0 12px 35px rgba(15, 23, 42, 0.2),
+    0 6px 15px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.class-settings-overlay__header {
+  padding: calc(1rem + env(safe-area-inset-top)) 1.25rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.class-settings-overlay__content {
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  overflow-y: auto;
+}
+
+.class-settings__accordion .accordion-button {
+  font-weight: 600;
+}
+
+.class-settings__child-list {
+  padding-left: 1rem;
 }
 
 .weekly-table-overlay__content {
@@ -1086,6 +1141,10 @@ body.observation-overlay-open {
   overflow: hidden;
 }
 
+body.class-settings-overlay-open {
+  overflow: hidden;
+}
+
 @media (max-width: 576px) {
   .observation-overlay__header {
     flex-direction: row;
@@ -1156,6 +1215,24 @@ body.observation-overlay-open {
   }
 
   .weekly-table-overlay__content {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+  }
+
+  .class-settings-overlay {
+    padding: 1rem;
+  }
+
+  .class-settings-overlay__panel {
+    max-height: 90vh;
+  }
+
+  .class-settings-overlay__header {
+    padding: calc(0.75rem + env(safe-area-inset-top)) 1rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .class-settings-overlay__content {
     padding: 1rem;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom));
   }

@@ -209,7 +209,25 @@ export const buildDrawerContent = ({
     accordionId,
   });
 
-  accordion.append(actionsSectionItem.element, offersSectionItem.element);
+  const settingsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const settingsButton = actionButton('Meine Klasse', '⚙', {
+    'data-role': 'open-class-settings',
+  });
+  settingsList.append(settingsButton);
+
+  const settingsSectionItem = buildAccordionItem({
+    id: 'settings',
+    title: 'Settings',
+    defaultOpen: Boolean(drawerSections?.settings),
+    contentNode: settingsList,
+    accordionId,
+  });
+
+  accordion.append(
+    actionsSectionItem.element,
+    offersSectionItem.element,
+    settingsSectionItem.element,
+  );
 
   return {
     nodes: [accordion],
@@ -223,6 +241,10 @@ export const buildDrawerContent = ({
       sections: {
         actions: actionsSectionItem,
         angebote: offersSectionItem,
+        settings: settingsSectionItem,
+      },
+      settings: {
+        classButton: settingsButton,
       },
     },
   };
