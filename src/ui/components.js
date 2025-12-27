@@ -16,16 +16,6 @@ export const buildHeader = ({ selectedDate }) => {
     className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top',
   });
 
-  const createIconButton = ({ icon, label, attrs = {} }) =>
-    createEl('button', {
-      className: 'btn btn-outline-primary header-action-btn',
-      attrs: { type: 'button', ...attrs },
-      children: [
-        createEl('span', { className: 'header-action-icon', text: icon }),
-        createEl('span', { className: 'visually-hidden', text: label }),
-      ],
-    });
-
   const menuButton = createEl('button', {
     className: 'btn btn-outline-primary d-inline-flex align-items-center header-menu-btn',
     children: [
@@ -60,12 +50,6 @@ export const buildHeader = ({ selectedDate }) => {
     children: [createEl('span', { text: '🧪' }), createEl('span', { text: 'Dummy-Daten laden' })],
   });
 
-  const exportButton = createEl('button', {
-    className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2 header-action-btn',
-    attrs: { type: 'button' },
-    children: [createEl('span', { text: '⬇️' }), createEl('span', { text: 'Exportieren' })],
-  });
-
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
@@ -73,7 +57,7 @@ export const buildHeader = ({ selectedDate }) => {
 
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions flex-wrap',
-    children: [importButton, dummyDataButton, exportButton, menuButton, importInput],
+    children: [importButton, dummyDataButton, menuButton, importInput],
   });
 
   const headerContent = createEl('div', {
@@ -89,7 +73,6 @@ export const buildHeader = ({ selectedDate }) => {
     refs: {
       dateInput,
       menuButton,
-      exportButton,
       importButton,
       dummyDataButton,
       importInput,
