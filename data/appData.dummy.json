@@ -98,7 +98,7 @@
       "groups": [
         "SCHWARZ"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "app-gemeinsam-bauen",
@@ -108,7 +108,7 @@
         "GRUEN",
         "LILA"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "bewegung-zu-musik",
@@ -117,7 +117,7 @@
         "BLAU",
         "ORANGE"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "bewegungsfreude",
@@ -125,7 +125,7 @@
       "groups": [
         "ORANGE"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "eigene-figuren-erfinden",
@@ -133,7 +133,7 @@
       "groups": [
         "ROT"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "eigenständiges-bauen",
@@ -141,7 +141,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "empathisches-verhalten",
@@ -149,7 +149,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "experimentieren-und-zeichnen",
@@ -158,7 +158,7 @@
         "GRUEN",
         "ROT"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "feinmotorik-geuebt",
@@ -166,7 +166,7 @@
       "groups": [
         "ROT"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "fragen-stellen",
@@ -174,7 +174,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "freies-basteln",
@@ -182,7 +182,7 @@
       "groups": [
         "ROT"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "freudiges-laufen",
@@ -190,7 +190,7 @@
       "groups": [
         "ORANGE"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "gerechtigkeitssinn",
@@ -198,7 +198,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "hilfsbereit",
@@ -206,7 +206,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "hoher-bewegungsdrang",
@@ -214,7 +214,7 @@
       "groups": [
         "ORANGE"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "hysterie-anfall",
@@ -222,7 +222,7 @@
       "groups": [
         "SCHWARZ"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "klettern-ohne-angst",
@@ -230,7 +230,7 @@
       "groups": [
         "ORANGE"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "konflikte-vermitteln",
@@ -238,7 +238,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "konzentriert-gearbeitet",
@@ -246,7 +246,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "kreatives-konstruieren",
@@ -255,7 +255,7 @@
         "ROT",
         "GRUEN"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "körperliche-grenze-übertretung",
@@ -263,7 +263,7 @@
       "groups": [
         "SCHWARZ"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "lieder-singen",
@@ -271,7 +271,7 @@
       "groups": [
         "BLAU"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "melodien-nachsingen",
@@ -279,7 +279,7 @@
       "groups": [
         "BLAU"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "musikalisch-beteiligt",
@@ -287,7 +287,7 @@
       "groups": [
         "BLAU"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "mutig-ausprobiert",
@@ -295,7 +295,7 @@
       "groups": [
         "ORANGE"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "neue-ideen-eingebracht",
@@ -303,7 +303,7 @@
       "groups": [
         "ROT"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "neugierig-gefragt",
@@ -311,7 +311,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "respektlosigkeit",
@@ -319,7 +319,7 @@
       "groups": [
         "SCHWARZ"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "rhythm-wiederholen",
@@ -327,7 +327,7 @@
       "groups": [
         "BLAU"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "ruhige-pause-gebraucht",
@@ -335,7 +335,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "ruecksichtsvoll",
@@ -343,7 +343,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "schimpfwörter",
@@ -351,7 +351,7 @@
       "groups": [
         "SCHWARZ"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "selbstaendig-gestartet",
@@ -359,7 +359,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "stabilität-testen",
@@ -367,7 +367,7 @@
       "groups": [
         "GRUEN"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "tanzen",
@@ -376,7 +376,7 @@
         "BLAU",
         "ORANGE"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "teamfaehig",
@@ -384,7 +384,7 @@
       "groups": [
         "LILA"
       ],
-      "createdAt": "2024-09-01T00:00:00Z"
+      "createdAt": "2025-09-01T00:00:00Z"
     },
     {
       "id": "theater-spielen",
@@ -393,7 +393,7 @@
         "ROT",
         "LILA"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     },
     {
       "id": "zeichnen",
@@ -401,7 +401,7 @@
       "groups": [
         "ROT"
       ],
-      "createdAt": "2025-01-01T00:00:00Z"
+      "createdAt": "2026-01-01T00:00:00Z"
     }
   ],
   "observationGroups": {
@@ -437,8 +437,8 @@
     }
   },
   "days": {
-    "2024-09-02": {
-      "date": "2024-09-02",
+    "2025-09-02": {
+      "date": "2025-09-02",
       "angebote": [
         "Freispiel",
         "Kreativatelier"
@@ -463,8 +463,8 @@
       ],
       "notes": "Außenspiel mit kurzer Regenpause"
     },
-    "2024-09-05": {
-      "date": "2024-09-05",
+    "2025-09-05": {
+      "date": "2025-09-05",
       "angebote": [
         "Musikraum",
         "Lesen"
@@ -487,8 +487,8 @@
       "absentChildIds": [],
       "notes": "Neue Lieder ausprobiert"
     },
-    "2024-09-09": {
-      "date": "2024-09-09",
+    "2025-09-09": {
+      "date": "2025-09-09",
       "angebote": [
         "Bau-Ecke",
         "Forschen"
@@ -513,8 +513,8 @@
       ],
       "notes": "Turmbau-Challenge"
     },
-    "2024-09-12": {
-      "date": "2024-09-12",
+    "2025-09-12": {
+      "date": "2025-09-12",
       "angebote": [
         "Bewegung",
         "Freispiel"
@@ -536,8 +536,8 @@
       "absentChildIds": [],
       "notes": "Parcours in der Turnhalle"
     },
-    "2024-09-16": {
-      "date": "2024-09-16",
+    "2025-09-16": {
+      "date": "2025-09-16",
       "angebote": [
         "Theater",
         "Musikraum"
@@ -559,8 +559,8 @@
       ],
       "notes": "Rhythmusspiele mit Trommeln"
     },
-    "2024-09-19": {
-      "date": "2024-09-19",
+    "2025-09-19": {
+      "date": "2025-09-19",
       "angebote": [
         "Kreativatelier",
         "Lesen"
@@ -583,8 +583,8 @@
       "absentChildIds": [],
       "notes": "Herbstblätter geklebt"
     },
-    "2024-09-23": {
-      "date": "2024-09-23",
+    "2025-09-23": {
+      "date": "2025-09-23",
       "angebote": [
         "Freispiel",
         "Bewegung"
@@ -605,8 +605,8 @@
       ],
       "notes": "Ballspiele im Hof"
     },
-    "2024-09-26": {
-      "date": "2024-09-26",
+    "2025-09-26": {
+      "date": "2025-09-26",
       "angebote": [
         "Forschen",
         "Kochen"
@@ -628,8 +628,8 @@
       ],
       "notes": "Gemüsesuppe gemeinsam gekocht"
     },
-    "2024-10-01": {
-      "date": "2024-10-01",
+    "2025-10-01": {
+      "date": "2025-10-01",
       "angebote": [
         "Ausflug"
       ],
@@ -650,8 +650,8 @@
       "absentChildIds": [],
       "notes": "Besuch im Stadtpark"
     },
-    "2024-10-07": {
-      "date": "2024-10-07",
+    "2025-10-07": {
+      "date": "2025-10-07",
       "angebote": [
         "Musikraum",
         "Theater"
@@ -675,8 +675,8 @@
       ],
       "notes": "Theaterstück geplant"
     },
-    "2024-10-14": {
-      "date": "2024-10-14",
+    "2025-10-14": {
+      "date": "2025-10-14",
       "angebote": [
         "Kreativatelier",
         "Lesen"
@@ -698,8 +698,8 @@
       "absentChildIds": [],
       "notes": "Laternen gebastelt"
     },
-    "2024-10-21": {
-      "date": "2024-10-21",
+    "2025-10-21": {
+      "date": "2025-10-21",
       "angebote": [
         "Bewegung",
         "Freispiel"
@@ -723,8 +723,8 @@
       ],
       "notes": "Hindernislauf im Garten"
     },
-    "2024-10-28": {
-      "date": "2024-10-28",
+    "2025-10-28": {
+      "date": "2025-10-28",
       "angebote": [
         "Lesen",
         "Forschen"
@@ -745,8 +745,8 @@
       ],
       "notes": "Geschichten zur Jahreszeit"
     },
-    "2024-11-04": {
-      "date": "2024-11-04",
+    "2025-11-04": {
+      "date": "2025-11-04",
       "angebote": [
         "Kochen",
         "Bau-Ecke"
@@ -768,8 +768,8 @@
       "absentChildIds": [],
       "notes": "Kürbissuppe vorbereitet"
     },
-    "2024-11-12": {
-      "date": "2024-11-12",
+    "2025-11-12": {
+      "date": "2025-11-12",
       "angebote": [
         "Ausflug"
       ],
@@ -792,8 +792,8 @@
       ],
       "notes": "Waldspaziergang"
     },
-    "2024-11-18": {
-      "date": "2024-11-18",
+    "2025-11-18": {
+      "date": "2025-11-18",
       "angebote": [
         "Theater",
         "Musikraum"
@@ -815,8 +815,8 @@
       "absentChildIds": [],
       "notes": "Probe für Winteraufführung"
     },
-    "2024-11-26": {
-      "date": "2024-11-26",
+    "2025-11-26": {
+      "date": "2025-11-26",
       "angebote": [
         "Kreativatelier",
         "Bewegung"
@@ -840,8 +840,8 @@
       ],
       "notes": "Winterdeko entworfen"
     },
-    "2024-12-03": {
-      "date": "2024-12-03",
+    "2025-12-03": {
+      "date": "2025-12-03",
       "angebote": [
         "Lesen",
         "Freispiel"
@@ -865,8 +865,8 @@
       ],
       "notes": "Vorlesenachmittag"
     },
-    "2024-12-11": {
-      "date": "2024-12-11",
+    "2025-12-11": {
+      "date": "2025-12-11",
       "angebote": [
         "Kochen",
         "Theater"
@@ -894,7 +894,7 @@
     "exportMode": "day"
   },
   "ui": {
-    "selectedDate": "2024-09-02",
+    "selectedDate": "2025-09-02",
     "exportMode": "day",
     "observationsFilter": "ALL",
     "overlay": {
