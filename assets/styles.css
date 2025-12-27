@@ -912,6 +912,27 @@ body {
   color: #064e3b;
 }
 
+.weekly-table__cell--absent {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.weekly-table__cell--absent .weekly-table__observation-text,
+.weekly-table__cell--absent .weekly-table__pill,
+.weekly-table__cell--absent .weekly-table__pill-list {
+  color: #475569;
+}
+
+.weekly-table__cell-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.weekly-table__absence-badge {
+  align-self: flex-start;
+}
+
 .weekly-table__holiday-label {
   display: inline-flex;
   align-items: center;
