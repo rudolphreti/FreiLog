@@ -197,6 +197,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let newChildErrors = [];
   let isNewChildOpen = false;
   let toastContainer = null;
+  let deleteChildName = '';
+  let deleteChildFeedbackMessage = '';
+  let deleteChildFeedbackState = 'idle';
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -421,6 +424,58 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const cautionContent = createEl('div', {
     className: 'd-flex flex-column gap-2',
   });
+
+  const deleteChildInput = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      id: 'delete-child-name',
+      placeholder: 'Name des Kindes',
+      'aria-label': 'Name des Kindes',
+    },
+    dataset: { role: 'delete-child-name' },
+  });
+  const deleteChildFeedback = createEl('div', {
+    className: 'small d-none',
+    dataset: { role: 'delete-child-feedback' },
+  });
+  const deleteChildButton = createEl('button', {
+    className: 'btn btn-outline-danger d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    dataset: { role: 'delete-child-submit' },
+    children: [createEl('span', { text: '⚠️' }), createEl('span', { text: 'Löschen…' })],
+  });
+  const deleteChildCard = createEl('div', {
+    className: 'card border-0 shadow-sm',
+    children: [
+      createEl('div', {
+        className: 'card-body d-flex flex-column gap-2',
+        children: [
+          createEl('div', {
+            className: 'd-flex flex-column gap-1',
+            children: [
+              createEl('div', {
+                className: 'h6 mb-0 text-danger',
+                text: 'Kinder aus der Liste löschen',
+              }),
+              createEl('p', {
+                className: 'small mb-0 text-muted',
+                text: 'Beim Löschen eines Kindes werden alle verknüpften Einträge und Daten entfernt.',
+              }),
+            ],
+          }),
+          createFormGroup({
+            id: 'delete-child-name',
+            label: 'Name des Kindes',
+            control: deleteChildInput,
+          }),
+          deleteChildButton,
+          deleteChildFeedback,
+        ],
+      }),
+    ],
+  });
+  cautionContent.append(deleteChildCard);
 
   const cautionItem = buildAccordionItem({
     id: 'class-caution',
@@ -657,6 +712,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const newChildErrorsBox = newChildErrorsEl;
   const newChildSubmitControl = content.querySelector('[data-role="new-child-submit"]');
   const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
+  const deleteChildNameInput = content.querySelector('[data-role="delete-child-name"]');
+  const deleteChildFeedbackBox = content.querySelector('[data-role="delete-child-feedback"]');
+  const deleteChildSubmitControl = content.querySelector('[data-role="delete-child-submit"]');
 
   const renderNewChildErrors = () => {
     if (!newChildErrorsBox) {
@@ -680,6 +738,30 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       newChildNoteInputField.value = '';
     }
     renderNewChildErrors();
+  };
+
+  const renderDeleteChildFeedback = () => {
+    if (!deleteChildFeedbackBox) {
+      return;
+    }
+    deleteChildFeedbackBox.replaceChildren();
+    if (!deleteChildFeedbackMessage) {
+      deleteChildFeedbackBox.classList.add('d-none');
+      deleteChildFeedbackBox.classList.remove('text-danger', 'text-success');
+      return;
+    }
+    deleteChildFeedbackBox.append(createEl('div', { text: deleteChildFeedbackMessage }));
+    deleteChildFeedbackBox.classList.remove('d-none');
+    deleteChildFeedbackBox.classList.remove('text-danger', 'text-success');
+    deleteChildFeedbackBox.classList.add(
+      deleteChildFeedbackState === 'success' ? 'text-success' : 'text-danger',
+    );
+  };
+
+  const resetDeleteChildFeedback = () => {
+    deleteChildFeedbackMessage = '';
+    deleteChildFeedbackState = 'idle';
+    renderDeleteChildFeedback();
   };
 
   const showNewChildForm = () => {
@@ -728,6 +810,41 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     resetNewChildForm();
     showNewChildForm();
     showChildAddedToast('Neues Kind wurde hinzugefügt.');
+  };
+
+  const handleDeleteChild = () => {
+    const normalizedTarget = normalizeChildName(deleteChildName);
+    if (!normalizedTarget) {
+      deleteChildFeedbackMessage = 'Bitte gib einen gültigen Namen ein.';
+      deleteChildFeedbackState = 'error';
+      renderDeleteChildFeedback();
+      return;
+    }
+    const existingRow = rows.find((row) => {
+      const normalizedName = normalizeChildName(row.name);
+      const normalizedOriginal = normalizeChildName(row.originalName);
+      return normalizedName === normalizedTarget || normalizedOriginal === normalizedTarget;
+    });
+    if (!existingRow) {
+      deleteChildFeedbackMessage = 'Kein Kind mit diesem Namen gefunden.';
+      deleteChildFeedbackState = 'error';
+      renderDeleteChildFeedback();
+      return;
+    }
+    rows = rows.filter((row) => {
+      const normalizedName = normalizeChildName(row.name);
+      const normalizedOriginal = normalizeChildName(row.originalName);
+      return normalizedName !== normalizedTarget && normalizedOriginal !== normalizedTarget;
+    });
+    saveClassChildren(rows);
+    renderRows();
+    deleteChildName = '';
+    if (deleteChildNameInput) {
+      deleteChildNameInput.value = '';
+    }
+    deleteChildFeedbackMessage = 'Das Kind und die zugehörigen Daten wurden gelöscht.';
+    deleteChildFeedbackState = 'success';
+    renderDeleteChildFeedback();
   };
 
   addRowButton.addEventListener('click', () => {
@@ -783,6 +900,21 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   }
   if (newChildSubmitControl) {
     newChildSubmitControl.addEventListener('click', handleAddNewChild);
+  }
+  if (deleteChildNameInput) {
+    deleteChildNameInput.addEventListener('input', (event) => {
+      deleteChildName = event.target.value;
+      resetDeleteChildFeedback();
+    });
+    deleteChildNameInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleDeleteChild();
+      }
+    });
+  }
+  if (deleteChildSubmitControl) {
+    deleteChildSubmitControl.addEventListener('click', handleDeleteChild);
   }
 
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
