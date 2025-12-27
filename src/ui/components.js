@@ -201,8 +201,8 @@ export const buildDrawerContent = ({
       children: [createEl('span', { text: icon }), createEl('span', { text })],
     });
 
-  const weeklyTableButton = showWeekly ? actionButton('Wochentabelle öffnen', '📅') : null;
-  const exportButton = showExport ? actionButton('Exportieren', '⬇️') : null;
+  const weeklyTableButton = showWeekly ? actionButton('Wochentabelle...', '📅') : null;
+  const exportButton = showExport ? actionButton('DB Exportieren...', '⬇️') : null;
   const importButton = actionButton('DB importieren...', '⬆️');
   const dummyDataButton = showDummy ? actionButton('Dummy-Daten laden', '🧪') : null;
   const importInput = createEl('input', {
@@ -222,7 +222,7 @@ export const buildDrawerContent = ({
 
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
-    title: 'Aktionen',
+    title: 'Daten',
     defaultOpen: Boolean(drawerSections?.actions),
     contentNode: actionsList,
     accordionId,
