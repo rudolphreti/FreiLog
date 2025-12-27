@@ -1,5 +1,4 @@
 import { createEl } from './dom.js';
-import { todayYmd } from '../utils/date.js';
 import {
   DEFAULT_SAVED_OBSERVATION_FILTERS,
   normalizeSavedObservationFilters,
@@ -10,8 +9,9 @@ import {
   normalizeObservationGroups,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import { todayYmd } from '../utils/date.js';
 
-export const buildHeader = ({ selectedDate }) => {
+export const buildHeader = ({ selectedDate, showInitialActions = false }) => {
   const header = createEl('header', {
     className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top',
   });
@@ -55,9 +55,15 @@ export const buildHeader = ({ selectedDate }) => {
     className: 'd-none',
   });
 
+  const actionNodes = [];
+  if (showInitialActions) {
+    actionNodes.push(importButton, dummyDataButton, importInput);
+  }
+  actionNodes.push(menuButton);
+
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions flex-wrap',
-    children: [importButton, dummyDataButton, menuButton, importInput],
+    children: actionNodes,
   });
 
   const headerContent = createEl('div', {
@@ -73,9 +79,9 @@ export const buildHeader = ({ selectedDate }) => {
     refs: {
       dateInput,
       menuButton,
-      importButton,
-      dummyDataButton,
-      importInput,
+      importButton: showInitialActions ? importButton : null,
+      dummyDataButton: showInitialActions ? dummyDataButton : null,
+      importInput: showInitialActions ? importInput : null,
     },
   };
 };
@@ -169,6 +175,9 @@ const buildAccordionItem = ({
 export const buildDrawerContent = ({
   drawerSections,
   angebotSection,
+  showExport = false,
+  showDummy = true,
+  showWeekly = false,
 }) => {
   const accordionId = 'drawerAccordion';
   const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
@@ -181,14 +190,24 @@ export const buildDrawerContent = ({
       children: [createEl('span', { text: icon }), createEl('span', { text })],
     });
 
+  const weeklyTableButton = showWeekly ? actionButton('Wochentabelle öffnen', '📅') : null;
+  const exportButton = showExport ? actionButton('Exportieren', '⬇️') : null;
   const importButton = actionButton('DB importieren...', '⬆️');
-  const dummyDataButton = actionButton('Dummy-Daten laden', '🧪');
+  const dummyDataButton = showDummy ? actionButton('Dummy-Daten laden', '🧪') : null;
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
   });
 
-  actionsList.append(importButton, dummyDataButton, importInput);
+  [
+    weeklyTableButton,
+    exportButton,
+    importButton,
+    dummyDataButton,
+    importInput,
+  ]
+    .filter(Boolean)
+    .forEach((node) => actionsList.append(node));
 
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
@@ -236,6 +255,8 @@ export const buildDrawerContent = ({
     nodes: [accordion],
     refs: {
       actions: {
+        weeklyTableButton,
+        exportButton,
         importButton,
         dummyDataButton,
         importInput,

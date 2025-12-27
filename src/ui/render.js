@@ -108,6 +108,7 @@ const renderDrawerContent = (
   drawerBody,
   angebotSection,
   preservedScrollTop,
+  options = {},
 ) => {
   if (!drawerBody) {
     return null;
@@ -119,6 +120,7 @@ const renderDrawerContent = (
   const content = buildDrawerContent({
     drawerSections,
     angebotSection: angebotSection?.element,
+    ...options,
   });
 
   drawerBody.replaceChildren(...content.nodes);
@@ -151,10 +153,13 @@ export const renderApp = (root, state) => {
   const observationGroups = db.observationGroups || {};
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
+  const hasData =
+    sortedChildren.length > 0 ||
+    Object.keys(weeklyDays || {}).length > 0;
 
   const preservedUi = getPreservedUiState(root);
 
-  const header = buildHeader({ selectedDate });
+  const header = buildHeader({ selectedDate, showInitialActions: !hasData });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
@@ -210,6 +215,11 @@ export const renderApp = (root, state) => {
     drawerShell.refs.body,
     angebotSection,
     preservedUi.drawerScrollTop,
+    {
+      showExport: hasData,
+      showDummy: !hasData,
+      showWeekly: hasData,
+    },
   );
 
   if (!appShell) {
@@ -235,6 +245,11 @@ export const renderApp = (root, state) => {
       importButton: header.refs.importButton,
       fileInput: header.refs.importInput,
     });
+    bindImportExport({
+      exportButton: actions?.exportButton,
+      importButton: actions?.importButton,
+      fileInput: actions?.importInput,
+    });
     const settingsActions = drawerContentRefs?.settings;
     bindDummyDataLoader({
       button: actions?.dummyDataButton,
@@ -244,6 +259,11 @@ export const renderApp = (root, state) => {
       button: header.refs.dummyDataButton,
       onLoaded: closeDrawer,
     });
+    if (weeklyTableViewBinding && actions?.weeklyTableButton) {
+      actions.weeklyTableButton.addEventListener('click', () => {
+        weeklyTableViewBinding.open();
+      });
+    }
     if (classSettingsView && settingsActions?.classButton) {
       settingsActions.classButton.addEventListener('click', () => {
         closeDrawer();
@@ -310,6 +330,11 @@ export const renderApp = (root, state) => {
     importButton: header.refs.importButton,
     fileInput: header.refs.importInput,
   });
+  bindImportExport({
+    exportButton: actions?.exportButton,
+    importButton: actions?.importButton,
+    fileInput: actions?.importInput,
+  });
   const settingsActions = drawerContentRefs?.settings;
   bindDummyDataLoader({
     button: actions?.dummyDataButton,
@@ -319,6 +344,11 @@ export const renderApp = (root, state) => {
     button: header.refs.dummyDataButton,
     onLoaded: closeDrawer,
   });
+  if (weeklyTableViewBinding && actions?.weeklyTableButton) {
+    actions.weeklyTableButton.addEventListener('click', () => {
+      weeklyTableViewBinding.open();
+    });
+  }
   if (classSettingsView && settingsActions?.classButton) {
     settingsActions.classButton.addEventListener('click', () => {
       closeDrawer();
