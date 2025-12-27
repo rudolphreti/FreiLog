@@ -236,11 +236,6 @@ export const renderApp = (root, state) => {
       fileInput: header.refs.importInput,
     });
     const settingsActions = drawerContentRefs?.settings;
-    bindImportExport({
-      exportButton: actions?.exportButton,
-      importButton: actions?.importButton,
-      fileInput: actions?.importInput,
-    });
     bindDummyDataLoader({
       button: actions?.dummyDataButton,
       onLoaded: closeDrawer,
@@ -249,11 +244,6 @@ export const renderApp = (root, state) => {
       button: header.refs.dummyDataButton,
       onLoaded: closeDrawer,
     });
-    if (weeklyTableViewBinding && actions?.weeklyTableButton) {
-      actions.weeklyTableButton.addEventListener('click', () => {
-        weeklyTableViewBinding.open();
-      });
-    }
     if (classSettingsView && settingsActions?.classButton) {
       settingsActions.classButton.addEventListener('click', () => {
         closeDrawer();
@@ -321,11 +311,6 @@ export const renderApp = (root, state) => {
     fileInput: header.refs.importInput,
   });
   const settingsActions = drawerContentRefs?.settings;
-  bindImportExport({
-    exportButton: actions?.exportButton,
-    importButton: actions?.importButton,
-    fileInput: actions?.importInput,
-  });
   bindDummyDataLoader({
     button: actions?.dummyDataButton,
     onLoaded: closeDrawer,
@@ -334,11 +319,6 @@ export const renderApp = (root, state) => {
     button: header.refs.dummyDataButton,
     onLoaded: closeDrawer,
   });
-  if (weeklyTableViewBinding && actions?.weeklyTableButton) {
-    actions.weeklyTableButton.addEventListener('click', () => {
-      weeklyTableViewBinding.open();
-    });
-  }
   if (classSettingsView && settingsActions?.classButton) {
     settingsActions.classButton.addEventListener('click', () => {
       closeDrawer();

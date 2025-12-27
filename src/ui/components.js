@@ -181,8 +181,6 @@ export const buildDrawerContent = ({
       children: [createEl('span', { text: icon }), createEl('span', { text })],
     });
 
-  const weeklyTableButton = actionButton('Wochentabelle öffnen', '📅');
-  const exportButton = actionButton('Exportieren', '⬇️');
   const importButton = actionButton('DB importieren...', '⬆️');
   const dummyDataButton = actionButton('Dummy-Daten laden', '🧪');
   const importInput = createEl('input', {
@@ -190,13 +188,7 @@ export const buildDrawerContent = ({
     className: 'd-none',
   });
 
-  actionsList.append(
-    weeklyTableButton,
-    exportButton,
-    importButton,
-    dummyDataButton,
-    importInput,
-  );
+  actionsList.append(importButton, dummyDataButton, importInput);
 
   const actionsSectionItem = buildAccordionItem({
     id: 'actions',
@@ -244,8 +236,6 @@ export const buildDrawerContent = ({
     nodes: [accordion],
     refs: {
       actions: {
-        weeklyTableButton,
-        exportButton,
         importButton,
         dummyDataButton,
         importInput,
