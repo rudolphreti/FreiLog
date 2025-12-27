@@ -13,6 +13,7 @@ import {
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import { normalizeFreeDays } from '../utils/freeDays.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -344,6 +345,21 @@ export const getPresets = (type) => {
   }
 
   return [];
+};
+
+export const getFreeDays = () => {
+  const data = getState().db?.settings;
+  return Array.isArray(data?.freeDays) ? data.freeDays : [];
+};
+
+export const saveFreeDays = (rows = []) => {
+  const normalized = normalizeFreeDays(rows);
+  updateAppData((data) => {
+    if (!data.settings) {
+      data.settings = {};
+    }
+    data.settings.freeDays = normalized;
+  });
 };
 
 export const getEntry = (date) => {

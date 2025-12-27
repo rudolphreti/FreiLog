@@ -9,6 +9,7 @@ import {
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
 import { setSelectedDate } from '../state/store.js';
+import { getFreeDayInfo } from '../utils/freeDays.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -210,13 +211,24 @@ const buildCellContent = ({
   displayDate,
   isEditMode,
   onEditCell,
+  isFreeDay,
+  freeDayLabel,
 }) => {
   const wrapper = createEl('div', { className: 'weekly-table__cell-content' });
+  if (freeDayLabel) {
+    wrapper.append(
+      createEl('span', {
+        className: 'weekly-table__holiday-label',
+        text: freeDayLabel,
+      }),
+    );
+  }
   if (content) {
     wrapper.append(content);
   }
 
-  const canEdit = isEditMode && typeof onEditCell === 'function' && child && dateKey;
+  const canEdit =
+    isEditMode && typeof onEditCell === 'function' && child && dateKey && !isFreeDay;
   if (canEdit) {
     wrapper.classList.add('weekly-table__cell-content--editable');
     const editButton = createEl('button', {
@@ -246,6 +258,7 @@ const buildWeeklyTable = ({
   observationGroups,
   onEditCell,
   isEditMode,
+  freeDays,
 }) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
@@ -274,8 +287,11 @@ const buildWeeklyTable = ({
   );
   weekDays.forEach((item) => {
     const dayEntry = normalizeDayEntry(days, item.dateKey);
+    const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
+    const holidayLabel = freeInfo?.label || null;
     angeboteRow.append(
       createEl('td', {
+        className: freeInfo ? 'weekly-table__cell--free-day' : '',
         children: [
           buildCellContent({
             content: buildPillList(dayEntry.angebote),
@@ -283,6 +299,8 @@ const buildWeeklyTable = ({
             displayDate: item.displayDate,
             isEditMode,
             onEditCell,
+            isFreeDay: Boolean(freeInfo),
+            freeDayLabel: holidayLabel,
           }),
         ],
       }),
@@ -298,8 +316,11 @@ const buildWeeklyTable = ({
     weekDays.forEach((item) => {
       const dayEntry = normalizeDayEntry(days, item.dateKey);
       const obs = dayEntry.observations[child] || [];
+      const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
+      const holidayLabel = freeInfo?.label || null;
       row.append(
         createEl('td', {
+          className: freeInfo ? 'weekly-table__cell--free-day' : '',
           children: [
             buildCellContent({
               content: buildObservationList(obs, getGroupsForLabel, observationGroups),
@@ -308,6 +329,8 @@ const buildWeeklyTable = ({
               displayDate: item.displayDate,
               isEditMode,
               onEditCell,
+              isFreeDay: Boolean(freeInfo),
+              freeDayLabel: holidayLabel,
             }),
           ],
         }),
@@ -338,6 +361,7 @@ export const createWeeklyTableView = ({
   children = [],
   observationCatalog = [],
   observationGroups = {},
+  freeDays = [],
 } = {}) => {
   let schoolYears = getSchoolWeeks(days);
   let selectedYear = schoolYears.length ? schoolYears[schoolYears.length - 1].label : null;
@@ -346,6 +370,7 @@ export const createWeeklyTableView = ({
   let currentChildren = Array.isArray(children) ? [...children] : [];
   let currentObservationCatalog = Array.isArray(observationCatalog) ? [...observationCatalog] : [];
   let currentObservationGroups = observationGroups || {};
+  let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
   let isEditMode = false;
   const getGroupsForLabel = (label) =>
@@ -529,6 +554,7 @@ export const createWeeklyTableView = ({
         window.setTimeout(() => openChild(8), 120);
       },
       isEditMode,
+      freeDays: currentFreeDays,
     });
     tableContainer.append(table);
   };
@@ -593,6 +619,7 @@ export const createWeeklyTableView = ({
     children: nextChildren = [],
     observationCatalog: nextObservationCatalog = [],
     observationGroups: nextObservationGroups = {},
+    freeDays: nextFreeDays = [],
   } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
@@ -600,6 +627,7 @@ export const createWeeklyTableView = ({
       ? [...nextObservationCatalog]
       : [];
     currentObservationGroups = nextObservationGroups || {};
+    currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     schoolYears = getSchoolWeeks(currentDays);
     if (!schoolYears.length) {

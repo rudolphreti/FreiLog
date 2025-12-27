@@ -669,6 +669,7 @@ export const bindObservations = ({
   date,
   observationGroups,
   savedFilters,
+  readOnly = false,
 }) => {
   if (
     !list ||
@@ -706,6 +707,7 @@ export const bindObservations = ({
   let isTemplateOverlayOpen = false;
   let isCreateOverlayOpen = false;
   let isEditOverlayOpen = false;
+  let isReadOnly = Boolean(readOnly);
   let editingObservation = null;
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
@@ -788,6 +790,9 @@ export const bindObservations = ({
   };
 
   const openTemplateOverlay = (child, { focusSearch = true } = {}) => {
+    if (isReadOnly) {
+      return;
+    }
     if (!child) {
       return;
     }
@@ -892,6 +897,9 @@ export const bindObservations = ({
   };
 
   const openCreateOverlay = (child) => {
+    if (isReadOnly) {
+      return;
+    }
     if (!child) {
       return;
     }
@@ -942,6 +950,9 @@ export const bindObservations = ({
     );
 
   const openEditOverlay = ({ text, groups }) => {
+    if (isReadOnly) {
+      return;
+    }
     if (!text) {
       return;
     }
@@ -1001,6 +1012,9 @@ export const bindObservations = ({
       '[data-role="observation-today-remove"]',
     );
     if (removeButton) {
+      if (isReadOnly) {
+        return;
+      }
       const tag = removeButton.dataset.value;
       if (tag) {
         removeObservationForChild(getDate(), card.dataset.child, tag);
@@ -1010,6 +1024,9 @@ export const bindObservations = ({
 
     const topButton = target.closest('[data-role="observation-top-add"]');
     if (topButton) {
+      if (isReadOnly) {
+        return;
+      }
       const tag = topButton.dataset.value;
       if (tag) {
         addTagForChild(getDate(), card.dataset.child, tag);
@@ -1038,6 +1055,9 @@ export const bindObservations = ({
       '[data-role="observation-template-open"]',
     );
     if (templateOpenButton) {
+      if (isReadOnly) {
+        return;
+      }
       openTemplateOverlay(card.dataset.child);
     }
 
@@ -1045,6 +1065,9 @@ export const bindObservations = ({
       '[data-role="observation-create-open"]',
     );
     if (createOpenButton) {
+      if (isReadOnly) {
+        return;
+      }
       closeTemplateOverlay();
       openCreateOverlay(card.dataset.child);
     }
@@ -1128,6 +1151,9 @@ export const bindObservations = ({
     if (target.dataset.role !== 'observation-create-form') {
       return;
     }
+    if (isReadOnly) {
+      return;
+    }
     event.preventDefault();
     const input = target.querySelector(
       '[data-role="observation-create-input"]',
@@ -1180,6 +1206,9 @@ export const bindObservations = ({
       return;
     }
     if (target.dataset.role !== 'observation-edit-form') {
+      return;
+    }
+    if (isReadOnly) {
       return;
     }
     event.preventDefault();
@@ -1247,6 +1276,9 @@ export const bindObservations = ({
       '[data-role="observation-create-group"]',
     );
     if (groupButton) {
+      if (isReadOnly) {
+        return;
+      }
       const selected = new Set(getCreateGroups());
       const value = groupButton.dataset.value;
       if (value) {
@@ -1297,6 +1329,9 @@ export const bindObservations = ({
       '[data-role="observation-template-add"]',
     );
     if (templateButton) {
+      if (isReadOnly) {
+        return;
+      }
       if (suppressTemplateClick) {
         return;
       }
@@ -1332,6 +1367,9 @@ export const bindObservations = ({
       '[data-role="observation-template-group-filter"]',
     );
     if (templateGroupButton) {
+      if (isReadOnly) {
+        return;
+      }
       toggleTemplateGroup(
         templatesOverlay,
         templateGroupButton.dataset.value,
@@ -1344,6 +1382,9 @@ export const bindObservations = ({
       '[data-role="observation-template-group-mode"]',
     );
     if (templateGroupModeButton) {
+      if (isReadOnly) {
+        return;
+      }
       setTemplateGroupMode(
         templatesOverlay,
         templateGroupModeButton.dataset.value,
@@ -1356,6 +1397,9 @@ export const bindObservations = ({
       '[data-role="observation-template-letter"]',
     );
     if (templateFilterButton) {
+      if (isReadOnly) {
+        return;
+      }
       setTemplateFilter(
         templatesOverlay,
         templateFilterButton.dataset.value || 'ALL',
@@ -1377,6 +1421,9 @@ export const bindObservations = ({
       return;
     }
     if (isEditOverlayOpen) {
+      return;
+    }
+    if (isReadOnly) {
       return;
     }
     if (templateLongPressTimer) {
@@ -1451,6 +1498,9 @@ export const bindObservations = ({
   const handleListPointerDown = (event) => {
     const target = event.target;
     if (!isHtmlElement(target)) {
+      return;
+    }
+    if (isReadOnly) {
       return;
     }
 
@@ -1556,6 +1606,18 @@ export const bindObservations = ({
       currentDate = nextDate;
       if (isOverlayOpen) {
         setOverlayTitle(activeChild);
+      }
+    },
+    updateReadOnly: (nextReadOnly) => {
+      const next = Boolean(nextReadOnly);
+      if (next === isReadOnly) {
+        return;
+      }
+      isReadOnly = next;
+      if (isReadOnly) {
+        closeTemplateOverlay();
+        closeCreateOverlay();
+        closeEditOverlay();
       }
     },
   };

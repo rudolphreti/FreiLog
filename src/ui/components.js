@@ -11,7 +11,7 @@ import {
 } from '../utils/observationCatalog.js';
 import { todayYmd } from '../utils/date.js';
 
-export const buildHeader = ({ selectedDate, showInitialActions = false }) => {
+export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
   const header = createEl('header', {
     className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top',
   });
@@ -37,6 +37,17 @@ export const buildHeader = ({ selectedDate, showInitialActions = false }) => {
     className: 'd-flex flex-column header-date',
     children: [dateInput],
   });
+  if (freeDayInfo) {
+    const label = freeDayInfo.label || 'Schulfrei';
+    const badge = createEl('span', {
+      className: 'free-day-pill mt-2',
+      children: [
+        createEl('span', { text: '🏖️' }),
+        createEl('span', { text: `${label}` }),
+      ],
+    });
+    dateGroup.append(badge);
+  }
 
   const importButton = createEl('button', {
     className: 'btn btn-outline-secondary d-inline-flex align-items-center gap-2',
@@ -235,7 +246,10 @@ export const buildDrawerContent = ({
   const classButton = actionButton('Meine Klasse', '🎒', {
     'data-role': 'class-settings',
   });
-  settingsContent.append(classButton);
+  const freeDaysButton = actionButton('Dni wolne (Freie Tage)', '🏖️', {
+    'data-role': 'free-days-settings',
+  });
+  settingsContent.append(classButton, freeDaysButton);
 
   const settingsSectionItem = buildAccordionItem({
     id: 'einstellungen',
@@ -263,6 +277,7 @@ export const buildDrawerContent = ({
       },
       settings: {
         classButton,
+        freeDaysButton,
       },
       sections: {
         actions: actionsSectionItem,
@@ -362,6 +377,7 @@ export const buildAngebotSection = ({
   angebote,
   selectedAngebote,
   newValue,
+  readOnly = false,
 }) => {
   const activeAngebote = Array.isArray(selectedAngebote)
     ? selectedAngebote
@@ -412,6 +428,9 @@ export const buildAngebotSection = ({
     className: 'd-flex align-items-center gap-2',
     children: [comboInput, addButton, datalist],
   });
+
+  comboInput.disabled = readOnly;
+  addButton.disabled = readOnly;
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
@@ -1379,6 +1398,8 @@ export const buildObservationsSection = ({
   observationCatalog,
   observationGroups,
   savedObsFilters,
+  readOnly = false,
+  freeDayInfo = null,
 }) => {
   const section = createEl('section', {
     className: 'card shadow-sm border-0',
@@ -1392,6 +1413,9 @@ export const buildObservationsSection = ({
     savedObsFilters || DEFAULT_SAVED_OBSERVATION_FILTERS,
   );
   let currentSavedFilters = normalizedSavedFilters;
+  let isReadOnly = Boolean(readOnly);
+  let currentFreeDayInfo = freeDayInfo;
+  let readOnlyNotice = null;
 
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-child-list',
@@ -1402,6 +1426,15 @@ export const buildObservationsSection = ({
       rebuildChildButton({ child, isAbsent, observationsByChild: observations }),
     );
   });
+
+  if (readOnly) {
+    const label = freeDayInfo?.label || 'Schulfrei';
+    readOnlyNotice = createEl('div', {
+      className: 'alert alert-success mb-0',
+      text: `Keine Eingaben möglich – ${label}`,
+    });
+    body.append(readOnlyNotice);
+  }
 
   const overlay = createEl('div', {
     className: 'observation-overlay',
@@ -1561,6 +1594,8 @@ export const buildObservationsSection = ({
     nextObservationGroups,
     nextObservationPresets,
     nextSavedObsFilters,
+    readOnly: nextReadOnly = false,
+    freeDayInfo: nextFreeDayInfo = null,
   }) => {
     if (nextSavedObsFilters) {
       currentSavedFilters = normalizeSavedObservationFilters(
@@ -1586,6 +1621,23 @@ export const buildObservationsSection = ({
     const observationGroupMapNext = buildObservationCatalogGroupMap(nextObservationCatalog);
     const getGroupsForLabelNext = (label) =>
       observationGroupMapNext.get(normalizeObservationKey(label)) || [];
+
+    const shouldBeReadOnly = Boolean(nextReadOnly);
+    const nextLabel = nextFreeDayInfo?.label || 'Schulfrei';
+    if (shouldBeReadOnly && !readOnlyNotice) {
+      readOnlyNotice = createEl('div', {
+        className: 'alert alert-success mb-0',
+        text: `Keine Eingaben möglich – ${nextLabel}`,
+      });
+      body.insertBefore(readOnlyNotice, list);
+    } else if (!shouldBeReadOnly && readOnlyNotice) {
+      readOnlyNotice.remove();
+      readOnlyNotice = null;
+    } else if (shouldBeReadOnly && readOnlyNotice) {
+      readOnlyNotice.textContent = `Keine Eingaben möglich – ${nextLabel}`;
+    }
+    isReadOnly = shouldBeReadOnly;
+    currentFreeDayInfo = nextFreeDayInfo;
 
     list.replaceChildren(
       ...nextChildren.map((child) =>

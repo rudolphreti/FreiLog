@@ -1,4 +1,5 @@
 import { todayYmd } from '../utils/date.js';
+import { getFreeDayInfo, isFreeDay } from '../utils/freeDays.js';
 import { clearElement } from './dom.js';
 import {
   buildHeader,
@@ -14,6 +15,7 @@ import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
 import { createClassSettingsView } from '../features/classSettings.js';
+import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
 
 const createFallbackEntry = (date) => ({
@@ -88,6 +90,8 @@ let appShell = null;
 let observationsBinding = null;
 let weeklyTableViewBinding = null;
 let classSettingsView = null;
+let freeDaysSettingsView = null;
+let angebotBinding = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -143,6 +147,9 @@ export const renderApp = (root, state) => {
   const children = db.children || [];
   const sortedChildren = getSortedChildren(children);
   const classProfile = db.classProfile || {};
+  const freeDays = db.settings?.freeDays || [];
+  const freeDayInfo = getFreeDayInfo(selectedDate, freeDays);
+  const isReadOnlyDay = isFreeDay(selectedDate, freeDays);
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
@@ -159,12 +166,13 @@ export const renderApp = (root, state) => {
 
   const preservedUi = getPreservedUiState(root);
 
-  const header = buildHeader({ selectedDate, showInitialActions: !hasData });
+  const header = buildHeader({ selectedDate, showInitialActions: !hasData, freeDayInfo });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
     selectedAngebote,
     newValue: preservedUi.angebotInputValue,
+    readOnly: isReadOnlyDay,
   });
   const observationsSection = appShell?.observationsView
     ? appShell.observationsView
@@ -177,6 +185,8 @@ export const renderApp = (root, state) => {
         observationCatalog,
         observationGroups,
         savedObsFilters,
+        readOnly: isReadOnlyDay,
+        freeDayInfo,
     });
   if (!weeklyTableViewBinding) {
     weeklyTableViewBinding = createWeeklyTableView({
@@ -184,6 +194,7 @@ export const renderApp = (root, state) => {
       children: sortedChildren,
       observationCatalog,
       observationGroups,
+      freeDays,
     });
   } else {
     weeklyTableViewBinding.update({
@@ -191,6 +202,7 @@ export const renderApp = (root, state) => {
       children: sortedChildren,
       observationCatalog,
       observationGroups,
+      freeDays,
     });
   }
 
@@ -204,6 +216,14 @@ export const renderApp = (root, state) => {
       profile: classProfile,
       children: sortedChildren,
     });
+  }
+
+  if (!freeDaysSettingsView) {
+    freeDaysSettingsView = createFreeDaysSettingsView({
+      freeDays,
+    });
+  } else {
+    freeDaysSettingsView.update({ freeDays });
   }
 
   if (!drawerShell) {
@@ -235,6 +255,7 @@ export const renderApp = (root, state) => {
       drawerShell.element,
       weeklyTableViewBinding.element,
       classSettingsView.element,
+      freeDaysSettingsView.element,
     );
     root.appendChild(container);
 
@@ -270,11 +291,18 @@ export const renderApp = (root, state) => {
         classSettingsView.open();
       });
     }
-    bindAngebot({
+    if (freeDaysSettingsView && settingsActions?.freeDaysButton) {
+      settingsActions.freeDaysButton.addEventListener('click', () => {
+        closeDrawer();
+        freeDaysSettingsView.open();
+      });
+    }
+    angebotBinding = bindAngebot({
       comboInput: angebotSection.refs.comboInput,
       addButton: angebotSection.refs.addButton,
       selectedList: angebotSection.refs.selectedList,
       date: selectedDate,
+      readOnly: isReadOnlyDay,
     });
     observationsBinding = bindObservations({
       list: observationsSection.refs.list,
@@ -289,6 +317,7 @@ export const renderApp = (root, state) => {
       date: selectedDate,
       observationGroups,
       savedFilters: savedObsFilters,
+      readOnly: isReadOnlyDay,
     });
 
     bindDrawerSections(drawerContentRefs?.sections);
@@ -318,10 +347,15 @@ export const renderApp = (root, state) => {
     nextObservationGroups: observationGroups,
     nextObservationPresets: observationPresets,
     nextSavedObsFilters: savedObsFilters,
+    readOnly: isReadOnlyDay,
+    freeDayInfo,
   });
 
   if (observationsBinding?.updateDate) {
     observationsBinding.updateDate(selectedDate);
+  }
+  if (observationsBinding?.updateReadOnly) {
+    observationsBinding.updateReadOnly(isReadOnlyDay);
   }
 
   const actions = drawerContentRefs?.actions;
@@ -355,13 +389,20 @@ export const renderApp = (root, state) => {
       classSettingsView.open();
     });
   }
+  if (freeDaysSettingsView && settingsActions?.freeDaysButton) {
+    settingsActions.freeDaysButton.addEventListener('click', () => {
+      closeDrawer();
+      freeDaysSettingsView.open();
+    });
+  }
 
   appShell.angebotEl = angebotSection.element;
-  bindAngebot({
+  angebotBinding = bindAngebot({
     comboInput: angebotSection.refs.comboInput,
     addButton: angebotSection.refs.addButton,
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
+    readOnly: isReadOnlyDay,
   });
   bindDrawerSections(drawerContentRefs?.sections);
 };

@@ -1,5 +1,6 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import { isValidYmd } from '../utils/date.js';
+import { DEFAULT_FREE_DAYS, normalizeFreeDays } from '../utils/freeDays.js';
 import {
   OBSERVATION_GROUP_CODES,
   buildObservationId,
@@ -9,7 +10,7 @@ import {
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -474,6 +475,7 @@ export const createEmptyAppData = () => ({
   observationStats: {},
   settings: {
     exportMode: DEFAULT_EXPORT_MODE,
+    freeDays: normalizeFreeDays(DEFAULT_FREE_DAYS, DEFAULT_FREE_DAYS),
   },
   ui: {
     ...normalizeUi(null),
@@ -534,6 +536,10 @@ export const normalizeAppData = (source, fallback = {}) => {
       : typeof fallbackData.settings?.exportMode === 'string'
         ? fallbackData.settings.exportMode
         : DEFAULT_EXPORT_MODE;
+  const freeDays = normalizeFreeDays(
+    base.settings?.freeDays,
+    fallbackData.settings?.freeDays || DEFAULT_FREE_DAYS,
+  );
 
   const uiSource = base.ui || fallbackData.ui || null;
 
@@ -549,6 +555,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     observationStats: buildObservationStats(days),
     settings: {
       exportMode,
+      freeDays,
     },
     ui: normalizeUi(uiSource),
   };

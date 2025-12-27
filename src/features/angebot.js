@@ -50,12 +50,20 @@ export const bindAngebot = ({
   addButton,
   selectedList,
   date,
+  readOnly = false,
 }) => {
   if (!comboInput || !addButton || !selectedList) {
     return;
   }
 
+  let isReadOnly = Boolean(readOnly);
+  comboInput.disabled = isReadOnly;
+  addButton.disabled = isReadOnly;
+
   const handleAdd = () => {
+    if (isReadOnly) {
+      return;
+    }
     const value = comboInput.value || '';
     addOffer({
       date,
@@ -73,6 +81,9 @@ export const bindAngebot = ({
   });
 
   selectedList.addEventListener('click', (event) => {
+    if (isReadOnly) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
@@ -90,4 +101,14 @@ export const bindAngebot = ({
     }
     removeOffer(date, value);
   });
+
+  const updateReadOnly = (nextReadOnly) => {
+    isReadOnly = Boolean(nextReadOnly);
+    comboInput.disabled = isReadOnly;
+    addButton.disabled = isReadOnly;
+  };
+
+  return {
+    updateReadOnly,
+  };
 };
