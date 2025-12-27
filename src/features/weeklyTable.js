@@ -272,7 +272,7 @@ const buildWeeklyTable = ({
     if (item.holidayLabel) {
       headerContent.append(
         createEl('span', {
-          className: 'badge text-bg-warning-subtle text-warning-emphasis weekly-table__holiday-badge',
+          className: 'badge weekly-table__holiday-badge',
           text: item.holidayLabel,
         }),
       );

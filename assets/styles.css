@@ -926,8 +926,10 @@ body {
 }
 .weekly-table__holiday-badge {
   align-self: flex-start;
-  border: 1px solid rgba(253, 224, 71, 0.6);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+  background: #16a34a;
+  color: #ffffff;
+  border: 1px solid #15803d;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
 }
 
 .observation-templates-overlay {
