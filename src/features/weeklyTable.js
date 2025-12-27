@@ -576,10 +576,6 @@ export const createWeeklyTableView = ({
 
   weekSelectGroup.select.addEventListener('change', (event) => {
     selectedWeekId = event.target.value || null;
-    console.log('weekly-table: week-select-change', {
-      selectedYear,
-      selectedWeekId,
-    });
     render();
   });
 
