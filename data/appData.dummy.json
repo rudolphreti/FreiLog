@@ -1,0 +1,673 @@
+{
+  "schemaVersion": 4,
+  "children": [
+    "Aylin",
+    "Ben",
+    "Clara",
+    "Dario",
+    "Elena",
+    "Farah",
+    "Gustav",
+    "Hannah",
+    "Ilias",
+    "Jara",
+    "Kian",
+    "Lena",
+    "Linus",
+    "Mara",
+    "Niko",
+    "Oskar",
+    "Paula",
+    "Quinn",
+    "Rana",
+    "Samir",
+    "Tara",
+    "Uli",
+    "Valeska",
+    "Wiebke",
+    "Yara"
+  ],
+  "classProfile": {
+    "name": "Schmetterlingsgruppe",
+    "badge": "🦋",
+    "motto": "Gemeinsam entdecken wir Neues",
+    "notes": "Beispieldaten für Tests.",
+    "childrenNotes": {}
+  },
+  "angebote": [
+    "Freispiel",
+    "Musikraum",
+    "Bau-Ecke",
+    "Bewegung",
+    "Theater",
+    "Lesen",
+    "Forschen",
+    "Kreativatelier",
+    "Ausflug",
+    "Kochen"
+  ],
+  "observationTemplates": [
+    "Konzentriert gearbeitet",
+    "Teamfähig",
+    "Neue Ideen eingebracht",
+    "Mutig ausprobiert",
+    "Musikalisch beteiligt",
+    "Ruhige Pause gebraucht",
+    "Bewegungsfreude",
+    "Neugierig gefragt",
+    "Hilfsbereit",
+    "Selbstständig gestartet",
+    "Rücksichtsvoll",
+    "Feinmotorik geübt"
+  ],
+  "observationCatalog": [
+    {
+      "id": "konzentriert-gearbeitet",
+      "text": "Konzentriert gearbeitet",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "teamfaehig",
+      "text": "Teamfähig",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "neue-ideen-eingebracht",
+      "text": "Neue Ideen eingebracht",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "mutig-ausprobiert",
+      "text": "Mutig ausprobiert",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "musikalisch-beteiligt",
+      "text": "Musikalisch beteiligt",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "ruhige-pause-gebraucht",
+      "text": "Ruhige Pause gebraucht",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "bewegungsfreude",
+      "text": "Bewegungsfreude",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "neugierig-gefragt",
+      "text": "Neugierig gefragt",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "hilfsbereit",
+      "text": "Hilfsbereit",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "selbstaendig-gestartet",
+      "text": "Selbstständig gestartet",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "ruecksichtsvoll",
+      "text": "Rücksichtsvoll",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    },
+    {
+      "id": "feinmotorik-geuebt",
+      "text": "Feinmotorik geübt",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2024-09-01T00:00:00Z"
+    }
+  ],
+  "observationGroups": {
+    "ROT": {
+      "code": "ROT",
+      "label": "künstlerisch, kreativ",
+      "color": "#d32f2f"
+    },
+    "BLAU": {
+      "code": "BLAU",
+      "label": "musikalisch",
+      "color": "#1976d2"
+    },
+    "ORANGE": {
+      "code": "ORANGE",
+      "label": "sportlich",
+      "color": "#f57c00"
+    },
+    "GRUEN": {
+      "code": "GRUEN",
+      "label": "technisch, forschend",
+      "color": "#388e3c"
+    },
+    "LILA": {
+      "code": "LILA",
+      "label": "Gesellschaft, Verhalten, Politik",
+      "color": "#7b1fa2"
+    },
+    "SCHWARZ": {
+      "code": "SCHWARZ",
+      "label": "Alarm",
+      "color": "#212121"
+    }
+  },
+  "days": {
+    "2024-09-02": {
+      "date": "2024-09-02",
+      "angebote": [
+        "Freispiel",
+        "Kreativatelier"
+      ],
+      "observations": {
+        "Aylin": [
+          "Hilfsbereit",
+          "Neue Ideen eingebracht"
+        ],
+        "Ben": [
+          "Bewegungsfreude"
+        ],
+        "Clara": [
+          "Ruhige Pause gebraucht"
+        ],
+        "Dario": [
+          "Teamfähig"
+        ]
+      },
+      "absentChildIds": [
+        "Linus"
+      ],
+      "notes": "Außenspiel mit kurzer Regenpause"
+    },
+    "2024-09-05": {
+      "date": "2024-09-05",
+      "angebote": [
+        "Musikraum",
+        "Lesen"
+      ],
+      "observations": {
+        "Elena": [
+          "Musikalisch beteiligt"
+        ],
+        "Farah": [
+          "Ruhige Pause gebraucht"
+        ],
+        "Gustav": [
+          "Teamfähig",
+          "Hilfsbereit"
+        ],
+        "Hannah": [
+          "Neugierig gefragt"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Neue Lieder ausprobiert"
+    },
+    "2024-09-09": {
+      "date": "2024-09-09",
+      "angebote": [
+        "Bau-Ecke",
+        "Forschen"
+      ],
+      "observations": {
+        "Ilias": [
+          "Konzentriert gearbeitet"
+        ],
+        "Jara": [
+          "Neue Ideen eingebracht"
+        ],
+        "Kian": [
+          "Selbstständig gestartet",
+          "Feinmotorik geübt"
+        ],
+        "Lena": [
+          "Rücksichtsvoll"
+        ]
+      },
+      "absentChildIds": [
+        "Yara"
+      ],
+      "notes": "Turmbau-Challenge"
+    },
+    "2024-09-12": {
+      "date": "2024-09-12",
+      "angebote": [
+        "Bewegung",
+        "Freispiel"
+      ],
+      "observations": {
+        "Linus": [
+          "Mutig ausprobiert"
+        ],
+        "Mara": [
+          "Bewegungsfreude"
+        ],
+        "Niko": [
+          "Teamfähig"
+        ],
+        "Oskar": [
+          "Hilfsbereit"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Parcours in der Turnhalle"
+    },
+    "2024-09-16": {
+      "date": "2024-09-16",
+      "angebote": [
+        "Theater",
+        "Musikraum"
+      ],
+      "observations": {
+        "Paula": [
+          "Musikalisch beteiligt"
+        ],
+        "Quinn": [
+          "Teamfähig",
+          "Rücksichtsvoll"
+        ],
+        "Rana": [
+          "Mutig ausprobiert"
+        ]
+      },
+      "absentChildIds": [
+        "Aylin"
+      ],
+      "notes": "Rhythmusspiele mit Trommeln"
+    },
+    "2024-09-19": {
+      "date": "2024-09-19",
+      "angebote": [
+        "Kreativatelier",
+        "Lesen"
+      ],
+      "observations": {
+        "Samir": [
+          "Neue Ideen eingebracht",
+          "Feinmotorik geübt"
+        ],
+        "Tara": [
+          "Konzentriert gearbeitet"
+        ],
+        "Uli": [
+          "Hilfsbereit"
+        ],
+        "Valeska": [
+          "Neugierig gefragt"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Herbstblätter geklebt"
+    },
+    "2024-09-23": {
+      "date": "2024-09-23",
+      "angebote": [
+        "Freispiel",
+        "Bewegung"
+      ],
+      "observations": {
+        "Wiebke": [
+          "Bewegungsfreude"
+        ],
+        "Yara": [
+          "Mutig ausprobiert"
+        ],
+        "Aylin": [
+          "Rücksichtsvoll"
+        ]
+      },
+      "absentChildIds": [
+        "Ben"
+      ],
+      "notes": "Ballspiele im Hof"
+    },
+    "2024-09-26": {
+      "date": "2024-09-26",
+      "angebote": [
+        "Forschen",
+        "Kochen"
+      ],
+      "observations": {
+        "Clara": [
+          "Neugierig gefragt"
+        ],
+        "Dario": [
+          "Teamfähig"
+        ],
+        "Elena": [
+          "Hilfsbereit",
+          "Feinmotorik geübt"
+        ]
+      },
+      "absentChildIds": [
+        "Gustav"
+      ],
+      "notes": "Gemüsesuppe gemeinsam gekocht"
+    },
+    "2024-10-01": {
+      "date": "2024-10-01",
+      "angebote": [
+        "Ausflug"
+      ],
+      "observations": {
+        "Farah": [
+          "Konzentriert gearbeitet"
+        ],
+        "Hannah": [
+          "Rücksichtsvoll"
+        ],
+        "Ilias": [
+          "Mutig ausprobiert"
+        ],
+        "Jara": [
+          "Teamfähig"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Besuch im Stadtpark"
+    },
+    "2024-10-07": {
+      "date": "2024-10-07",
+      "angebote": [
+        "Musikraum",
+        "Theater"
+      ],
+      "observations": {
+        "Kian": [
+          "Musikalisch beteiligt"
+        ],
+        "Lena": [
+          "Hilfsbereit"
+        ],
+        "Linus": [
+          "Neue Ideen eingebracht"
+        ],
+        "Mara": [
+          "Ruhige Pause gebraucht"
+        ]
+      },
+      "absentChildIds": [
+        "Oskar"
+      ],
+      "notes": "Theaterstück geplant"
+    },
+    "2024-10-14": {
+      "date": "2024-10-14",
+      "angebote": [
+        "Kreativatelier",
+        "Lesen"
+      ],
+      "observations": {
+        "Niko": [
+          "Feinmotorik geübt"
+        ],
+        "Oskar": [
+          "Teamfähig"
+        ],
+        "Paula": [
+          "Konzentriert gearbeitet"
+        ],
+        "Quinn": [
+          "Ruhige Pause gebraucht"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Laternen gebastelt"
+    },
+    "2024-10-21": {
+      "date": "2024-10-21",
+      "angebote": [
+        "Bewegung",
+        "Freispiel"
+      ],
+      "observations": {
+        "Rana": [
+          "Mutig ausprobiert"
+        ],
+        "Samir": [
+          "Bewegungsfreude"
+        ],
+        "Tara": [
+          "Hilfsbereit"
+        ],
+        "Uli": [
+          "Rücksichtsvoll"
+        ]
+      },
+      "absentChildIds": [
+        "Valeska"
+      ],
+      "notes": "Hindernislauf im Garten"
+    },
+    "2024-10-28": {
+      "date": "2024-10-28",
+      "angebote": [
+        "Lesen",
+        "Forschen"
+      ],
+      "observations": {
+        "Valeska": [
+          "Neugierig gefragt"
+        ],
+        "Wiebke": [
+          "Konzentriert gearbeitet"
+        ],
+        "Yara": [
+          "Neue Ideen eingebracht"
+        ]
+      },
+      "absentChildIds": [
+        "Aylin"
+      ],
+      "notes": "Geschichten zur Jahreszeit"
+    },
+    "2024-11-04": {
+      "date": "2024-11-04",
+      "angebote": [
+        "Kochen",
+        "Bau-Ecke"
+      ],
+      "observations": {
+        "Ben": [
+          "Hilfsbereit"
+        ],
+        "Clara": [
+          "Feinmotorik geübt"
+        ],
+        "Dario": [
+          "Teamfähig"
+        ],
+        "Elena": [
+          "Neugierig gefragt"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Kürbissuppe vorbereitet"
+    },
+    "2024-11-12": {
+      "date": "2024-11-12",
+      "angebote": [
+        "Ausflug"
+      ],
+      "observations": {
+        "Farah": [
+          "Rücksichtsvoll"
+        ],
+        "Gustav": [
+          "Teamfähig"
+        ],
+        "Hannah": [
+          "Mutig ausprobiert"
+        ],
+        "Ilias": [
+          "Selbstständig gestartet"
+        ]
+      },
+      "absentChildIds": [
+        "Linus"
+      ],
+      "notes": "Waldspaziergang"
+    },
+    "2024-11-18": {
+      "date": "2024-11-18",
+      "angebote": [
+        "Theater",
+        "Musikraum"
+      ],
+      "observations": {
+        "Jara": [
+          "Musikalisch beteiligt"
+        ],
+        "Kian": [
+          "Teamfähig"
+        ],
+        "Lena": [
+          "Konzentriert gearbeitet"
+        ],
+        "Mara": [
+          "Ruhige Pause gebraucht"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Probe für Winteraufführung"
+    },
+    "2024-11-26": {
+      "date": "2024-11-26",
+      "angebote": [
+        "Kreativatelier",
+        "Bewegung"
+      ],
+      "observations": {
+        "Niko": [
+          "Neue Ideen eingebracht"
+        ],
+        "Oskar": [
+          "Mutig ausprobiert"
+        ],
+        "Paula": [
+          "Hilfsbereit"
+        ],
+        "Quinn": [
+          "Bewegungsfreude"
+        ]
+      },
+      "absentChildIds": [
+        "Rana"
+      ],
+      "notes": "Winterdeko entworfen"
+    },
+    "2024-12-03": {
+      "date": "2024-12-03",
+      "angebote": [
+        "Lesen",
+        "Freispiel"
+      ],
+      "observations": {
+        "Samir": [
+          "Konzentriert gearbeitet"
+        ],
+        "Tara": [
+          "Ruhige Pause gebraucht"
+        ],
+        "Uli": [
+          "Teamfähig"
+        ],
+        "Valeska": [
+          "Feinmotorik geübt"
+        ]
+      },
+      "absentChildIds": [
+        "Wiebke"
+      ],
+      "notes": "Vorlesenachmittag"
+    },
+    "2024-12-11": {
+      "date": "2024-12-11",
+      "angebote": [
+        "Kochen",
+        "Theater"
+      ],
+      "observations": {
+        "Wiebke": [
+          "Hilfsbereit"
+        ],
+        "Yara": [
+          "Teamfähig"
+        ],
+        "Aylin": [
+          "Selbstständig gestartet"
+        ],
+        "Ben": [
+          "Rücksichtsvoll"
+        ]
+      },
+      "absentChildIds": [],
+      "notes": "Plätzchen gebacken"
+    }
+  },
+  "observationStats": {},
+  "settings": {
+    "exportMode": "day"
+  },
+  "ui": {
+    "selectedDate": "2024-09-02",
+    "exportMode": "day",
+    "observationsFilter": "ALL",
+    "overlay": {
+      "savedObsFilters": {
+        "multiGroups": false,
+        "andOrMode": "AND",
+        "showAndOr": true,
+        "showAlphabet": false,
+        "selectedGroups": [],
+        "selectedLetter": "ALL"
+      }
+    },
+    "drawer": {
+      "open": false,
+      "sections": {
+        "actions": false,
+        "angebote": false,
+        "einstellungen": false
+      }
+    }
+  }
+}

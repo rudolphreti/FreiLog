@@ -14,6 +14,7 @@ import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
 import { createClassSettingsView } from '../features/classSettings.js';
+import { bindDummyDataLoader } from '../features/dummyData.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -238,6 +239,10 @@ export const renderApp = (root, state) => {
       importButton: actions?.importButton,
       fileInput: actions?.importInput,
     });
+    bindDummyDataLoader({
+      button: actions?.dummyDataButton,
+      onLoaded: closeDrawer,
+    });
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
       actions.weeklyTableButton.addEventListener('click', () => {
         weeklyTableViewBinding.open();
@@ -312,6 +317,10 @@ export const renderApp = (root, state) => {
     exportButton: actions?.exportButton,
     importButton: actions?.importButton,
     fileInput: actions?.importInput,
+  });
+  bindDummyDataLoader({
+    button: actions?.dummyDataButton,
+    onLoaded: closeDrawer,
   });
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {
     actions.weeklyTableButton.addEventListener('click', () => {
