@@ -212,17 +212,8 @@ const buildCellContent = ({
   isEditMode,
   onEditCell,
   isFreeDay,
-  freeDayLabel,
 }) => {
   const wrapper = createEl('div', { className: 'weekly-table__cell-content' });
-  if (freeDayLabel) {
-    wrapper.append(
-      createEl('span', {
-        className: 'weekly-table__holiday-label',
-        text: freeDayLabel,
-      }),
-    );
-  }
   if (content) {
     wrapper.append(content);
   }
@@ -266,13 +257,27 @@ const buildWeeklyTable = ({
   const thead = createEl('thead');
   const headerRow = createEl('tr');
   headerRow.append(createEl('th', { scope: 'col', text: '' }));
-  const weekDays = getWeekDays(week);
+  const weekDays = getWeekDays(week).map((item) => {
+    const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
+    const holidayLabel = freeInfo?.type === 'holiday' && freeInfo.label ? freeInfo.label : null;
+    return { ...item, freeInfo, holidayLabel };
+  });
   weekDays.forEach((item) => {
     const cell = createEl('th', { scope: 'col' });
-    cell.append(
+    const headerContent = createEl('div', { className: 'd-flex flex-column gap-1' });
+    headerContent.append(
       createEl('div', { className: 'fw-semibold', text: item.label }),
       createEl('div', { className: 'text-muted small', text: item.displayDate }),
     );
+    if (item.holidayLabel) {
+      headerContent.append(
+        createEl('span', {
+          className: 'badge text-bg-warning-subtle text-warning-emphasis weekly-table__holiday-badge',
+          text: item.holidayLabel,
+        }),
+      );
+    }
+    cell.append(headerContent);
     headerRow.append(cell);
   });
   thead.append(headerRow);
@@ -287,8 +292,7 @@ const buildWeeklyTable = ({
   );
   weekDays.forEach((item) => {
     const dayEntry = normalizeDayEntry(days, item.dateKey);
-    const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
-    const holidayLabel = freeInfo?.label || null;
+    const freeInfo = item.freeInfo;
     angeboteRow.append(
       createEl('td', {
         className: freeInfo ? 'weekly-table__cell--free-day' : '',
@@ -300,7 +304,6 @@ const buildWeeklyTable = ({
             isEditMode,
             onEditCell,
             isFreeDay: Boolean(freeInfo),
-            freeDayLabel: holidayLabel,
           }),
         ],
       }),
@@ -316,8 +319,7 @@ const buildWeeklyTable = ({
     weekDays.forEach((item) => {
       const dayEntry = normalizeDayEntry(days, item.dateKey);
       const obs = dayEntry.observations[child] || [];
-      const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
-      const holidayLabel = freeInfo?.label || null;
+      const freeInfo = item.freeInfo;
       row.append(
         createEl('td', {
           className: freeInfo ? 'weekly-table__cell--free-day' : '',
@@ -330,7 +332,6 @@ const buildWeeklyTable = ({
               isEditMode,
               onEditCell,
               isFreeDay: Boolean(freeInfo),
-              freeDayLabel: holidayLabel,
             }),
           ],
         }),

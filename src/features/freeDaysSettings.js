@@ -33,7 +33,7 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
   });
   const panel = createEl('div', { className: 'free-days-overlay__panel' });
   const header = createEl('div', { className: 'free-days-overlay__header' });
-  const title = createEl('h3', { className: 'h4 mb-0', text: 'Freie Tage (Dni wolne)' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: 'Freie Tage' });
   const closeButton = createEl('button', {
     className: 'btn-close free-days-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },

@@ -924,6 +924,11 @@ body {
   padding: 0.2rem 0.6rem;
   margin-bottom: 0.25rem;
 }
+.weekly-table__holiday-badge {
+  align-self: flex-start;
+  border: 1px solid rgba(253, 224, 71, 0.6);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+}
 
 .observation-templates-overlay {
   position: absolute;

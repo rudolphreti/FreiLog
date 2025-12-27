@@ -246,7 +246,7 @@ export const buildDrawerContent = ({
   const classButton = actionButton('Meine Klasse', '🎒', {
     'data-role': 'class-settings',
   });
-  const freeDaysButton = actionButton('Dni wolne (Freie Tage)', '🏖️', {
+  const freeDaysButton = actionButton('Freie Tage', '🏖️', {
     'data-role': 'free-days-settings',
   });
   settingsContent.append(classButton, freeDaysButton);
