@@ -9,8 +9,14 @@ import {
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import {
+  DEFAULT_TIMETABLE_LESSONS,
+  DEFAULT_TIMETABLE_SCHEDULE,
+  DEFAULT_TIMETABLE_SUBJECTS,
+  TIMETABLE_DAY_ORDER,
+} from '../utils/timetable.js';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -64,6 +70,23 @@ const DEFAULT_OBSERVATION_GROUPS = {
 
 const isPlainObject = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const cloneTimetableLessons = (lessons = []) =>
+  Array.isArray(lessons)
+    ? lessons.map((entry, index) => ({
+        period: typeof entry?.period === 'number' ? entry.period : index + 1,
+        start: entry?.start || '',
+        end: entry?.end || '',
+      }))
+    : [];
+
+const cloneTimetableSchedule = (schedule = {}) => {
+  const cloned = {};
+  Object.entries(schedule).forEach(([day, entries]) => {
+    cloned[day] = Array.isArray(entries) ? entries.map((cell) => [...(cell || [])]) : [];
+  });
+  return cloned;
+};
 
 export const ensureUniqueSortedStrings = (arr) => {
   if (!Array.isArray(arr)) {
@@ -345,6 +368,76 @@ export const normalizeSavedObservationFilters = (value) => {
   };
 };
 
+const normalizeTimetableSubjects = (value, fallback = []) => {
+  const subjects = ensureUniqueSortedStrings(
+    Array.isArray(value) ? value : Array.isArray(fallback) ? fallback : [],
+  );
+  return subjects.sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+};
+
+const isValidTimeRange = (value) => typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
+
+const normalizeTimetableLessons = (value, fallback = DEFAULT_TIMETABLE_LESSONS) => {
+  const source = Array.isArray(value) ? value : Array.isArray(fallback) ? fallback : [];
+  const items = [];
+  const maxLessons = 10;
+
+  for (let i = 0; i < maxLessons; i += 1) {
+    const period = i + 1;
+    const entry = source[i] || {};
+    const start = isValidTimeRange(entry.start) ? entry.start : DEFAULT_TIMETABLE_LESSONS[i].start;
+    const end = isValidTimeRange(entry.end) ? entry.end : DEFAULT_TIMETABLE_LESSONS[i].end;
+    items.push({ period, start, end });
+  }
+
+  return items;
+};
+
+const normalizeTimetableSchedule = (
+  schedule,
+  subjects = DEFAULT_TIMETABLE_SUBJECTS,
+  lessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
+  const normalizedSchedule = {};
+
+  const normalizeCell = (value) => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const unique = new Set();
+    const items = [];
+    value.forEach((entry) => {
+      if (typeof entry !== 'string') {
+        return;
+      }
+      const trimmed = entry.trim();
+      if (!trimmed) {
+        return;
+      }
+      const key = trimmed.toLocaleLowerCase('de');
+      if (unique.has(key)) {
+        return;
+      }
+      unique.add(key);
+      // Keep subject even if not in list to avoid data loss; will be shown as-is.
+      items.push(trimmed);
+    });
+    return items;
+  };
+
+  const source = isPlainObject(schedule) ? schedule : {};
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    const dayEntries = Array.isArray(source[key]) ? source[key] : [];
+    const normalizedDay = [];
+    for (let i = 0; i < lessons.length; i += 1) {
+      normalizedDay.push(normalizeCell(dayEntries[i]));
+    }
+    normalizedSchedule[key] = normalizedDay;
+  });
+
+  return normalizedSchedule;
+};
+
 const normalizeUi = (ui) => {
   const source = isPlainObject(ui) ? ui : {};
   const drawer = isPlainObject(source.drawer) ? source.drawer : {};
@@ -507,6 +600,9 @@ export const createEmptyAppData = () => ({
   observationTemplates: [],
   observationCatalog: [],
   observationGroups: { ...DEFAULT_OBSERVATION_GROUPS },
+  timetableSubjects: [...DEFAULT_TIMETABLE_SUBJECTS],
+  timetableLessons: cloneTimetableLessons(DEFAULT_TIMETABLE_LESSONS),
+  timetableSchedule: cloneTimetableSchedule(DEFAULT_TIMETABLE_SCHEDULE),
   days: {},
   observationStats: {},
   settings: {
@@ -550,6 +646,20 @@ export const normalizeAppData = (source, fallback = {}) => {
       : fallbackData.observationTemplates,
   );
 
+  const timetableSubjects = normalizeTimetableSubjects(
+    base.timetableSubjects,
+    fallbackData.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+  );
+  const timetableLessons = normalizeTimetableLessons(
+    base.timetableLessons,
+    fallbackData.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+  );
+  const timetableSchedule = normalizeTimetableSchedule(
+    base.timetableSchedule,
+    timetableSubjects,
+    timetableLessons,
+  );
+
   const observationCatalog = normalizeObservationCatalog(
     Array.isArray(base.observationCatalog)
       ? base.observationCatalog
@@ -587,6 +697,9 @@ export const normalizeAppData = (source, fallback = {}) => {
     observationTemplates: getObservationCatalogLabels(observationCatalog),
     observationCatalog,
     observationGroups,
+    timetableSubjects,
+    timetableLessons,
+    timetableSchedule,
     days,
     observationStats: buildObservationStats(days),
     settings: {

@@ -249,7 +249,10 @@ export const buildDrawerContent = ({
   const freeDaysButton = actionButton('Freie Tage', '🏖️', {
     'data-role': 'free-days-settings',
   });
-  settingsContent.append(classButton, freeDaysButton);
+  const timetableButton = actionButton('Stundenplan', '🗓️', {
+    'data-role': 'timetable-settings',
+  });
+  settingsContent.append(classButton, freeDaysButton, timetableButton);
 
   const settingsSectionItem = buildAccordionItem({
     id: 'einstellungen',
@@ -278,6 +281,7 @@ export const buildDrawerContent = ({
       settings: {
         classButton,
         freeDaysButton,
+        timetableButton,
       },
       sections: {
         actions: actionsSectionItem,

@@ -14,6 +14,12 @@ import {
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
 import { isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
+import {
+  DEFAULT_TIMETABLE_LESSONS,
+  DEFAULT_TIMETABLE_SCHEDULE,
+  DEFAULT_TIMETABLE_SUBJECTS,
+  TIMETABLE_DAY_ORDER,
+} from '../utils/timetable.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -220,6 +226,71 @@ const mergeObservations = (currentObservations, patchObservations) => {
   });
 
   return base;
+};
+
+const normalizeTimetableSubjects = (value) =>
+  ensureUniqueSortedStrings(Array.isArray(value) ? value : []).sort((a, b) =>
+    a.localeCompare(b, 'de', { sensitivity: 'base' }),
+  );
+
+const isValidTimeRange = (value) => typeof value === 'string' && /^\d{2}:\d{2}$/.test(value);
+
+const normalizeTimetableLessons = (value, fallback = DEFAULT_TIMETABLE_LESSONS) => {
+  const source = Array.isArray(value) ? value : Array.isArray(fallback) ? fallback : [];
+  const result = [];
+  const max = 10;
+  for (let i = 0; i < max; i += 1) {
+    const period = i + 1;
+    const entry = source[i] || {};
+    const start = isValidTimeRange(entry.start) ? entry.start : fallback[i]?.start || '';
+    const end = isValidTimeRange(entry.end) ? entry.end : fallback[i]?.end || '';
+    result.push({ period, start, end });
+  }
+  return result;
+};
+
+const normalizeTimetableSchedule = (
+  schedule,
+  subjects = DEFAULT_TIMETABLE_SUBJECTS,
+  lessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
+  const normalizedSchedule = {};
+  const source = schedule && typeof schedule === 'object' ? schedule : {};
+
+  const normalizeCell = (value) => {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const unique = new Set();
+    const items = [];
+    value.forEach((entry) => {
+      if (typeof entry !== 'string') {
+        return;
+      }
+      const trimmed = entry.trim();
+      if (!trimmed) {
+        return;
+      }
+      const key = trimmed.toLocaleLowerCase('de');
+      if (unique.has(key)) {
+        return;
+      }
+      unique.add(key);
+      items.push(trimmed);
+    });
+    return items;
+  };
+
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    const dayEntries = Array.isArray(source[key]) ? source[key] : [];
+    const normalizedDay = [];
+    for (let i = 0; i < lessons.length; i += 1) {
+      normalizedDay.push(normalizeCell(dayEntries[i]));
+    }
+    normalizedSchedule[key] = normalizedDay;
+  });
+
+  return normalizedSchedule;
 };
 
 const applyChildMappingToEntry = (entry, renameMap, allowedSet) => {
@@ -795,4 +866,64 @@ export const importJson = (obj) => {
   if (applied) {
     setSelectedDate(todayYmd());
   }
+};
+
+export const getTimetable = () => {
+  const state = getState();
+  const subjects = normalizeTimetableSubjects(state.db?.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS);
+  const lessons = normalizeTimetableLessons(state.db?.timetableLessons || DEFAULT_TIMETABLE_LESSONS);
+  const schedule = normalizeTimetableSchedule(
+    state.db?.timetableSchedule || DEFAULT_TIMETABLE_SCHEDULE,
+    subjects,
+    lessons,
+  );
+  return { subjects, lessons, schedule };
+};
+
+export const saveTimetableSubjects = (subjects) => {
+  updateAppData((data) => {
+    const normalizedSubjects = normalizeTimetableSubjects(subjects);
+    data.timetableSubjects = normalizedSubjects;
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
+      normalizedSubjects,
+      data.timetableLessons,
+    );
+  });
+};
+
+export const saveTimetableLessons = (lessons) => {
+  updateAppData((data) => {
+    const normalizedLessons = normalizeTimetableLessons(lessons, DEFAULT_TIMETABLE_LESSONS);
+    data.timetableLessons = normalizedLessons;
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
+      data.timetableSubjects,
+      normalizedLessons,
+    );
+  });
+};
+
+export const saveTimetableSchedule = (schedule) => {
+  updateAppData((data) => {
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      schedule,
+      data.timetableSubjects,
+      data.timetableLessons,
+    );
+  });
 };

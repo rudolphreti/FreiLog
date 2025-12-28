@@ -17,6 +17,7 @@ import { createWeeklyTableView } from '../features/weeklyTable.js';
 import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
+import { createTimetableSettingsView } from '../features/timetableSettings.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -92,6 +93,7 @@ let weeklyTableViewBinding = null;
 let classSettingsView = null;
 let freeDaysSettingsView = null;
 let angebotBinding = null;
+let timetableSettingsView = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -158,6 +160,9 @@ export const renderApp = (root, state) => {
   const observationStats = db.observationStats || {};
   const observationCatalog = db.observationCatalog || [];
   const observationGroups = db.observationGroups || {};
+  const timetableSubjects = db.timetableSubjects || [];
+  const timetableLessons = db.timetableLessons || [];
+  const timetableSchedule = db.timetableSchedule || {};
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
   const hasData =
@@ -226,6 +231,20 @@ export const renderApp = (root, state) => {
     freeDaysSettingsView.update({ freeDays });
   }
 
+  if (!timetableSettingsView) {
+    timetableSettingsView = createTimetableSettingsView({
+      subjects: timetableSubjects,
+      lessons: timetableLessons,
+      schedule: timetableSchedule,
+    });
+  } else {
+    timetableSettingsView.update({
+      subjects: timetableSubjects,
+      lessons: timetableLessons,
+      schedule: timetableSchedule,
+    });
+  }
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -256,6 +275,7 @@ export const renderApp = (root, state) => {
       weeklyTableViewBinding.element,
       classSettingsView.element,
       freeDaysSettingsView.element,
+      timetableSettingsView.element,
     );
     root.appendChild(container);
 
@@ -295,6 +315,12 @@ export const renderApp = (root, state) => {
       settingsActions.freeDaysButton.addEventListener('click', () => {
         closeDrawer();
         freeDaysSettingsView.open();
+      });
+    }
+    if (timetableSettingsView && settingsActions?.timetableButton) {
+      settingsActions.timetableButton.addEventListener('click', () => {
+        closeDrawer();
+        timetableSettingsView.open();
       });
     }
     angebotBinding = bindAngebot({
@@ -393,6 +419,12 @@ export const renderApp = (root, state) => {
     settingsActions.freeDaysButton.addEventListener('click', () => {
       closeDrawer();
       freeDaysSettingsView.open();
+    });
+  }
+  if (timetableSettingsView && settingsActions?.timetableButton) {
+    settingsActions.timetableButton.addEventListener('click', () => {
+      closeDrawer();
+      timetableSettingsView.open();
     });
   }
 
