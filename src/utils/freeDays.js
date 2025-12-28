@@ -15,6 +15,26 @@ const toDayNumber = (ymd) => {
   return date ? date.getTime() : null;
 };
 
+const normalizeFreeDayEntryWithNumbers = (value, index = null) => {
+  const entry = normalizeFreeDayEntry(value);
+  if (!entry) {
+    return null;
+  }
+
+  const startValue = toDayNumber(entry.start);
+  const endValue = toDayNumber(entry.end);
+  if (startValue === null || endValue === null) {
+    return null;
+  }
+
+  return {
+    ...entry,
+    startValue,
+    endValue,
+    index,
+  };
+};
+
 const formatYmd = (date) => {
   if (!(date instanceof Date)) {
     return '';
@@ -170,26 +190,30 @@ export const normalizeFreeDays = (value, fallback = []) => {
   const primary = Array.isArray(value) ? value : [];
   const secondary = Array.isArray(fallback) ? fallback : [];
   const merged = [...primary, ...secondary];
-  const byRange = new Map();
+  const normalized = merged
+    .map((item, index) => normalizeFreeDayEntryWithNumbers(item, index))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const startDiff = a.startValue - b.startValue;
+      if (startDiff !== 0) {
+        return startDiff;
+      }
+      return a.endValue - b.endValue;
+    });
+  const result = [];
 
-  merged.forEach((item) => {
-    const entry = normalizeFreeDayEntry(item);
-    if (!entry) {
-      return;
-    }
-    const key = `${entry.start}__${entry.end}`;
-    if (!byRange.has(key)) {
-      byRange.set(key, entry);
+  normalized.forEach((entry) => {
+    const hasOverlap = result.some((existing) => rangesOverlap(existing, entry));
+    if (!hasOverlap) {
+      result.push(entry);
     }
   });
 
-  return Array.from(byRange.values()).sort((a, b) => {
-    const startDiff = a.start.localeCompare(b.start);
-    if (startDiff !== 0) {
-      return startDiff;
-    }
-    return a.end.localeCompare(b.end);
-  });
+  return result.map(({ start, end, label }) => ({
+    start,
+    end,
+    label,
+  }));
 };
 
 export const isWeekend = (ymd) => {
@@ -218,6 +242,9 @@ const rangeLength = (start, end) => {
   }
   return endValue - startValue;
 };
+
+const rangesOverlap = (a, b) =>
+  a.startValue <= b.endValue && b.startValue <= a.endValue;
 
 export const findFreeDayMatch = (ymd, freeDays = []) => {
   const entries = Array.isArray(freeDays) ? freeDays : [];
@@ -277,3 +304,42 @@ export const getFreeDayInfo = (ymd, freeDays = []) => {
 };
 
 export const isFreeDay = (ymd, freeDays = []) => Boolean(getFreeDayInfo(ymd, freeDays));
+
+export const findFreeDayConflicts = (entries = []) => {
+  const normalized = (Array.isArray(entries) ? entries : [])
+    .map((item, index) => normalizeFreeDayEntryWithNumbers(item, index))
+    .filter(Boolean)
+    .sort((a, b) => {
+      const startDiff = a.startValue - b.startValue;
+      if (startDiff !== 0) {
+        return startDiff;
+      }
+      return a.endValue - b.endValue;
+    });
+
+  const conflicts = [];
+  normalized.forEach((entry, idx) => {
+    for (let i = 0; i < idx; i += 1) {
+      const other = normalized[i];
+      if (rangesOverlap(entry, other)) {
+        conflicts.push({
+          first: {
+            start: other.start,
+            end: other.end,
+            label: other.label,
+            index: other.index,
+          },
+          second: {
+            start: entry.start,
+            end: entry.end,
+            label: entry.label,
+            index: entry.index,
+          },
+        });
+        break;
+      }
+    }
+  });
+
+  return conflicts;
+};

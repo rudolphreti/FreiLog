@@ -1,7 +1,7 @@
 import { saveFreeDays } from '../db/dbRepository.js';
 import { createEl } from '../ui/dom.js';
 import { isValidYmd } from '../utils/date.js';
-import { normalizeFreeDays } from '../utils/freeDays.js';
+import { findFreeDayConflicts, normalizeFreeDays } from '../utils/freeDays.js';
 
 const createEmptyRow = () => ({
   start: '',
@@ -26,6 +26,16 @@ const validateRow = (row) => {
 export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
   let rows = normalizeFreeDays(freeDays);
   let isOpen = false;
+  let conflictIndices = new Set();
+
+  const collectConflictIndices = () => {
+    const conflicts = findFreeDayConflicts(rows);
+    return new Set(
+      conflicts.flatMap(({ first, second }) =>
+        [first?.index, second?.index].filter((value) => value !== null && value !== undefined),
+      ),
+    );
+  };
 
   const overlay = createEl('div', {
     className: 'free-days-overlay',
@@ -95,6 +105,19 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
 
   const renderRows = () => {
     tbody.replaceChildren();
+    const rowErrorBoxes = [];
+
+    const refreshErrorStates = () => {
+      conflictIndices = collectConflictIndices();
+      rowErrorBoxes.forEach((errorBox, idx) => {
+        const errors = validateRow(rows[idx]);
+        if (conflictIndices.has(idx)) {
+          errors.push('Date ranges must not overlap with other entries.');
+        }
+        errorBox.replaceChildren(...errors.map((msg) => createEl('div', { text: msg })));
+        errorBox.classList.toggle('d-none', !errors.length);
+      });
+    };
     rows.forEach((row, index) => {
       const tr = createEl('tr');
       const startInput = createEl('input', {
@@ -115,6 +138,7 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
         text: '✕',
       });
       const errorBox = createEl('div', { className: 'form-text text-danger small pt-1 d-none' });
+      rowErrorBoxes[index] = errorBox;
 
       const updateRow = () => {
         rows[index] = {
@@ -122,9 +146,7 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
           end: endInput.value || '',
           label: labelInput.value || '',
         };
-        const errors = validateRow(rows[index]);
-        errorBox.replaceChildren(...errors.map((msg) => createEl('div', { text: msg })));
-        errorBox.classList.toggle('d-none', !errors.length);
+        refreshErrorStates();
       };
 
       startInput.addEventListener('input', updateRow);
@@ -148,8 +170,9 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
         ],
       });
       tbody.append(errorRow);
-      updateRow();
     });
+
+    refreshErrorStates();
   };
 
   const setStatus = (message, tone = 'muted') => {
@@ -169,6 +192,12 @@ export const createFreeDaysSettingsView = ({ freeDays = [] } = {}) => {
     const hasErrors = errors.some((rowErrors) => rowErrors.length);
     if (hasErrors) {
       setStatus('Bitte korrigiere die markierten Fehler.', 'error');
+      renderRows();
+      return;
+    }
+    conflictIndices = collectConflictIndices();
+    if (conflictIndices.size > 0) {
+      setStatus('Bitte entferne überlappende Einträge.', 'error');
       renderRows();
       return;
     }

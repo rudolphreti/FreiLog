@@ -1,6 +1,6 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import { isValidYmd } from '../utils/date.js';
-import { DEFAULT_FREE_DAYS, normalizeFreeDays } from '../utils/freeDays.js';
+import { DEFAULT_FREE_DAYS, isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
 import {
   OBSERVATION_GROUP_CODES,
   buildObservationId,
@@ -186,6 +186,29 @@ const ensureUniqueStrings = (arr) => {
   return result;
 };
 
+const ensureUniqueObservationTexts = (arr) => {
+  if (!Array.isArray(arr)) {
+    return [];
+  }
+
+  const seen = new Set();
+  const result = [];
+  arr.forEach((item) => {
+    if (typeof item !== 'string') {
+      return;
+    }
+    const normalized = normalizeObservationText(item);
+    const key = normalizeObservationKey(normalized);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push(normalized);
+  });
+
+  return result;
+};
+
 const normalizeObservationEntries = (value, childrenSet) => {
   let source = {};
 
@@ -208,19 +231,19 @@ const normalizeObservationEntries = (value, childrenSet) => {
 
     const entry = source[child];
     if (Array.isArray(entry)) {
-      result[child] = ensureUniqueStrings(entry);
+      result[child] = ensureUniqueObservationTexts(entry);
       return;
     }
 
     if (typeof entry === 'string') {
-      result[child] = ensureUniqueStrings([entry]);
+      result[child] = ensureUniqueObservationTexts([entry]);
       return;
     }
 
     const item = isPlainObject(entry) ? entry : {};
     const preset =
       typeof item.preset === 'string' ? item.preset.trim() : '';
-    const tags = ensureUniqueStrings(item.tags);
+    const tags = ensureUniqueObservationTexts(item.tags);
     if (preset && !tags.includes(preset)) {
       tags.push(preset);
     }
@@ -231,7 +254,7 @@ const normalizeObservationEntries = (value, childrenSet) => {
   return result;
 };
 
-const normalizeDayEntry = (entry, date, childrenSet) => {
+const normalizeDayEntry = (entry, date, childrenSet, freeDays) => {
   const source = isPlainObject(entry) ? entry : {};
   const legacyAngebot =
     typeof source.angebot === 'string' ? source.angebot.trim() : '';
@@ -256,16 +279,29 @@ const normalizeDayEntry = (entry, date, childrenSet) => {
   );
   const notes = typeof source.notes === 'string' ? source.notes : '';
 
+  const isDayFree = isFreeDay(date, freeDays);
+  const absentSet = new Set(filteredAbsent);
+  const filteredObservations = {};
+  if (!isDayFree) {
+    Object.entries(observations).forEach(([child, tags]) => {
+      if (absentSet.has(child)) {
+        return;
+      }
+      const normalized = ensureUniqueObservationTexts(tags);
+      filteredObservations[child] = normalized;
+    });
+  }
+
   return {
     date,
     angebote,
-    observations,
+    observations: filteredObservations,
     absentChildIds: filteredAbsent,
     notes,
   };
 };
 
-export const sanitizeDaysByDate = (days, childrenList) => {
+export const sanitizeDaysByDate = (days, childrenList, freeDays = DEFAULT_FREE_DAYS) => {
   if (!isPlainObject(days)) {
     return {};
   }
@@ -279,7 +315,7 @@ export const sanitizeDaysByDate = (days, childrenList) => {
     if (!isValidYmd(date)) {
       return;
     }
-    result[date] = normalizeDayEntry(days[date], date, childrenSet);
+    result[date] = normalizeDayEntry(days[date], date, childrenSet, freeDays);
   });
 
   return result;
@@ -445,7 +481,7 @@ export const buildObservationStats = (days) => {
         : isPlainObject(data)
           ? data.tags
           : [];
-      const tags = ensureUniqueStrings(list);
+      const tags = ensureUniqueObservationTexts(list);
       if (!tags.length) {
         return;
       }
@@ -526,10 +562,6 @@ export const normalizeAppData = (source, fallback = {}) => {
     fallbackData.observationGroups,
   );
 
-  const daysSource =
-    base.days || base.records?.entriesByDate || fallbackData.days || {};
-  const days = sanitizeDaysByDate(daysSource, children);
-
   const exportMode =
     typeof base.settings?.exportMode === 'string'
       ? base.settings.exportMode
@@ -540,6 +572,10 @@ export const normalizeAppData = (source, fallback = {}) => {
     base.settings?.freeDays,
     fallbackData.settings?.freeDays || DEFAULT_FREE_DAYS,
   );
+
+  const daysSource =
+    base.days || base.records?.entriesByDate || fallbackData.days || {};
+  const days = sanitizeDaysByDate(daysSource, children, freeDays);
 
   const uiSource = base.ui || fallbackData.ui || null;
 

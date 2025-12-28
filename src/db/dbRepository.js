@@ -13,12 +13,13 @@ import {
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
-import { normalizeFreeDays } from '../utils/freeDays.js';
+import { isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
-    const trimmed = value.trim();
-    return trimmed ? [trimmed] : [];
+    const normalized = normalizeObservationText(value);
+    const key = normalizeObservationKey(normalized);
+    return key ? [normalized] : [];
   }
 
   if (value && typeof value === 'object' && !Array.isArray(value)) {
@@ -35,12 +36,13 @@ const normalizeObservationList = (value) => {
     if (typeof item !== 'string') {
       return;
     }
-    const trimmed = item.trim();
-    if (!trimmed || unique.has(trimmed)) {
+    const normalized = normalizeObservationText(item);
+    const key = normalizeObservationKey(normalized);
+    if (!key || unique.has(key)) {
       return;
     }
-    unique.add(trimmed);
-    result.push(trimmed);
+    unique.add(key);
+    result.push(normalized);
   });
 
   return result;
@@ -138,6 +140,47 @@ const createDefaultDay = (date, childrenList = []) => ({
   absentChildIds: [],
   notes: '',
 });
+
+const normalizeAbsentChildren = (value, childrenSet) => {
+  const absentList = ensureUniqueSortedStrings(value || []);
+  if (!childrenSet) {
+    return absentList;
+  }
+  return absentList.filter((child) => childrenSet.has(child));
+};
+
+const sanitizeObservationsForDate = (observations, { absentSet, childrenSet, isFreeDay }) => {
+  const shouldFillChildren = childrenSet && childrenSet.size > 0;
+  if (isFreeDay) {
+    return shouldFillChildren ? buildDefaultObservations(Array.from(childrenSet)) : {};
+  }
+
+  const result = {};
+  if (observations && typeof observations === 'object') {
+    Object.entries(observations).forEach(([child, value]) => {
+      if (childrenSet && !childrenSet.has(child)) {
+        return;
+      }
+      if (absentSet.has(child)) {
+        return;
+      }
+      const normalized = normalizeObservationList(value);
+      if (normalized.length) {
+        result[child] = normalized;
+      }
+    });
+  }
+
+  if (shouldFillChildren) {
+    childrenSet.forEach((child) => {
+      if (!result[child]) {
+        result[child] = [];
+      }
+    });
+  }
+
+  return result;
+};
 
 const mergeObservations = (currentObservations, patchObservations) => {
   if (!patchObservations || typeof patchObservations !== 'object') {
@@ -383,11 +426,14 @@ export const getEntry = (date) => {
 export const updateEntry = (date, patch) => {
   const ymd = ensureYmd(date, todayYmd());
   const payload = patch && typeof patch === 'object' ? patch : {};
+  const childrenList = getChildrenList();
+  const childrenSet = new Set(childrenList);
+  const freeDays = getFreeDays();
 
   updateAppData((data) => {
     ensureDaysContainer(data);
     const existing =
-      data.days[ymd] || createDefaultDay(ymd, getChildrenList());
+      data.days[ymd] || createDefaultDay(ymd, childrenList);
     const merged = { ...existing, ...payload };
     if (payload.observations) {
       merged.observations = mergeObservations(
@@ -395,6 +441,17 @@ export const updateEntry = (date, patch) => {
         payload.observations,
       );
     }
+    const absentValues = merged.absentChildIds || merged.absentChildren || [];
+    merged.absentChildIds = normalizeAbsentChildren(absentValues, childrenSet);
+    const absentSet = new Set(merged.absentChildIds);
+    merged.observations = sanitizeObservationsForDate(
+      merged.observations || existing.observations,
+      {
+        absentSet,
+        childrenSet,
+        isFreeDay: isFreeDay(ymd, freeDays),
+      },
+    );
     merged.date = ymd;
     data.days[ymd] = merged;
   });
@@ -679,6 +736,7 @@ export const importJson = (obj) => {
 
   let applied = false;
   const childrenList = getState().db?.children || [];
+  const freeDays = getFreeDays();
   const hasSchemaVersion = typeof obj.schemaVersion === 'number';
   const hasCatalog = Array.isArray(obj.observationCatalog);
   const hasValidCatalog =
@@ -726,7 +784,7 @@ export const importJson = (obj) => {
     }
 
     const sanitizedDay =
-      sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList)[
+      sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList, freeDays)[
         payload.date
       ] || createDefaultDay(payload.date, childrenList);
 
