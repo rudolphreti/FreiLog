@@ -32,6 +32,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   let localLessons = cloneLessons(lessons);
   let localSchedule = cloneSchedule(schedule);
   let isOpen = false;
+  let isEditing = false;
 
   const status = {
     subjects: null,
@@ -166,7 +167,9 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
   });
 
-  const lessonsTable = createEl('table', { className: 'table table-sm align-middle mb-0 timetable-lessons' });
+  const lessonsTable = createEl('table', {
+    className: 'table table-sm align-middle mb-0 timetable-lessons',
+  });
   const lessonsTbody = createEl('tbody');
   lessonsTable.append(lessonsTbody);
   status.lessons = createEl('div', { className: 'small text-muted pt-1', text: '' });
@@ -220,13 +223,59 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
   };
 
-  const gridTable = createEl('table', { className: 'table table-bordered table-sm timetable-grid mb-0' });
+  const gridTable = createEl('table', {
+    className: 'table table-bordered table-sm timetable-grid mb-0',
+  });
   const gridThead = createEl('thead');
   const gridTbody = createEl('tbody');
   gridTable.append(gridThead, gridTbody);
   status.schedule = createEl('div', { className: 'small text-muted pt-1', text: '' });
 
   const selectRefs = new Map();
+  const summaryRefs = new Map();
+
+  const getSubjectColorClass = (subject) => {
+    const lower = subject.toLocaleLowerCase('de');
+    if (lower.startsWith('rel.')) {
+      return 'timetable-badge--purple';
+    }
+    if (lower === 'freizeit') {
+      return 'timetable-badge--green';
+    }
+    if (lower === 'mittagsessen') {
+      return 'timetable-badge--red';
+    }
+    if (lower === 'lernzeit') {
+      return 'timetable-badge--blue';
+    }
+    if (lower === 'bus') {
+      return 'timetable-badge--sky';
+    }
+    if (lower === 'ted') {
+      return 'timetable-badge--yellow';
+    }
+    if (lower === 'spätdienst' || lower === 'sd' || lower === 'spatdienst') {
+      return 'timetable-badge--darkred';
+    }
+    return 'timetable-badge--neutral';
+  };
+
+  const buildBadgeList = (subjectsForCell) => {
+    const list = createEl('div', { className: 'd-flex flex-wrap gap-1 timetable-badge-list' });
+    if (!subjectsForCell.length) {
+      list.append(createEl('span', { className: 'text-muted small', text: '—' }));
+      return list;
+    }
+    subjectsForCell.forEach((subject) => {
+      list.append(
+        createEl('span', {
+          className: `timetable-badge ${getSubjectColorClass(subject)}`,
+          text: subject,
+        }),
+      );
+    });
+    return list;
+  };
 
   const refreshTimeRow = () => {
     gridThead.replaceChildren();
@@ -272,9 +321,16 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
         }
       });
     });
+    summaryRefs.forEach((dayMap, dayKey) => {
+      const daySchedule = localSchedule[dayKey] || [];
+      dayMap.forEach((summaryNode, periodIndex) => {
+        const badges = buildBadgeList(daySchedule[periodIndex] || []);
+        summaryNode.replaceChildren(...badges.children);
+      });
+    });
   };
 
-  const handleCellChange = (dayKey, index, selectEl, summaryEl) => {
+  const handleCellChange = (dayKey, index, selectEl, summaryEl, summaryContainer) => {
     const selected = Array.from(selectEl.selectedOptions).map((option) => option.value);
     const nextSchedule = cloneSchedule(localSchedule);
     if (!nextSchedule[dayKey]) {
@@ -288,16 +344,21 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     if (summaryEl) {
       summaryEl.textContent = summaryText || '—';
     }
+    if (summaryContainer) {
+      summaryContainer.replaceChildren(...buildBadgeList(selected).children);
+    }
     setStatus('schedule', 'Timetable updated.', 'success');
   };
 
   const refreshGrid = () => {
     gridTbody.replaceChildren();
     selectRefs.clear();
+    summaryRefs.clear();
     TIMETABLE_DAY_ORDER.forEach(({ key, label }) => {
       const row = createEl('tr');
       row.append(createEl('th', { className: 'text-muted', text: label }));
       const selects = [];
+      const daySummaryRefs = new Map();
       for (let i = 0; i < LESSONS_COUNT; i += 1) {
         const cell = createEl('td');
         const select = createEl('select', {
@@ -319,22 +380,72 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
           className: 'form-text small text-muted mt-1 timetable-cell-summary',
           text: summaryText || '—',
         });
+        const badgeSummary = buildBadgeList(cellValues);
+        const badgeWrapper = createEl('div', {
+          className: 'timetable-cell-badges',
+          children: badgeSummary.children,
+        });
         select.title = summaryText;
-        select.addEventListener('change', () => handleCellChange(key, i, select, summary));
-        cell.append(select, summary);
+        select.addEventListener('change', () => handleCellChange(key, i, select, summary, badgeWrapper));
+        const selectWrapper = createEl('div', { className: 'timetable-select-wrapper', children: [select] });
+        cell.append(selectWrapper, badgeWrapper, summary);
         row.append(cell);
-        selects.push({ selectEl: select, summaryEl: summary });
+        selects.push({ selectEl: select, summaryEl: summary, badgeWrapper });
+        daySummaryRefs.set(i, badgeWrapper);
       }
       selectRefs.set(key, selects);
+      summaryRefs.set(key, daySummaryRefs);
       gridTbody.append(row);
     });
   };
 
+  const applyEditingState = () => {
+    selectRefs.forEach((rows) => {
+      rows.forEach(({ selectEl, summaryEl, badgeWrapper }) => {
+        selectEl.closest('.timetable-select-wrapper').classList.toggle('d-none', !isEditing);
+        selectEl.disabled = !isEditing;
+        if (summaryEl) {
+          summaryEl.classList.toggle('d-none', isEditing);
+        }
+        if (badgeWrapper) {
+          badgeWrapper.classList.toggle('timetable-cell-badges--inactive', isEditing);
+        }
+      });
+    });
+  };
+
+  const editToggle = createEl('div', {
+    className: 'form-check form-switch d-inline-flex align-items-center gap-2',
+  });
+  const editInput = createEl('input', {
+    className: 'form-check-input',
+    attrs: { type: 'checkbox', id: 'timetable-edit-toggle' },
+  });
+  const editLabel = createEl('label', {
+    className: 'form-check-label fw-semibold',
+    attrs: { for: 'timetable-edit-toggle' },
+    text: 'Edit mode',
+  });
+  editToggle.append(editInput, editLabel);
+
+  editInput.addEventListener('change', () => {
+    isEditing = editInput.checked;
+    applyEditingState();
+  });
+
   gridBody.append(
-    createEl('h4', { className: 'h5 mb-1', text: 'Weekly schedule' }),
-    createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Select subjects for each lesson. Use multi-select (Ctrl/Cmd) to combine subjects with "+" in the view.',
+    createEl('div', {
+      className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
+      children: [
+        createEl('div', { className: 'd-flex flex-column', children: [
+          createEl('h4', { className: 'h5 mb-0', text: 'Weekly schedule' }),
+          createEl('p', {
+            className: 'text-muted small mb-0',
+            text: 'Switch to edit mode to adjust lessons. Use multi-select to combine subjects.',
+          }),
+        ] }),
+        editToggle,
+      ],
     }),
     gridTable,
     status.schedule,
@@ -383,7 +494,11 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
   });
 
-  const update = ({ subjects: nextSubjects = [], lessons: nextLessons = [], schedule: nextSchedule = {} } = {}) => {
+  const update = ({
+    subjects: nextSubjects = [],
+    lessons: nextLessons = [],
+    schedule: nextSchedule = {},
+  } = {}) => {
     localSubjects = [...nextSubjects];
     localLessons = cloneLessons(nextLessons);
     localSchedule = cloneSchedule(nextSchedule);
@@ -391,6 +506,8 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     refreshLessons();
     refreshTimeRow();
     refreshGrid();
+    applyEditingState();
+    editInput.checked = isEditing;
     setStatus('subjects', '');
     setStatus('lessons', '');
     setStatus('schedule', '');
@@ -400,6 +517,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   refreshLessons();
   refreshTimeRow();
   refreshGrid();
+  applyEditingState();
 
   return {
     element: overlay,

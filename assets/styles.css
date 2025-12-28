@@ -964,6 +964,84 @@ body {
   font-size: 0.9rem;
 }
 
+.timetable-select-wrapper.d-none {
+  display: none !important;
+}
+
+.timetable-cell-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.timetable-cell-badges--inactive {
+  opacity: 0.35;
+}
+
+.timetable-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  border: 1px solid transparent;
+  color: #0f172a;
+  background: #e2e8f0;
+}
+
+.timetable-badge--neutral {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+.timetable-badge--green {
+  background: #ecfdf3;
+  border-color: #86efac;
+  color: #166534;
+}
+
+.timetable-badge--red {
+  background: #fef2f2;
+  border-color: #fecdd3;
+  color: #991b1b;
+}
+
+.timetable-badge--blue {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1d4ed8;
+}
+
+.timetable-badge--sky {
+  background: #e0f2fe;
+  border-color: #bae6fd;
+  color: #075985;
+}
+
+.timetable-badge--purple {
+  background: #f3e8ff;
+  border-color: #e9d5ff;
+  color: #6b21a8;
+}
+
+.timetable-badge--yellow {
+  background: #fefce8;
+  border-color: #fef08a;
+  color: #854d0e;
+}
+
+.timetable-badge--darkred {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #7f1d1d;
+}
+
+.timetable-badge-list .text-muted {
+  margin: 0.1rem 0;
+}
+
 .timetable-overlay-open {
   overflow: hidden;
 }
