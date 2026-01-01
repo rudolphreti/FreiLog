@@ -1,9 +1,9 @@
 export const TIMETABLE_DAY_ORDER = [
-  { key: 'monday', label: 'Monday' },
-  { key: 'tuesday', label: 'Tuesday' },
-  { key: 'wednesday', label: 'Wednesday' },
-  { key: 'thursday', label: 'Thursday' },
-  { key: 'friday', label: 'Friday' },
+  { key: 'monday', label: 'Montag' },
+  { key: 'tuesday', label: 'Dienstag' },
+  { key: 'wednesday', label: 'Mittwoch' },
+  { key: 'thursday', label: 'Donnerstag' },
+  { key: 'friday', label: 'Freitag' },
 ];
 
 const DEFAULT_SUBJECTS = [

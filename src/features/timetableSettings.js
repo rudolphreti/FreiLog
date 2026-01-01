@@ -24,7 +24,7 @@ const cloneSchedule = (schedule) => {
 const buildSubjectOption = (subject, isMissing = false) =>
   createEl('option', {
     attrs: { value: subject },
-    text: isMissing ? `${subject} (removed)` : subject,
+    text: isMissing ? `${subject} (entfernt)` : subject,
   });
 
 export const createTimetableSettingsView = ({ subjects = [], lessons = [], schedule = {} } = {}) => {
@@ -33,6 +33,8 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   let localSchedule = cloneSchedule(schedule);
   let isOpen = false;
   let isEditing = false;
+  let subjectRemoveButtons = [];
+  let lessonInputs = [];
 
   const status = {
     subjects: null,
@@ -47,10 +49,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const panel = createEl('div', { className: 'timetable-overlay__panel' });
 
   const header = createEl('div', { className: 'timetable-overlay__header' });
-  const title = createEl('h3', { className: 'h4 mb-0', text: 'Timetable' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: 'Stundenplan' });
   const closeButton = createEl('button', {
     className: 'btn-close timetable-overlay__close',
-    attrs: { type: 'button', 'aria-label': 'Close timetable' },
+    attrs: { type: 'button', 'aria-label': 'Stundenplan schließen' },
   });
   header.append(title, closeButton);
 
@@ -91,12 +93,12 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const subjectsList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
   const subjectInput = createEl('input', {
     className: 'form-control',
-    attrs: { type: 'text', placeholder: 'Add new subject' },
+    attrs: { type: 'text', placeholder: 'Neues Fach hinzufügen' },
   });
   const addSubjectButton = createEl('button', {
     className: 'btn btn-primary',
     attrs: { type: 'button' },
-    text: 'Add',
+    text: 'Hinzufügen',
   });
   const subjectFormRow = createEl('div', {
     className: 'd-flex flex-wrap gap-2 align-items-center',
@@ -105,6 +107,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   status.subjects = createEl('div', { className: 'small text-muted', text: '' });
 
   const refreshSubjectsList = () => {
+    subjectRemoveButtons = [];
     subjectsList.replaceChildren();
     localSubjects.forEach((subject) => {
       const pill = createEl('span', {
@@ -113,7 +116,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
       pill.append(createEl('span', { text: subject }));
       const removeBtn = createEl('button', {
         className: 'btn btn-link btn-sm text-white p-0',
-        attrs: { type: 'button', 'aria-label': `Remove ${subject}` },
+        attrs: { type: 'button', 'aria-label': `${subject} entfernen` },
         text: '✕',
       });
       removeBtn.addEventListener('click', () => {
@@ -128,25 +131,28 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
         saveTimetableSchedule(localSchedule);
         refreshSubjectsList();
         refreshGridOptions();
-        setStatus('subjects', 'Subject removed.', 'success');
+        setStatus('subjects', 'Fach entfernt.', 'success');
       });
+      removeBtn.disabled = !isEditing;
+      subjectRemoveButtons.push(removeBtn);
       pill.append(removeBtn);
       subjectsList.append(pill);
     });
+    applyEditingState();
   };
 
   const handleAddSubject = () => {
     const value = subjectInput.value.trim();
     if (!value) {
-      setStatus('subjects', 'Please enter a subject name.', 'error');
+      setStatus('subjects', 'Bitte einen Fachnamen eingeben.', 'error');
       return;
     }
     if (value.length > MAX_SUBJECT_LENGTH) {
-      setStatus('subjects', `Maximum length is ${MAX_SUBJECT_LENGTH} characters.`, 'error');
+      setStatus('subjects', `Maximale Länge: ${MAX_SUBJECT_LENGTH} Zeichen.`, 'error');
       return;
     }
     if (localSubjects.includes(value)) {
-      setStatus('subjects', 'Subject already exists.', 'error');
+      setStatus('subjects', 'Fach ist bereits vorhanden.', 'error');
       return;
     }
     localSubjects = [...localSubjects, value].sort((a, b) =>
@@ -156,7 +162,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     refreshSubjectsList();
     refreshGridOptions();
     subjectInput.value = '';
-    setStatus('subjects', 'Subject added.', 'success');
+    setStatus('subjects', 'Fach hinzugefügt.', 'success');
   };
 
   addSubjectButton.addEventListener('click', handleAddSubject);
@@ -177,6 +183,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const validateTime = (value) => /^\d{2}:\d{2}$/.test(value);
 
   const refreshLessons = () => {
+    lessonInputs = [];
     lessonsTbody.replaceChildren();
     for (let i = 0; i < LESSONS_COUNT; i += 1) {
       const lesson = localLessons[i] || { period: i + 1, start: '', end: '' };
@@ -193,6 +200,9 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
         className: 'form-control form-control-sm',
         attrs: { type: 'time', value: lesson.end || '' },
       });
+      startInput.disabled = !isEditing;
+      endInput.disabled = !isEditing;
+      lessonInputs.push(startInput, endInput);
 
       const syncLessons = () => {
         const nextLessons = [...localLessons];
@@ -202,12 +212,12 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
           end: endInput.value || '',
         };
         if (!validateTime(startInput.value) || !validateTime(endInput.value)) {
-          setStatus('lessons', 'Please use HH:MM format.', 'error');
+          setStatus('lessons', 'Bitte das Format HH:MM verwenden.', 'error');
         } else {
           localLessons = nextLessons;
           saveTimetableLessons(localLessons);
           refreshTimeRow();
-          setStatus('lessons', 'Time updated.', 'success');
+          setStatus('lessons', 'Zeit aktualisiert.', 'success');
         }
       };
 
@@ -286,7 +296,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
 
     const timeRow = createEl('tr');
-    timeRow.append(createEl('th', { className: 'text-muted small', text: 'Time' }));
+    timeRow.append(createEl('th', { className: 'text-muted small', text: 'Zeit' }));
     for (let i = 0; i < LESSONS_COUNT; i += 1) {
       const lesson = localLessons[i] || {};
       timeRow.append(
@@ -347,7 +357,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     if (summaryContainer) {
       summaryContainer.replaceChildren(...buildBadgeList(selected).children);
     }
-    setStatus('schedule', 'Timetable updated.', 'success');
+    setStatus('schedule', 'Stundenplan aktualisiert.', 'success');
   };
 
   const refreshGrid = () => {
@@ -363,7 +373,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
         const cell = createEl('td');
         const select = createEl('select', {
           className: 'form-select form-select-sm timetable-select',
-          attrs: { multiple: 'multiple', 'aria-label': `${label} lesson ${i + 1}` },
+          attrs: { multiple: 'multiple', 'aria-label': `${label} Stunde ${i + 1}` },
         });
         localSubjects.forEach((subject) => select.append(buildSubjectOption(subject)));
         const cellValues = localSchedule[key]?.[i] || [];
@@ -400,15 +410,25 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   };
 
   const applyEditingState = () => {
+    const disable = !isEditing;
+    subjectInput.disabled = disable;
+    addSubjectButton.disabled = disable;
+    subjectRemoveButtons.forEach((btn) => {
+      btn.disabled = disable;
+      btn.classList.toggle('disabled', disable);
+    });
+    lessonInputs.forEach((input) => {
+      input.disabled = disable;
+    });
     selectRefs.forEach((rows) => {
       rows.forEach(({ selectEl, summaryEl, badgeWrapper }) => {
-        selectEl.closest('.timetable-select-wrapper').classList.toggle('d-none', !isEditing);
-        selectEl.disabled = !isEditing;
+        selectEl.closest('.timetable-select-wrapper').classList.toggle('d-none', disable);
+        selectEl.disabled = disable;
         if (summaryEl) {
-          summaryEl.classList.toggle('d-none', isEditing);
+          summaryEl.classList.toggle('d-none', !disable);
         }
         if (badgeWrapper) {
-          badgeWrapper.classList.toggle('timetable-cell-badges--inactive', isEditing);
+          badgeWrapper.classList.toggle('timetable-cell-badges--inactive', !disable);
         }
       });
     });
@@ -424,7 +444,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const editLabel = createEl('label', {
     className: 'form-check-label fw-semibold',
     attrs: { for: 'timetable-edit-toggle' },
-    text: 'Edit mode',
+    text: 'Bearbeitungsmodus',
   });
   editToggle.append(editInput, editLabel);
 
@@ -437,13 +457,16 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     createEl('div', {
       className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
       children: [
-        createEl('div', { className: 'd-flex flex-column', children: [
-          createEl('h4', { className: 'h5 mb-0', text: 'Weekly schedule' }),
-          createEl('p', {
-            className: 'text-muted small mb-0',
-            text: 'Switch to edit mode to adjust lessons. Use multi-select to combine subjects.',
-          }),
-        ] }),
+        createEl('div', {
+          className: 'd-flex flex-column',
+          children: [
+            createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
+            createEl('p', {
+              className: 'text-muted small mb-0',
+              text: 'In den Bearbeitungsmodus wechseln, um Stunden anzupassen. Mehrfachauswahl kombiniert Fächer.',
+            }),
+          ],
+        }),
         editToggle,
       ],
     }),
@@ -452,10 +475,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   );
 
   subjectsBody.append(
-    createEl('h4', { className: 'h5 mb-1', text: 'Subjects' }),
+    createEl('h4', { className: 'h5 mb-1', text: 'Fächer' }),
     createEl('p', {
       className: 'text-muted small mb-0',
-      text: 'Manage the list of available subjects. The list is sorted alphabetically.',
+      text: 'Verwalte die Liste verfügbarer Fächer. Die Liste ist alphabetisch sortiert.',
     }),
     subjectFormRow,
     subjectsList,
@@ -463,10 +486,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   );
 
   lessonsBody.append(
-    createEl('h4', { className: 'h5 mb-1', text: 'Lesson times' }),
+    createEl('h4', { className: 'h5 mb-1', text: 'Stundenzeiten' }),
     createEl('p', {
       className: 'text-muted small mb-0',
-      text: 'Edit start and end times for each lesson (HH:MM).',
+      text: 'Start- und Endzeiten für jede Stunde bearbeiten (HH:MM).',
     }),
     lessonsTable,
     status.lessons,
