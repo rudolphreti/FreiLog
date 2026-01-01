@@ -450,6 +450,21 @@ export const bindAngebotCatalog = ({
   let suppressClick = false;
   let openButtonRef = openButton || null;
 
+  const closeDrawerIfOpen = () => {
+    const drawerEl = document.getElementById('mainDrawer');
+    if (!drawerEl || !drawerEl.classList.contains('show')) {
+      return;
+    }
+    const closeButton = drawerEl.querySelector('[data-bs-dismiss="offcanvas"]');
+    if (closeButton instanceof HTMLElement) {
+      closeButton.click();
+    }
+    drawerEl.classList.remove('show');
+    drawerEl.setAttribute('aria-hidden', 'true');
+    const backdrop = document.querySelector('.offcanvas-backdrop');
+    backdrop?.parentElement?.removeChild(backdrop);
+  };
+
   setFilterState(catalogOverlay, {
     filter: savedFilters?.selectedLetter || 'ALL',
     groups: normalizeAngebotGroups(savedFilters?.selectedGroups || []).join(','),
@@ -519,6 +534,7 @@ export const bindAngebotCatalog = ({
     if (isReadOnly) {
       return;
     }
+    closeDrawerIfOpen();
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
@@ -551,6 +567,7 @@ export const bindAngebotCatalog = ({
     if (isReadOnly) {
       return;
     }
+    closeDrawerIfOpen();
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
     render();
