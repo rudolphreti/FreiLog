@@ -13,7 +13,7 @@ import { todayYmd } from '../utils/date.js';
 
 export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
   const header = createEl('header', {
-    className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top',
+    className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top app-header',
   });
 
   const menuButton = createEl('button', {
@@ -70,11 +70,15 @@ export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayI
   if (showInitialActions) {
     actionNodes.push(importButton, dummyDataButton, importInput);
   }
-  actionNodes.push(menuButton);
 
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions flex-wrap',
     children: actionNodes,
+  });
+
+  const menuContainer = createEl('div', {
+    className: 'header-menu-anchor',
+    children: [menuButton],
   });
 
   const headerContent = createEl('div', {
@@ -83,7 +87,7 @@ export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayI
     children: [dateGroup, actionsGroup],
   });
 
-  header.append(headerContent);
+  header.append(headerContent, menuContainer);
 
   return {
     element: header,

@@ -236,6 +236,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const gridTable = createEl('table', {
     className: 'table table-bordered table-sm timetable-grid mb-0',
   });
+  const gridTableWrapper = createEl('div', {
+    className: 'timetable-grid-wrapper',
+    children: [gridTable],
+  });
   const gridThead = createEl('thead');
   const gridTbody = createEl('tbody');
   gridTable.append(gridThead, gridTbody);
@@ -472,7 +476,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
         editToggle,
       ],
     }),
-    gridTable,
+    gridTableWrapper,
     status.schedule,
   );
 
