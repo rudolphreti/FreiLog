@@ -681,7 +681,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     attrs: { type: 'button' },
     dataset: { role: 'angebot-settings-toggle' },
     children: [
-      createEl('span', { text: '⚙️' }),
+      createEl('span', { text: '⚙️', className: 'me-1' }),
       createEl('span', { text: 'Einstellungen' }),
     ],
   });

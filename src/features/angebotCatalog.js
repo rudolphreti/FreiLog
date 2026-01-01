@@ -297,11 +297,11 @@ const renderCatalogList = ({
   });
 };
 
-const renderLetterButtons = (overlay, catalog) => {
-  const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
-  if (!letterBar) {
-    return;
-  }
+  const renderLetterButtons = (overlay, catalog) => {
+    const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
+    if (!letterBar) {
+      return;
+    }
   const { selectedLetter } = getFilterState(overlay);
   const letters = new Set();
   (Array.isArray(catalog) ? catalog : []).forEach((entry) => {
@@ -335,15 +335,15 @@ const renderLetterButtons = (overlay, catalog) => {
 };
 
 const syncGroupUi = (overlay, angebotGroups) => {
-  const {
-    selectedGroups,
-    groupMode,
-    selectedLetter,
-    showAndOr,
-    showAlphabet,
-    multiGroups,
-    settingsOpen,
-  } = getFilterState(overlay);
+    const {
+      selectedGroups,
+      groupMode,
+      selectedLetter,
+      showAndOr,
+      showAlphabet,
+      multiGroups,
+      settingsOpen,
+    } = getFilterState(overlay);
   const groupButtons = overlay.querySelectorAll('[data-role="angebot-group-filter"]');
   groupButtons.forEach((button) => {
     const value = button.dataset.value;
@@ -390,27 +390,32 @@ const syncGroupUi = (overlay, angebotGroups) => {
     andOrSwitch.checked = showAndOr;
   }
 
-  const settingsPanel = overlay.querySelector('[data-role="angebot-settings-panel"]');
-  if (settingsPanel) {
-    settingsPanel.hidden = !settingsOpen;
-  }
-  const groupModeToggle = overlay.querySelector('[data-role="angebot-group-mode-toggle"]');
-  if (groupModeToggle) {
-    groupModeToggle.hidden = !showAndOr;
-  }
-};
+    const settingsPanel = overlay.querySelector('[data-role="angebot-settings-panel"]');
+    if (settingsPanel) {
+      settingsPanel.hidden = !settingsOpen;
+    }
+    const groupModeToggle = overlay.querySelector('[data-role="angebot-group-mode-toggle"]');
+    if (groupModeToggle) {
+      groupModeToggle.hidden = !showAndOr;
+    }
+    const settingsToggle = overlay.querySelector('[data-role="angebot-settings-toggle"]');
+    if (settingsToggle) {
+      settingsToggle.setAttribute('aria-pressed', settingsOpen ? 'true' : 'false');
+      settingsToggle.classList.toggle('active', settingsOpen);
+    }
+  };
 
-const persistFilters = debounce((overlay) => {
-  const state = getFilterState(overlay);
-  setSavedAngebotFilters({
-    selectedGroups: state.selectedGroups,
-    selectedLetter: state.selectedLetter,
+  const persistFilters = debounce((overlay) => {
+    const state = getFilterState(overlay);
+    setSavedAngebotFilters({
+      selectedGroups: state.selectedGroups,
+      selectedLetter: state.selectedLetter,
     andOrMode: state.groupMode,
     multiGroups: state.multiGroups,
     showAndOr: state.showAndOr,
-    showAlphabet: state.showAlphabet,
-  });
-}, 200);
+      showAlphabet: state.showAlphabet,
+    });
+  }, 200);
 
 const normalizeCatalog = (catalog) =>
   Array.isArray(catalog) ? catalog : Array.isArray(getAngebotCatalog()) ? getAngebotCatalog() : [];
@@ -529,6 +534,10 @@ export const bindAngebotCatalog = ({
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
     render();
+  };
+  const closeCatalogOverlay = () => {
+    catalogOverlay.classList.remove('is-open');
+    catalogOverlay.setAttribute('aria-hidden', 'true');
   };
 
   const setCreateGroups = (groups) => {
@@ -682,13 +691,11 @@ export const bindAngebotCatalog = ({
       return;
     }
     if (target === catalogOverlay) {
-      catalogOverlay.classList.remove('is-open');
-      catalogOverlay.setAttribute('aria-hidden', 'true');
+      closeCatalogOverlay();
       return;
     }
     if (target.closest('[data-role="angebot-catalog-close"]')) {
-      catalogOverlay.classList.remove('is-open');
-      catalogOverlay.setAttribute('aria-hidden', 'true');
+      closeCatalogOverlay();
       return;
     }
     if (target.closest('[data-role="angebot-create-open"]')) {

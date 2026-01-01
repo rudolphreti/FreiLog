@@ -63,7 +63,7 @@ export const normalizeAngebotCatalog = (value, fallback = []) => {
     });
   });
 
-  return result;
+  return result.sort((a, b) => a.text.localeCompare(b.text, 'de', { sensitivity: 'base' }));
 };
 
 export const getAngebotCatalogLabels = (catalog) => {
