@@ -687,50 +687,38 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     children: [createEl('span', { text: '⚙️' })],
   });
 
-  const multiSwitch = createEl('div', {
+  const multiSwitch = createEl('label', {
     className: 'form-check form-switch observation-templates__setting-option',
     children: [
+      createEl('span', { className: 'form-check-label', text: 'Mehrere Gruppen auswählen' }),
       createEl('input', {
         className: 'form-check-input',
         attrs: { type: 'checkbox', role: 'switch', id: 'angebot-multi-switch' },
         dataset: { role: 'angebot-multi-switch' },
       }),
-      createEl('label', {
-        className: 'form-check-label',
-        attrs: { for: 'angebot-multi-switch' },
-        text: 'Mehrfach-Gruppen aktivieren',
-      }),
     ],
   });
 
-  const alphabetSwitch = createEl('div', {
+  const andOrSwitch = createEl('label', {
     className: 'form-check form-switch observation-templates__setting-option',
     children: [
-      createEl('input', {
-        className: 'form-check-input',
-        attrs: { type: 'checkbox', role: 'switch', id: 'angebot-alphabet-switch' },
-        dataset: { role: 'angebot-alphabet-switch' },
-      }),
-      createEl('label', {
-        className: 'form-check-label',
-        attrs: { for: 'angebot-alphabet-switch' },
-        text: 'Alphabetleiste anzeigen',
-      }),
-    ],
-  });
-
-  const andOrSwitch = createEl('div', {
-    className: 'form-check form-switch observation-templates__setting-option',
-    children: [
+      createEl('span', { className: 'form-check-label', text: 'UND/ODER anzeigen' }),
       createEl('input', {
         className: 'form-check-input',
         attrs: { type: 'checkbox', role: 'switch', id: 'angebot-andor-switch' },
         dataset: { role: 'angebot-andor-switch' },
       }),
-      createEl('label', {
-        className: 'form-check-label',
-        attrs: { for: 'angebot-andor-switch' },
-        text: 'UND/ODER Anzeige aktivieren',
+    ],
+  });
+
+  const alphabetSwitch = createEl('label', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('span', { className: 'form-check-label', text: 'Buchstaben-Filter anzeigen' }),
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox', role: 'switch', id: 'angebot-alphabet-switch' },
+        dataset: { role: 'angebot-alphabet-switch' },
       }),
     ],
   });
@@ -738,18 +726,13 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   const settingsPanel = createEl('div', {
     className: 'observation-templates__settings-panel',
     dataset: { role: 'angebot-settings-panel' },
-    children: [multiSwitch, alphabetSwitch, andOrSwitch],
+    children: [multiSwitch, andOrSwitch, alphabetSwitch],
   });
   settingsPanel.hidden = true;
 
   const settings = createEl('div', {
     className: 'observation-templates__settings',
     children: [settingsToggle, settingsPanel],
-  });
-
-  const searchRow = createEl('div', {
-    className: 'observation-templates__search-row',
-    children: [searchInput],
   });
 
   const filterRow = createEl('div', {
@@ -760,6 +743,10 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
         children: [groupControls, settings],
       }),
       filterBar,
+      createEl('div', {
+        className: 'observation-templates__search-row',
+        children: [searchInput],
+      }),
     ],
   });
 
@@ -780,7 +767,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
         className: 'observation-section d-flex flex-column gap-2',
         children: [
           catalogTitle,
-          searchRow,
           filterRow,
           catalogList,
         ],
