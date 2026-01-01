@@ -251,7 +251,7 @@ const renderCatalogList = ({
     return;
   }
 
-  const shouldGroup = filters.showAlphabet;
+  const shouldGroup = true;
   const groups = new Map();
   sorted.forEach((entry) => {
     const initial = entry.label[0]?.toLocaleUpperCase() || '';
