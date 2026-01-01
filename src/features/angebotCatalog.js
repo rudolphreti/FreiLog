@@ -281,6 +281,7 @@ const renderCatalogList = ({
       const isSelected = selectedSet.has(normalizeAngebotKey(entry.label));
       button.className =
         'btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2';
+       button.classList.toggle('is-selected', isSelected);
       const text = document.createElement('span');
       text.textContent = entry.label;
       button.append(groupDots, text);
