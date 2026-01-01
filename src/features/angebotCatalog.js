@@ -936,6 +936,11 @@ export const bindAngebotCatalog = ({
     if (!(target instanceof HTMLElement)) {
       return;
     }
+    const closeButton = target.closest('[data-role="angebot-create-close"]');
+    if (closeButton) {
+      closeCreateOverlay();
+      return;
+    }
     const groupButton = target.closest('[data-role="angebot-create-group"]');
     if (groupButton) {
       const value = groupButton.dataset.value;

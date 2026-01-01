@@ -678,12 +678,9 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
 
   const settingsToggle = createEl('button', {
     className: 'btn btn-link observation-templates__settings-btn',
-    attrs: { type: 'button' },
+    attrs: { type: 'button', 'aria-label': 'Einstellungen' },
     dataset: { role: 'angebot-settings-toggle' },
-    children: [
-      createEl('span', { text: '⚙️', className: 'me-1' }),
-      createEl('span', { text: 'Einstellungen' }),
-    ],
+    children: [createEl('span', { text: '⚙️' })],
   });
 
   const multiSwitch = createEl('div', {
