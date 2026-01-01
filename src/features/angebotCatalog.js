@@ -402,8 +402,8 @@ const syncGroupUi = (overlay, angebotGroups) => {
     }
     const settingsToggle = overlay.querySelector('[data-role="angebot-settings-toggle"]');
     if (settingsToggle) {
-      settingsToggle.setAttribute('aria-pressed', settingsOpen ? 'true' : 'false');
-      settingsToggle.classList.toggle('active', settingsOpen);
+      settingsToggle.setAttribute('aria-expanded', settingsOpen ? 'true' : 'false');
+      settingsToggle.classList.toggle('is-active', settingsOpen);
     }
   };
 

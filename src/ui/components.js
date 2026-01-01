@@ -742,9 +742,14 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   });
   settingsPanel.hidden = true;
 
+  const settings = createEl('div', {
+    className: 'observation-templates__settings',
+    children: [settingsToggle, settingsPanel],
+  });
+
   const searchRow = createEl('div', {
     className: 'observation-templates__search-row',
-    children: [searchInput, settingsToggle],
+    children: [searchInput, settings],
   });
 
   const filterRow = createEl('div', {
@@ -775,7 +780,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
         children: [
           catalogTitle,
           searchRow,
-          settingsPanel,
           filterRow,
           catalogList,
         ],
