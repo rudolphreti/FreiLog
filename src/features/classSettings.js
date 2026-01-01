@@ -191,12 +191,12 @@ const createRowState = (counter) => ({
 export const createClassSettingsView = ({ profile = {}, children = [] } = {}) => {
   let rowCounter = 0;
   let rows = [];
-  const rowElements = new Map();
-  let newChildName = '';
-  let newChildNote = '';
-  let newChildErrors = [];
-  let isNewChildOpen = false;
+  const childButtonRefs = new Map();
   let toastContainer = null;
+  let activeChildId = '';
+  let childFormErrors = [];
+  let childFormName = '';
+  let childFormNote = '';
   let deleteChildName = '';
   let deleteChildFeedbackMessage = '';
   let deleteChildFeedbackState = 'idle';
@@ -263,17 +263,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     defaultOpen: true,
   });
 
-  const table = createEl('table', { className: 'table table-sm align-middle class-settings__table' });
-  const thead = createEl('thead');
-  const headerRow = createEl('tr');
-  headerRow.append(
-    createEl('th', { className: 'small text-muted', text: 'Kinder' }),
-    createEl('th', { className: 'small text-muted', text: 'Notizen' }),
-  );
-  thead.append(headerRow);
-  const tbody = createEl('tbody');
-  table.append(thead, tbody);
-
   const addRowButton = createEl('button', {
     className: 'btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2',
     attrs: { type: 'button' },
@@ -287,81 +276,15 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     children: [createEl('h4', { className: 'h6 mb-0 text-muted', text: 'Kinderliste' }), addRowButton],
   });
 
-  const newChildCard = createEl('div', {
-    className: 'card border-0 shadow-sm d-none',
-    dataset: { role: 'new-child-card' },
+  const childList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-child-list',
+    dataset: { role: 'child-pill-list' },
   });
-
-  const newChildCardBody = createEl('div', {
-    className: 'card-body d-flex flex-column gap-2',
+  const emptyChildren = createEl('div', {
+    className: 'text-muted small ps-1',
+    dataset: { role: 'child-pill-empty' },
+    text: 'Noch keine Kinder hinzugefügt.',
   });
-
-  const newChildNameInput = createEl('input', {
-    className: 'form-control form-control-sm',
-    attrs: {
-      type: 'text',
-      placeholder: 'Name eingeben',
-      'aria-label': 'Neues Kind',
-    },
-    dataset: { role: 'new-child-name' },
-  });
-
-  const newChildNoteInput = createEl('textarea', {
-    className: 'form-control form-control-sm',
-    attrs: {
-      rows: '1',
-      placeholder: 'Notizen',
-      'aria-label': 'Notizen zum Kind',
-    },
-    dataset: { role: 'new-child-note' },
-  });
-
-  const newChildSubmitButton = createEl('button', {
-    className: 'btn btn-primary btn-sm w-100',
-    attrs: { type: 'button', 'aria-label': 'Kind hinzufügen' },
-    dataset: { role: 'new-child-submit' },
-    text: '+ Hinzufügen',
-  });
-
-  const newChildErrorsEl = createEl('div', {
-    className: 'text-danger small d-none',
-    dataset: { role: 'new-child-errors' },
-  });
-
-  newChildCardBody.append(
-    createEl('div', {
-      className: 'row g-2 align-items-start',
-      children: [
-        createEl('div', {
-          className: 'col-12 col-md-5',
-          children: [
-            createFormGroup({
-              id: 'new-child-name',
-              label: 'Neues Kind',
-              control: newChildNameInput,
-            }),
-          ],
-        }),
-        createEl('div', {
-          className: 'col-12 col-md-5',
-          children: [
-            createFormGroup({
-              id: 'new-child-note',
-              label: 'Notizen',
-              control: newChildNoteInput,
-            }),
-          ],
-        }),
-        createEl('div', {
-          className: 'col-12 col-md-2 d-flex align-items-end justify-content-start',
-          children: [newChildSubmitButton],
-        }),
-      ],
-    }),
-    newChildErrorsEl,
-  );
-
-  newChildCard.append(newChildCardBody);
 
   const buildToastContainer = () => {
     if (toastContainer) {
@@ -411,8 +334,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     className: 'd-flex flex-column gap-3',
     children: [
       childrenHeader,
-      newChildCard,
-      table,
+      childList,
+      emptyChildren,
     ],
   });
 
@@ -528,6 +451,71 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   );
   deleteChildConfirmDialog.append(deleteChildConfirmPanel);
 
+  const childDetailOverlay = createEl('div', {
+    className: 'child-detail-overlay d-none',
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const childDetailPanel = createEl('div', {
+    className: 'child-detail-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const childDetailHeader = createEl('div', { className: 'child-detail-overlay__header' });
+  const childDetailTitle = createEl('h3', {
+    className: 'h5 mb-0',
+    dataset: { role: 'child-detail-title' },
+    text: 'Kind Details',
+  });
+  const childDetailClose = createEl('button', {
+    className: 'btn-close child-detail-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+  });
+  childDetailHeader.append(childDetailTitle, childDetailClose);
+
+  const childDetailContent = createEl('div', { className: 'child-detail-overlay__content' });
+  const childDetailForm = createEl('form', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'child-detail-form' },
+  });
+  const childNameInput = createEl('input', {
+    className: 'form-control',
+    attrs: { type: 'text', placeholder: 'Name eingeben', 'aria-label': 'Kind' },
+    dataset: { role: 'child-detail-name' },
+  });
+  const childNoteInput = createEl('textarea', {
+    className: 'form-control',
+    attrs: { rows: '3', placeholder: 'Notizen', 'aria-label': 'Notizen zum Kind' },
+    dataset: { role: 'child-detail-note' },
+  });
+  const childErrorsBox = createEl('div', {
+    className: 'text-danger small d-none',
+    dataset: { role: 'child-detail-errors' },
+  });
+  const childDetailActions = createEl('div', {
+    className: 'd-flex flex-column flex-sm-row gap-2',
+  });
+  const childSaveButton = createEl('button', {
+    className: 'btn btn-primary',
+    attrs: { type: 'submit' },
+    text: 'Speichern',
+    dataset: { role: 'child-detail-save' },
+  });
+  const childCancelButton = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    text: 'Abbrechen',
+    dataset: { role: 'child-detail-cancel' },
+  });
+  childDetailActions.append(childSaveButton, childCancelButton);
+  childDetailForm.append(
+    createFormGroup({ id: 'child-detail-name', label: 'Name', control: childNameInput }),
+    createFormGroup({ id: 'child-detail-note', label: 'Notizen', control: childNoteInput }),
+    childErrorsBox,
+    childDetailActions,
+  );
+  childDetailContent.append(childDetailForm);
+  childDetailPanel.append(childDetailHeader, childDetailContent);
+  childDetailOverlay.append(childDetailPanel);
+
   const cautionItem = buildAccordionItem({
     id: 'class-caution',
     title: 'Vorsicht!',
@@ -538,7 +526,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   accordion.append(generalItem.element, childrenItem.element, cautionItem.element);
   content.append(intro, accordion);
   panel.append(header, content);
-  overlay.append(panel, deleteChildConfirmDialog);
+  overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog);
 
   const updateProfileInputs = (nextProfile = {}) => {
     const nextName = typeof nextProfile.name === 'string' ? nextProfile.name : '';
@@ -569,146 +557,165 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
   }, 200);
 
-  const applyValidation = () => {
-    const seenNames = [];
-    rows.forEach((row) => {
-      const { normalized, errors } = validateName(row.name, seenNames);
-      row.validationMessages = errors;
-      row.normalizedName = normalized;
-      if (!errors.length && normalized) {
-        seenNames.push(normalized.toLocaleLowerCase());
-      }
-    });
-    return rows.some((row) => row.validationMessages.length);
-  };
+  const childListEl = content.querySelector('[data-role="child-pill-list"]');
+  const emptyChildrenEl = content.querySelector('[data-role="child-pill-empty"]');
 
-  const persistRows = debounce(() => {
-    const hasErrors = applyValidation();
-    renderRows();
-    if (hasErrors) {
+  const renderChildFormErrors = () => {
+    if (!childErrorsBox) {
       return;
     }
-    const nextRows = rows.map((row) => {
-      const normalizedName = row.normalizedName || normalizeChildName(row.name);
+    childErrorsBox.replaceChildren();
+    childFormErrors.forEach((msg) => {
+      childErrorsBox.append(createEl('div', { text: msg }));
+    });
+    childErrorsBox.classList.toggle('d-none', !childFormErrors.length);
+  };
+
+  const closeChildDetailOverlay = () => {
+    childDetailOverlay.classList.add('d-none');
+    childDetailOverlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('child-detail-overlay-open');
+    activeChildId = '';
+    childFormName = '';
+    childFormNote = '';
+    childFormErrors = [];
+    renderChildFormErrors();
+  };
+
+  const getExistingNames = (excludeId = '') =>
+    rows
+      .filter((row) => row.id !== excludeId)
+      .map((row) => (row.name ? row.name.toLocaleLowerCase() : ''))
+      .filter(Boolean);
+
+  const openChildDetailOverlay = (row = null) => {
+    activeChildId = row?.id || '';
+    childFormName = row?.name || '';
+    childFormNote = typeof row?.note === 'string' ? row.note : '';
+    childFormErrors = [];
+
+    childDetailTitle.textContent = row ? 'Kind bearbeiten' : 'Neues Kind';
+    childNameInput.value = childFormName;
+    childNoteInput.value = childFormNote;
+    renderChildFormErrors();
+
+    childDetailOverlay.classList.remove('d-none');
+    childDetailOverlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('child-detail-overlay-open');
+    window.requestAnimationFrame(() => {
+      childNameInput?.focus();
+    });
+  };
+
+  const persistRows = debounce((rowsToPersist) => {
+    const normalizedRows = (Array.isArray(rowsToPersist) ? rowsToPersist : rows).map((row) => {
+      const normalizedName = normalizeChildName(row.name);
       const normalizedNote = typeof row.note === 'string' ? row.note : '';
-      if (normalizedName) {
-        return {
-          ...row,
-          name: normalizedName,
-          originalName: normalizedName,
-          note: normalizedNote,
-          persisted: true,
-          validationMessages: [],
-        };
+      if (!normalizedName) {
+        return { ...row, note: normalizedNote };
       }
       return {
         ...row,
+        name: normalizedName,
         note: normalizedNote,
       };
     });
-    rows = nextRows;
-    saveClassChildren(rows);
-    rows.forEach((row) => {
-      const rowRefs = rowElements.get(row.id);
-      if (!rowRefs) {
-        return;
-      }
-      if (rowRefs.nameInputEl.value !== row.name) {
-        rowRefs.nameInputEl.value = row.name;
-      }
-      if (rowRefs.noteInputEl.value !== row.note) {
-        rowRefs.noteInputEl.value = row.note;
-      }
-    });
-  }, 220);
 
-  const handleRowInput = (rowId, key, value) => {
-    const row = rows.find((item) => item.id === rowId);
-    if (!row) {
+    saveClassChildren(normalizedRows);
+    rows = normalizedRows.map((row) => {
+      const normalizedName = normalizeChildName(row.name);
+      if (!normalizedName) {
+        return row;
+      }
+      return {
+        ...row,
+        name: normalizedName,
+        originalName: normalizedName,
+        note: typeof row.note === 'string' ? row.note : '',
+        persisted: true,
+      };
+    });
+    renderChildPills();
+  }, 200);
+
+  const renderChildPills = () => {
+    if (!childListEl) {
       return;
     }
-    row[key] = value;
-  };
+    childListEl.replaceChildren();
+    childButtonRefs.clear();
+    const normalizedRows = rows
+      .map((row) => ({
+        ...row,
+        normalizedName: normalizeChildName(row.name),
+      }))
+      .filter((row) => row.normalizedName);
 
-  const handleRowBlur = () => {
-    persistRows();
-  };
-
-  const buildRowElement = (row) => {
-    const tr = createEl('tr', { dataset: { rowId: row.id } });
-    const nameInputEl = createEl('input', {
-      className: 'form-control form-control-sm',
-      attrs: {
-        type: 'text',
-        placeholder: 'Name eingeben',
-        'aria-label': 'Kind',
-      },
-    });
-    const noteInputEl = createEl('textarea', {
-      className: 'form-control form-control-sm',
-      attrs: { rows: '1', placeholder: 'Notizen', 'aria-label': 'Notizen' },
-    });
-    const errorBox = createEl('div', {
-      className: 'form-text text-danger small pt-1 class-settings__errors',
-    });
-
-    nameInputEl.addEventListener('input', (event) => {
-      handleRowInput(row.id, 'name', event.target.value);
-      row.validationMessages = [];
-      updateRowInputs({ nameInputEl, noteInputEl, errorBox }, row);
-    });
-    nameInputEl.addEventListener('blur', handleRowBlur);
-    noteInputEl.addEventListener('input', (event) => {
-      handleRowInput(row.id, 'note', event.target.value);
-    });
-    noteInputEl.addEventListener('blur', handleRowBlur);
-
-    const nameCell = createEl('td', { children: [nameInputEl] });
-    const noteCell = createEl('td', { children: [noteInputEl, errorBox] });
-    tr.append(nameCell, noteCell);
-    return { rowEl: tr, nameInputEl, noteInputEl, errorBox };
-  };
-
-  const updateRowInputs = (rowElRefs, row) => {
-    if (rowElRefs.nameInputEl.value !== row.name) {
-      rowElRefs.nameInputEl.value = row.name;
-    }
-    if (rowElRefs.noteInputEl.value !== row.note) {
-      rowElRefs.noteInputEl.value = row.note;
-    }
-    if (rowElRefs.errorBox) {
-      rowElRefs.errorBox.replaceChildren();
-      (row.validationMessages || []).forEach((msg) => {
-        rowElRefs.errorBox.append(createEl('div', { text: msg }));
+    normalizedRows
+      .sort((a, b) => a.normalizedName.localeCompare(b.normalizedName, 'de'))
+      .forEach((row) => {
+        const pill = createEl('button', {
+          className: 'btn observation-child-button btn-outline-primary',
+          attrs: { type: 'button' },
+          dataset: { role: 'child-pill', child: row.normalizedName, id: row.id },
+          children: [
+            createEl('span', {
+              className: 'fw-semibold observation-child-label',
+              text: row.name || row.normalizedName,
+            }),
+          ],
+        });
+        pill.addEventListener('click', () => openChildDetailOverlay(row));
+        childButtonRefs.set(row.id, pill);
+        childListEl.append(pill);
       });
-      rowElRefs.errorBox.classList.toggle('d-none', !row.validationMessages?.length);
-    }
+
+    emptyChildrenEl?.classList.toggle('d-none', normalizedRows.length > 0);
   };
 
-  const renderRows = () => {
-    const previousScrollTop = content.scrollTop;
-    const existingIds = new Set();
-    rows.forEach((row) => {
-      let rowRefs = rowElements.get(row.id);
-      if (!rowRefs) {
-        rowRefs = buildRowElement(row);
-        rowElements.set(row.id, rowRefs);
-      }
-      updateRowInputs(rowRefs, row);
-      existingIds.add(row.id);
-      tbody.append(rowRefs.rowEl);
-    });
+  const handleChildSave = () => {
+    const existingNames = getExistingNames(activeChildId);
+    const { normalized, errors } = validateName(childFormName, existingNames);
+    const nextErrors = [...errors];
+    if (!normalized) {
+      nextErrors.push('Name darf nicht leer sein.');
+    }
+    childFormErrors = Array.from(new Set(nextErrors));
+    renderChildFormErrors();
+    if (childFormErrors.length) {
+      return;
+    }
 
-    Array.from(rowElements.keys()).forEach((id) => {
-      if (!existingIds.has(id)) {
-        const refs = rowElements.get(id);
-        if (refs?.rowEl?.parentElement === tbody) {
-          tbody.removeChild(refs.rowEl);
-        }
-        rowElements.delete(id);
+    const normalizedNote = typeof childFormNote === 'string' ? childFormNote : '';
+    let nextRows = [...rows];
+    if (activeChildId) {
+      const targetIndex = nextRows.findIndex((row) => row.id === activeChildId);
+      if (targetIndex !== -1) {
+        const targetRow = nextRows[targetIndex];
+        nextRows[targetIndex] = {
+          ...targetRow,
+          name: normalized,
+          note: normalizedNote,
+          validationMessages: [],
+          originalName: targetRow.originalName || targetRow.name || normalized,
+        };
       }
-    });
-    content.scrollTop = previousScrollTop;
+    } else {
+      const newRow = {
+        id: `class-row-${++rowCounter}`,
+        name: normalized,
+        originalName: normalized,
+        note: normalizedNote,
+        persisted: true,
+        validationMessages: [],
+      };
+      nextRows = [...nextRows, newRow];
+      showChildAddedToast('Neues Kind wurde hinzugefügt.');
+    }
+
+    childFormErrors = [];
+    persistRows(nextRows);
+    closeChildDetailOverlay();
   };
 
   const syncRows = (nextProfile = {}, nextChildren = []) => {
@@ -750,7 +757,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
 
     rows = [...nextRows, ...drafts];
-    renderRows();
+    const maxId = rows.reduce((acc, row) => {
+      const match = /class-row-(\d+)/.exec(row.id || '');
+      const value = match ? Number.parseInt(match[1], 10) : 0;
+      return Number.isNaN(value) ? acc : Math.max(acc, value);
+    }, 0);
+    rowCounter = Math.max(rowCounter, maxId);
+    renderChildPills();
   };
 
   nameInput.addEventListener('input', persistProfile);
@@ -758,38 +771,52 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   mottoInput.addEventListener('input', persistProfile);
   notesInput.addEventListener('input', persistProfile);
 
-  const newChildNameInputField = content.querySelector('[data-role="new-child-name"]');
-  const newChildNoteInputField = content.querySelector('[data-role="new-child-note"]');
-  const newChildErrorsBox = newChildErrorsEl;
-  const newChildSubmitControl = content.querySelector('[data-role="new-child-submit"]');
-  const newChildCardEl = content.querySelector('[data-role="new-child-card"]');
   const deleteChildNameInput = content.querySelector('[data-role="delete-child-name"]');
   const deleteChildFeedbackBox = content.querySelector('[data-role="delete-child-feedback"]');
   const deleteChildSubmitControl = content.querySelector('[data-role="delete-child-submit"]');
+  childNameInput.addEventListener('input', (event) => {
+    childFormName = event.target.value;
+    childFormErrors = [];
+    renderChildFormErrors();
+  });
 
-  const renderNewChildErrors = () => {
-    if (!newChildErrorsBox) {
-      return;
+  childNameInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleChildSave();
     }
-    newChildErrorsBox.replaceChildren();
-    newChildErrors.forEach((msg) => {
-      newChildErrorsBox.append(createEl('div', { text: msg }));
-    });
-    newChildErrorsBox.classList.toggle('d-none', !newChildErrors.length);
-  };
+  });
 
-  const resetNewChildForm = () => {
-    newChildName = '';
-    newChildNote = '';
-    newChildErrors = [];
-    if (newChildNameInputField) {
-      newChildNameInputField.value = '';
+  childNoteInput.addEventListener('input', (event) => {
+    childFormNote = event.target.value;
+  });
+
+  childDetailForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    handleChildSave();
+  });
+  childSaveButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    handleChildSave();
+  });
+  childCancelButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    closeChildDetailOverlay();
+  });
+  childDetailClose.addEventListener('click', () => {
+    closeChildDetailOverlay();
+  });
+  childDetailOverlay.addEventListener('click', (event) => {
+    if (event.target === childDetailOverlay) {
+      closeChildDetailOverlay();
     }
-    if (newChildNoteInputField) {
-      newChildNoteInputField.value = '';
+  });
+  childDetailOverlay.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeChildDetailOverlay();
     }
-    renderNewChildErrors();
-  };
+  });
 
   const renderDeleteChildFeedback = () => {
     if (!deleteChildFeedbackBox) {
@@ -848,54 +875,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
   };
 
-  const showNewChildForm = () => {
-    isNewChildOpen = true;
-    resetNewChildForm();
-    if (newChildCardEl) {
-      newChildCardEl.classList.remove('d-none');
-    }
-    window.requestAnimationFrame(() => {
-      newChildNameInputField?.focus();
-    });
-  };
-
-  const hideNewChildForm = () => {
-    isNewChildOpen = false;
-    if (newChildCardEl) {
-      newChildCardEl.classList.add('d-none');
-    }
-  };
-
-  const handleAddNewChild = () => {
-    const canonicalExisting = rows
-      .map((row) => (row.name ? row.name.toLocaleLowerCase() : ''))
-      .filter(Boolean);
-    const { normalized, errors } = validateName(newChildName, canonicalExisting);
-    const nextErrors = [...errors];
-    if (!normalized) {
-      nextErrors.push('Name darf nicht leer sein.');
-    }
-    newChildErrors = Array.from(new Set(nextErrors));
-    renderNewChildErrors();
-    if (newChildErrors.length) {
-      return;
-    }
-    const newRow = {
-      id: `class-row-${++rowCounter}`,
-      name: normalized,
-      originalName: normalized,
-      note: typeof newChildNote === 'string' ? newChildNote : '',
-      persisted: true,
-      validationMessages: [],
-    };
-    rows = [...rows, newRow];
-    saveClassChildren(rows);
-    renderRows();
-    resetNewChildForm();
-    showNewChildForm();
-    showChildAddedToast('Neues Kind wurde hinzugefügt.');
-  };
-
   const performDeleteChild = (normalizedTarget) => {
     if (!normalizedTarget) {
       return;
@@ -906,7 +885,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       return normalizedName !== normalizedTarget && normalizedOriginal !== normalizedTarget;
     });
     saveClassChildren(rows);
-    renderRows();
+    renderChildPills();
     deleteChildName = '';
     if (deleteChildNameInput) {
       deleteChildNameInput.value = '';
@@ -942,11 +921,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   addRowButton.addEventListener('click', () => {
-    if (isNewChildOpen) {
-      hideNewChildForm();
-      return;
-    }
-    showNewChildForm();
+    openChildDetailOverlay();
   });
 
   const open = () => {
@@ -960,6 +935,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
   const close = () => {
     closeDeleteConfirmation();
+    closeChildDetailOverlay();
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('class-settings-overlay-open');
@@ -975,27 +951,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
   });
 
-  if (newChildNameInputField) {
-    newChildNameInputField.addEventListener('input', (event) => {
-      newChildName = event.target.value;
-      newChildErrors = [];
-      renderNewChildErrors();
-    });
-    newChildNameInputField.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        handleAddNewChild();
-      }
-    });
-  }
-  if (newChildNoteInputField) {
-    newChildNoteInputField.addEventListener('input', (event) => {
-      newChildNote = event.target.value;
-    });
-  }
-  if (newChildSubmitControl) {
-    newChildSubmitControl.addEventListener('click', handleAddNewChild);
-  }
   if (deleteChildNameInput) {
     deleteChildNameInput.addEventListener('input', (event) => {
       deleteChildName = event.target.value;
