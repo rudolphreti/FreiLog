@@ -281,8 +281,8 @@ const renderCatalogList = ({
       const groupDots = buildGroupDots(entry.groups, angebotGroups);
       const isSelected = selectedSet.has(normalizeAngebotKey(entry.label));
       button.className =
-        'btn btn-outline-secondary btn-sm observation-chip d-inline-flex align-items-center gap-2';
-       button.classList.toggle('is-selected', isSelected);
+        'btn btn-outline-secondary observation-chip observation-template-button d-inline-flex align-items-center';
+      button.classList.toggle('is-selected', isSelected);
       const text = document.createElement('span');
       text.textContent = entry.label;
       button.append(groupDots, text);
@@ -471,7 +471,7 @@ export const bindAngebotCatalog = ({
     groupMode: savedFilters?.andOrMode === 'OR' ? 'OR' : 'AND',
     multi: savedFilters?.multiGroups === true,
     showAndOr: savedFilters?.showAndOr !== false,
-    showAlphabet: savedFilters?.showAlphabet === true,
+    showAlphabet: savedFilters?.showAlphabet !== false,
   });
 
   const getGroupMap = () => buildAngebotCatalogGroupMap(currentCatalog);
@@ -1072,7 +1072,7 @@ export const bindAngebotCatalog = ({
           groupMode: nextSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
           multi: nextSavedFilters.multiGroups === true,
           showAndOr: nextSavedFilters.showAndOr !== false,
-          showAlphabet: nextSavedFilters.showAlphabet === true,
+          showAlphabet: nextSavedFilters.showAlphabet !== false,
         });
       }
       syncGroupUi(catalogOverlay, angebotGroups);
