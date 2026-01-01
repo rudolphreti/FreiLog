@@ -505,13 +505,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     text: 'Abbrechen',
     dataset: { role: 'child-detail-cancel' },
   });
-  const childDeleteButton = createEl('button', {
-    className: 'btn btn-outline-danger ms-auto',
-    attrs: { type: 'button' },
-    text: 'Löschen',
-    dataset: { role: 'child-detail-delete' },
-  });
-  childDetailActions.append(childSaveButton, childCancelButton, childDeleteButton);
+  childDetailActions.append(childSaveButton, childCancelButton);
   childDetailForm.append(
     createFormGroup({ id: 'child-detail-name', label: 'Name', control: childNameInput }),
     createFormGroup({ id: 'child-detail-note', label: 'Notizen', control: childNoteInput }),
@@ -603,7 +597,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     childDetailTitle.textContent = row ? 'Kind bearbeiten' : 'Neues Kind';
     childNameInput.value = childFormName;
     childNoteInput.value = childFormNote;
-    childDeleteButton.classList.toggle('d-none', !row);
     renderChildFormErrors();
 
     childDetailOverlay.classList.remove('d-none');
@@ -725,24 +718,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     closeChildDetailOverlay();
   };
 
-  const handleChildDeleteFromOverlay = () => {
-    if (!activeChildId) {
-      closeChildDetailOverlay();
-      return;
-    }
-    const targetRow = rows.find((row) => row.id === activeChildId);
-    const normalizedTarget = normalizeChildName(targetRow?.name || targetRow?.originalName);
-    if (!normalizedTarget) {
-      closeChildDetailOverlay();
-      return;
-    }
-    deleteChildConfirmationTarget = normalizedTarget;
-    deleteChildConfirmationLabel = targetRow?.name || targetRow?.originalName || '';
-    closeChildDetailOverlay();
-    resetDeleteChildFeedback();
-    showDeleteConfirmationDialog();
-  };
-
   const syncRows = (nextProfile = {}, nextChildren = []) => {
     const notes = nextProfile.childrenNotes || {};
     const drafts = rows.filter(
@@ -830,10 +805,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   });
   childDetailClose.addEventListener('click', () => {
     closeChildDetailOverlay();
-  });
-  childDeleteButton.addEventListener('click', (event) => {
-    event.preventDefault();
-    handleChildDeleteFromOverlay();
   });
   childDetailOverlay.addEventListener('click', (event) => {
     if (event.target === childDetailOverlay) {
