@@ -54,22 +54,26 @@ const removeOffer = (date, value) => {
 };
 
 export const bindAngebot = ({
-  comboInput,
-  addButton,
+  comboInput = null,
+  addButton = null,
   selectedList,
   date,
   readOnly = false,
 }) => {
-  if (!comboInput || !addButton || !selectedList) {
+  if (!selectedList) {
     return;
   }
 
   let isReadOnly = Boolean(readOnly);
-  comboInput.disabled = isReadOnly;
-  addButton.disabled = isReadOnly;
+  if (comboInput) {
+    comboInput.disabled = isReadOnly;
+  }
+  if (addButton) {
+    addButton.disabled = isReadOnly;
+  }
 
   const handleAdd = () => {
-    if (isReadOnly) {
+    if (isReadOnly || !comboInput) {
       return;
     }
     const value = comboInput.value || '';
@@ -80,13 +84,15 @@ export const bindAngebot = ({
     comboInput.value = '';
   };
 
-  addButton.addEventListener('click', handleAdd);
-  comboInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      handleAdd();
-    }
-  });
+  if (addButton && comboInput) {
+    addButton.addEventListener('click', handleAdd);
+    comboInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        handleAdd();
+      }
+    });
+  }
 
   selectedList.addEventListener('click', (event) => {
     if (isReadOnly) {
@@ -112,8 +118,12 @@ export const bindAngebot = ({
 
   const updateReadOnly = (nextReadOnly) => {
     isReadOnly = Boolean(nextReadOnly);
-    comboInput.disabled = isReadOnly;
-    addButton.disabled = isReadOnly;
+    if (comboInput) {
+      comboInput.disabled = isReadOnly;
+    }
+    if (addButton) {
+      addButton.disabled = isReadOnly;
+    }
   };
 
   return {

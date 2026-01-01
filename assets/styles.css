@@ -408,7 +408,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 1075;
+  z-index: 2000;
 }
 
 .observation-overlay.is-open {
@@ -1198,6 +1198,17 @@ body.child-detail-overlay-open {
   inset: 0;
   display: flex;
   flex-direction: column;
+  background: #f5f7fb;
+}
+
+.angebot-catalog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 2010;
+}
+
+.angebot-catalog-overlay .observation-templates-overlay__panel {
   background: #f5f7fb;
 }
 

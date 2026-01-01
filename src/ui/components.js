@@ -390,34 +390,20 @@ export const buildAngebotSection = ({
   newValue,
   readOnly = false,
 }) => {
-  const activeAngebote = Array.isArray(selectedAngebote)
-    ? selectedAngebote
-    : [];
-  const datalistId = 'angebote-list';
-  const comboInput = createEl('input', {
-    className: 'form-control',
-    attrs: {
-      type: 'text',
-      list: datalistId,
-      placeholder: 'Angebot auswählen...',
-    },
-    dataset: { role: 'angebot-input' },
-  });
-  comboInput.value = newValue || '';
+  const activeAngebote = Array.isArray(selectedAngebote) ? selectedAngebote : [];
 
-  const datalist = createEl('datalist', { attrs: { id: datalistId } });
-  angebote.forEach((item) => {
-    datalist.appendChild(createEl('option', { attrs: { value: item } }));
+  const openButton = createEl('button', {
+    className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-open' },
+    children: [
+      createEl('span', { text: '📋' }),
+      createEl('span', { text: 'Heutige Angebote...' }),
+    ],
   });
 
-  const addButton = createEl('button', {
-    className: 'btn btn-outline-secondary btn-sm px-2',
-    text: '+',
-    attrs: { type: 'button', 'aria-label': 'Hinzufügen' },
-  });
-
-  const selectedTitle = createEl('h4', {
-    className: 'h6 text-muted mt-3 mb-2',
+  const infoTitle = createEl('p', {
+    className: 'text-muted small mb-1',
     text: 'Heute ausgewählt',
   });
   const selectedList = createEl('div', {
@@ -425,48 +411,134 @@ export const buildAngebotSection = ({
     dataset: { role: 'angebot-list' },
   });
   activeAngebote.forEach((angebot) => {
-    const pill = buildPill({
-      label: angebot,
-      removeLabel: `${angebot} entfernen`,
-      removeRole: 'angebot-remove',
-      value: angebot,
-    });
-    pill.dataset.angebot = angebot;
-    selectedList.appendChild(pill);
+    selectedList.appendChild(
+      buildPill({
+        label: angebot,
+        removeLabel: `${angebot} entfernen`,
+        removeRole: 'angebot-remove',
+        value: angebot,
+      }),
+    );
   });
-
-  const catalogButton = createEl('button', {
-    className:
-      'btn btn-outline-primary d-inline-flex align-items-center gap-2 angebot-catalog-open-btn',
-    attrs: { type: 'button' },
-    dataset: { role: 'angebot-catalog-open' },
-    children: [
-      createEl('span', { text: '⌕' }),
-      createEl('span', { text: 'Angebot-Katalog...' }),
-    ],
-  });
-
-  const comboRow = createEl('div', {
-    className: 'd-flex align-items-center gap-2 flex-wrap',
-    children: [comboInput, addButton, datalist],
-  });
-
-  comboInput.disabled = readOnly;
-  addButton.disabled = readOnly;
-  catalogButton.disabled = false;
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [catalogButton, comboRow, selectedTitle, selectedList],
+    children: [openButton, infoTitle, selectedList],
   });
 
   return {
     element: content,
     refs: {
-      catalogButton,
-      comboInput,
-      addButton,
       selectedList,
+      openButton,
+    },
+  };
+};
+
+export const buildAngebotOverlay = ({ angebotGroups }) => {
+  const overlay = createEl('div', {
+    className: 'observation-overlay angebot-overlay',
+    dataset: { role: 'angebot-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const overlayPanel = createEl('div', {
+    className: 'observation-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const overlayHeader = createEl('div', {
+    className: 'observation-overlay__header',
+  });
+  const overlayTitle = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Heutige Angebote',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'angebot-close' },
+  });
+  overlayHeader.append(overlayTitle, closeButton);
+
+  const overlayContent = createEl('div', {
+    className: 'observation-overlay__content',
+  });
+
+  const todayTitle = createEl('p', {
+    className: 'observation-section__title mb-0',
+    text: 'Heutige Angebote',
+  });
+  const todayList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    dataset: { role: 'angebot-today-list' },
+  });
+  const todaySection = createEl('div', {
+    className: 'observation-section',
+    children: [todayTitle, todayList],
+  });
+
+  const addTitle = createEl('p', {
+    className: 'observation-section__title mb-0',
+    text: 'Angebote hinzufügen',
+  });
+  const topTitle = createEl('p', {
+    className: 'observation-section__subtitle mb-0',
+    text: 'Top 10',
+  });
+  const topList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 small observation-top-list',
+    dataset: { role: 'angebot-top-list' },
+  });
+
+  const catalogButton = createEl('button', {
+    className:
+      'observation-action-card observation-action-card--catalog observation-template-open',
+    children: [
+      createEl('span', {
+        className: 'observation-action-icon',
+        attrs: { 'aria-hidden': 'true' },
+        text: '⌕',
+      }),
+      createEl('span', { className: 'observation-action-label', text: 'Angebotskatalog' }),
+    ],
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-catalog-open' },
+  });
+
+  const createButton = createEl('button', {
+    className: 'observation-action-card observation-action-card--create observation-create-open',
+    children: [
+      createEl('span', {
+        className: 'observation-action-icon',
+        attrs: { 'aria-hidden': 'true' },
+        text: '+',
+      }),
+      createEl('span', { className: 'observation-action-label', text: 'Erstelle Angebot' }),
+    ],
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-create-open' },
+  });
+
+  const actionRow = createEl('div', { className: 'observation-action-grid' });
+  actionRow.append(catalogButton, createButton);
+
+  const addSection = createEl('div', {
+    className: 'observation-section observation-section--add d-flex flex-column gap-2',
+    children: [addTitle, topTitle, topList, actionRow],
+  });
+
+  overlayContent.append(todaySection, addSection);
+  overlayPanel.append(overlayHeader, overlayContent);
+  overlay.appendChild(overlayPanel);
+
+  return {
+    element: overlay,
+    refs: {
+      overlayPanel,
+      todayList,
+      topList,
+      catalogButton,
+      createButton,
+      closeButton,
     },
   };
 };
@@ -686,37 +758,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
 
   const todayTitle = createEl('p', {
     className: 'observation-section__title mb-0',
-    text: 'Heutige Angebote',
-  });
-
-  const todayList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
-    dataset: { role: 'angebot-today-list' },
-  });
-
-  const topTitle = createEl('p', {
-    className: 'observation-section__subtitle mb-0',
-    text: 'Top 10',
-  });
-
-  const topList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2 small observation-top-list',
-    dataset: { role: 'angebot-top-list' },
-  });
-
-  const createButton = createEl('button', {
-    className:
-      'btn btn-outline-primary d-inline-flex align-items-center gap-2 angebot-create-trigger',
-    attrs: { type: 'button' },
-    dataset: { role: 'angebot-create-open' },
-    children: [
-      createEl('span', { text: '+' }),
-      createEl('span', { text: 'Erstelle Angebot' }),
-    ],
-  });
-
-  const catalogTitle = createEl('p', {
-    className: 'observation-section__title mb-0',
     text: 'Angebotskatalog',
   });
 
@@ -725,30 +766,20 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     dataset: { role: 'angebot-catalog-list' },
   });
 
-  const todaySection = createEl('div', {
-    className: 'observation-section d-flex flex-column gap-2',
-    children: [todayTitle, todayList],
-  });
-
-  const addSection = createEl('div', {
-    className: 'observation-section observation-section--add d-flex flex-column gap-2',
-    children: [topTitle, topList, createButton],
-  });
-
-  const catalogSection = createEl('div', {
-    className: 'observation-section d-flex flex-column gap-2',
-    children: [
-      catalogTitle,
-      searchRow,
-      settingsPanel,
-      filterRow,
-      catalogList,
-    ],
-  });
-
   const content = createEl('div', {
     className: 'observation-templates-overlay__content',
-    children: [todaySection, addSection, catalogSection],
+    children: [
+      createEl('div', {
+        className: 'observation-section d-flex flex-column gap-2',
+        children: [
+          catalogTitle,
+          searchRow,
+          settingsPanel,
+          filterRow,
+          catalogList,
+        ],
+      }),
+    ],
   });
 
   panel.append(header, content);

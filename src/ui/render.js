@@ -6,6 +6,7 @@ import {
   buildDrawerShell,
   buildDrawerContent,
   buildAngebotSection,
+  buildAngebotOverlay,
   buildAngebotCatalogOverlay,
   buildAngebotCreateOverlay,
   buildAngebotEditOverlay,
@@ -98,6 +99,7 @@ let classSettingsView = null;
 let freeDaysSettingsView = null;
 let angebotBinding = null;
 let timetableSettingsView = null;
+let angebotOverlayView = null;
 let angebotCatalogView = null;
 let angebotCatalogBinding = null;
 let angebotCreateOverlay = null;
@@ -207,6 +209,9 @@ export const renderApp = (root, state) => {
         readOnly: isReadOnlyDay,
         freeDayInfo,
     });
+  if (!angebotOverlayView) {
+    angebotOverlayView = buildAngebotOverlay({ angebotGroups });
+  }
   if (!angebotCatalogView) {
     angebotCatalogView = buildAngebotCatalogOverlay({
       angebotGroups,
@@ -302,6 +307,7 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
+      angebotOverlayView.element,
       angebotCatalogView.element,
       angebotCreateOverlay.element,
       angebotEditOverlay.element,
@@ -353,15 +359,14 @@ export const renderApp = (root, state) => {
       });
     }
     angebotBinding = bindAngebot({
-      comboInput: angebotSection.refs.comboInput,
-      addButton: angebotSection.refs.addButton,
       selectedList: angebotSection.refs.selectedList,
       date: selectedDate,
       readOnly: isReadOnlyDay,
     });
     angebotCatalogBinding = bindAngebotCatalog({
-      openButton: angebotSection.refs.catalogButton,
-      overlay: angebotCatalogView.element,
+      openButton: angebotSection.refs.openButton,
+      overlay: angebotOverlayView.element,
+      catalogOverlay: angebotCatalogView.element,
       createOverlay: angebotCreateOverlay.element,
       editOverlay: angebotEditOverlay.element,
       date: selectedDate,
@@ -435,7 +440,7 @@ export const renderApp = (root, state) => {
       angebotGroups,
       savedFilters: savedAngebotFilters,
       readOnly: isReadOnlyDay,
-      openButton: angebotSection.refs.catalogButton,
+      openButton: angebotSection.refs.openButton,
     });
   }
 
@@ -485,8 +490,6 @@ export const renderApp = (root, state) => {
 
   appShell.angebotEl = angebotSection.element;
   angebotBinding = bindAngebot({
-    comboInput: angebotSection.refs.comboInput,
-    addButton: angebotSection.refs.addButton,
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
     readOnly: isReadOnlyDay,
