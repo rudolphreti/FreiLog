@@ -500,7 +500,7 @@ export const bindAngebotCatalog = ({
       selectedSet: selectedKeys,
       filters,
     });
-    renderLetterButtons(overlay, currentCatalog);
+    renderLetterButtons(catalogOverlay, currentCatalog);
     const searchInput = catalogOverlay.querySelector('[data-role="angebot-search"]');
     if (searchInput instanceof HTMLInputElement) {
       searchInput.value = filters.query || '';

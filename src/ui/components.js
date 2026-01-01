@@ -756,7 +756,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     ],
   });
 
-  const todayTitle = createEl('p', {
+  const catalogTitle = createEl('p', {
     className: 'observation-section__title mb-0',
     text: 'Angebotskatalog',
   });
@@ -790,8 +790,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     refs: {
       closeButton,
       content,
-      todayList,
-      topList,
       catalogList,
       searchInput,
       settingsPanel,
