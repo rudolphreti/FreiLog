@@ -608,6 +608,7 @@ export const bindAngebotCatalog = ({
     const input = createOverlay.querySelector('[data-role="angebot-create-input"]');
     if (input instanceof HTMLInputElement) {
       input.disabled = false;
+      input.readOnly = false;
       input.value = '';
       input.focus();
     }
@@ -902,6 +903,11 @@ export const bindAngebotCatalog = ({
     }
     const normalized = normalizeAngebotText(input.value);
     if (!normalized) {
+      return;
+    }
+    const selectedKeys = getSelectedKeys();
+    if (selectedKeys.has(normalizeAngebotKey(normalized))) {
+      closeCreateOverlay();
       return;
     }
     const groups = getCreateGroups();
