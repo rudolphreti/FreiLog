@@ -610,6 +610,12 @@ export const bindAngebotCatalog = ({
       input.disabled = false;
       input.readOnly = false;
       input.value = '';
+      // Debug: ensure the input can receive focus and is enabled.
+      console.log('angebot-create: opening overlay', {
+        disabled: input.disabled,
+        readOnly: input.readOnly,
+        value: input.value,
+      });
       input.focus();
     }
     updateCreatePreview();
@@ -901,6 +907,11 @@ export const bindAngebotCatalog = ({
     if (!(input instanceof HTMLInputElement)) {
       return;
     }
+    console.log('angebot-create: submit', {
+      disabled: input.disabled,
+      readOnly: input.readOnly,
+      raw: input.value,
+    });
     const normalized = normalizeAngebotText(input.value);
     if (!normalized) {
       return;
@@ -951,6 +962,9 @@ export const bindAngebotCatalog = ({
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
+    }
+    if (target.dataset.role === 'angebot-create-input') {
+      console.log('angebot-create: click on input');
     }
     const closeButton = target.closest('[data-role="angebot-create-close"]');
     if (closeButton) {
@@ -1010,6 +1024,11 @@ export const bindAngebotCatalog = ({
     const target = event.target;
     if (target instanceof HTMLInputElement && target.dataset.role === 'angebot-create-input') {
       updateCreatePreview();
+      console.log('angebot-create: input', {
+        value: target.value,
+        disabled: target.disabled,
+        readOnly: target.readOnly,
+      });
     }
   });
   createOverlay.addEventListener('click', handleCreateClick);
