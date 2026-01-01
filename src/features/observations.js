@@ -227,6 +227,8 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
   const selectedLetter = container.dataset.templateFilter || 'ALL';
   const { multiGroups, showAlphabet, showAndOr, settingsOpen } = getTemplateFlags(container);
   const groupMode = container.dataset.templateGroupMode === 'OR' ? 'OR' : 'AND';
+  const showGroupModesInline = multiGroups && showAndOr;
+  const showGroupModesInSettings = multiGroups && !showAndOr;
 
   const groupButtons = container.querySelectorAll(
     '[data-role="observation-template-group-filter"]',
@@ -242,24 +244,25 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
   );
   groupModeButtons.forEach((button) => {
     const isActive = button.dataset.value === groupMode;
+    const isDisabled = !multiGroups;
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    button.classList.remove('is-disabled');
-    button.disabled = false;
-    button.setAttribute('aria-disabled', 'false');
+    button.classList.toggle('is-disabled', isDisabled);
+    button.disabled = isDisabled;
+    button.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
   });
   const groupModeToggle = container.querySelector(
     '[data-role="observation-template-group-mode-toggle"]',
   );
   if (isHtmlElement(groupModeToggle)) {
-    groupModeToggle.hidden = !showAndOr;
-    groupModeToggle.classList.toggle('is-hidden', !showAndOr);
+    groupModeToggle.hidden = !showGroupModesInline;
+    groupModeToggle.classList.toggle('is-hidden', !showGroupModesInline);
   }
   const settingsMode = container.querySelector(
     '[data-role="observation-template-group-mode-settings"]',
   );
   if (isHtmlElement(settingsMode)) {
-    settingsMode.hidden = showAndOr;
+    settingsMode.hidden = !showGroupModesInSettings;
   }
 
   const letterBar = container.querySelector('[data-role="observation-template-letter-bar"]');
@@ -290,6 +293,12 @@ const updateTemplateControls = (container, { syncInput = false } = {}) => {
   );
   if (isInputElement(andOrSwitch)) {
     andOrSwitch.checked = showAndOr;
+    andOrSwitch.disabled = !multiGroups;
+  }
+  const andOrSwitchWrapper = andOrSwitch?.closest('.observation-templates__setting-option');
+  if (isHtmlElement(andOrSwitchWrapper)) {
+    andOrSwitchWrapper.hidden = !multiGroups;
+    andOrSwitchWrapper.classList.toggle('is-hidden', !multiGroups);
   }
 
   const settingsPanel = container.querySelector(
@@ -1374,7 +1383,8 @@ export const bindObservations = ({
       '[data-role="observation-template-group-mode"]',
     );
     if (templateGroupModeButton) {
-      if (isReadOnly) {
+      const { multiGroups } = getTemplateFlags(templatesOverlay);
+      if (isReadOnly || !multiGroups) {
         return;
       }
       setTemplateGroupMode(

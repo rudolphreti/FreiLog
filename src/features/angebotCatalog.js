@@ -338,15 +338,15 @@ const renderCatalogList = ({
 };
 
 const syncGroupUi = (overlay, angebotGroups) => {
-    const {
-      selectedGroups,
-      groupMode,
-      selectedLetter,
-      showAndOr,
-      showAlphabet,
-      multiGroups,
-      settingsOpen,
-    } = getFilterState(overlay);
+  const {
+    selectedGroups,
+    groupMode,
+    selectedLetter,
+    showAndOr,
+    showAlphabet,
+    multiGroups,
+    settingsOpen,
+  } = getFilterState(overlay);
   const groupButtons = overlay.querySelectorAll('[data-role="angebot-group-filter"]');
   groupButtons.forEach((button) => {
     const value = button.dataset.value;
@@ -364,22 +364,26 @@ const syncGroupUi = (overlay, angebotGroups) => {
   modeButtons.forEach((button) => {
     const value = button.dataset.value === 'OR' ? 'OR' : 'AND';
     const isActive = value === groupMode;
+    const isDisabled = !multiGroups;
+    button.classList.toggle('active', isActive);
+    button.classList.toggle('is-disabled', isDisabled);
+    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    button.setAttribute('aria-disabled', isDisabled ? 'true' : 'false');
+    button.disabled = isDisabled;
+  });
+
+  const letterButtons = overlay.querySelectorAll('[data-role="angebot-letter"]');
+  letterButtons.forEach((button) => {
+    const value = button.dataset.value || 'ALL';
+    const isActive = value === (selectedLetter || 'ALL');
     button.classList.toggle('active', isActive);
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
-
-    const letterButtons = overlay.querySelectorAll('[data-role="angebot-letter"]');
-    letterButtons.forEach((button) => {
-      const value = button.dataset.value || 'ALL';
-      const isActive = value === (selectedLetter || 'ALL');
-      button.classList.toggle('active', isActive);
-      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    });
-    const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
-    if (letterBar) {
-      letterBar.classList.toggle('d-none', !showAlphabet);
-      letterBar.classList.toggle('is-hidden', !showAlphabet);
-    }
+  const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
+  if (letterBar) {
+    letterBar.classList.toggle('d-none', !showAlphabet);
+    letterBar.classList.toggle('is-hidden', !showAlphabet);
+  }
 
   const multiSwitch = overlay.querySelector('[data-role="angebot-multi-switch"]');
   const alphabetSwitch = overlay.querySelector('[data-role="angebot-alphabet-switch"]');
@@ -392,34 +396,42 @@ const syncGroupUi = (overlay, angebotGroups) => {
   }
   if (andOrSwitch instanceof HTMLInputElement) {
     andOrSwitch.checked = showAndOr;
+    andOrSwitch.disabled = !multiGroups;
+  }
+  const andOrSwitchWrapper = andOrSwitch?.closest('.observation-templates__setting-option');
+  if (andOrSwitchWrapper instanceof HTMLElement) {
+    andOrSwitchWrapper.hidden = !multiGroups;
+    andOrSwitchWrapper.classList.toggle('is-hidden', !multiGroups);
   }
 
-    const settingsPanel = overlay.querySelector('[data-role="angebot-settings-panel"]');
-    if (settingsPanel) {
-      settingsPanel.hidden = !settingsOpen;
-    }
-    const groupModeToggle = overlay.querySelector('[data-role="angebot-group-mode-toggle"]');
-    if (groupModeToggle) {
-      groupModeToggle.hidden = !showAndOr;
-    }
-    const settingsToggle = overlay.querySelector('[data-role="angebot-settings-toggle"]');
-    if (settingsToggle) {
-      settingsToggle.setAttribute('aria-expanded', settingsOpen ? 'true' : 'false');
-      settingsToggle.classList.toggle('is-active', settingsOpen);
-    }
-  };
+  const settingsPanel = overlay.querySelector('[data-role="angebot-settings-panel"]');
+  if (settingsPanel) {
+    settingsPanel.hidden = !settingsOpen;
+  }
+  const groupModeToggle = overlay.querySelector('[data-role="angebot-group-mode-toggle"]');
+  if (groupModeToggle) {
+    const shouldShowGroupMode = multiGroups && showAndOr;
+    groupModeToggle.hidden = !shouldShowGroupMode;
+    groupModeToggle.classList.toggle('is-hidden', !shouldShowGroupMode);
+  }
+  const settingsToggle = overlay.querySelector('[data-role="angebot-settings-toggle"]');
+  if (settingsToggle) {
+    settingsToggle.setAttribute('aria-expanded', settingsOpen ? 'true' : 'false');
+    settingsToggle.classList.toggle('is-active', settingsOpen);
+  }
+};
 
-  const persistFilters = debounce((overlay) => {
-    const state = getFilterState(overlay);
-    setSavedAngebotFilters({
-      selectedGroups: state.selectedGroups,
-      selectedLetter: state.selectedLetter,
+const persistFilters = debounce((overlay) => {
+  const state = getFilterState(overlay);
+  setSavedAngebotFilters({
+    selectedGroups: state.selectedGroups,
+    selectedLetter: state.selectedLetter,
     andOrMode: state.groupMode,
     multiGroups: state.multiGroups,
     showAndOr: state.showAndOr,
-      showAlphabet: state.showAlphabet,
-    });
-  }, 200);
+    showAlphabet: state.showAlphabet,
+  });
+}, 200);
 
 const normalizeCatalog = (catalog) =>
   Array.isArray(catalog) ? catalog : Array.isArray(getAngebotCatalog()) ? getAngebotCatalog() : [];
@@ -808,6 +820,10 @@ export const bindAngebotCatalog = ({
     }
     const groupModeButton = target.closest('[data-role="angebot-group-mode"]');
     if (groupModeButton) {
+      const { multiGroups } = getFilterState(catalogOverlay);
+      if (!multiGroups) {
+        return;
+      }
       const value = groupModeButton.dataset.value === 'OR' ? 'OR' : 'AND';
       setFilterState(catalogOverlay, { groupMode: value });
       syncGroupUi(catalogOverlay, angebotGroups);
