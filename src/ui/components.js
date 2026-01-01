@@ -750,11 +750,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     ],
   });
 
-  const catalogTitle = createEl('p', {
-    className: 'observation-section__title mb-0',
-    text: 'Angebotskatalog',
-  });
-
   const catalogList = createEl('div', {
     className: 'd-flex flex-column gap-3 observation-templates__list',
     dataset: { role: 'angebot-catalog-list' },
@@ -764,12 +759,8 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     className: 'observation-templates-overlay__content',
     children: [
       createEl('div', {
-        className: 'observation-section d-flex flex-column gap-2',
-        children: [
-          catalogTitle,
-          filterRow,
-          catalogList,
-        ],
+        className: 'mt-3 d-flex flex-column gap-3',
+        children: [filterRow, catalogList],
       }),
     ],
   });
