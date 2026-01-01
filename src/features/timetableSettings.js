@@ -21,6 +21,72 @@ const cloneSchedule = (schedule) => {
   return cloned;
 };
 
+const normalizeSubjectName = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const buildSubjectKey = (value) => normalizeSubjectName(value).toLocaleLowerCase('de');
+
+const hasSubjectKey = (subjects, key, excludeKey = '') =>
+  Array.isArray(subjects)
+    ? subjects.some((item) => {
+        const itemKey = buildSubjectKey(item);
+        if (!itemKey || (excludeKey && itemKey === excludeKey)) {
+          return false;
+        }
+        return itemKey === key;
+      })
+    : false;
+
+const renameSubjectInSchedule = (schedule, fromValue, toValue) => {
+  const fromKey = buildSubjectKey(fromValue);
+  const toName = normalizeSubjectName(toValue);
+  const toKey = buildSubjectKey(toName);
+
+  if (!fromKey || !toKey) {
+    return cloneSchedule(schedule);
+  }
+
+  const updatedSchedule = cloneSchedule(schedule);
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    updatedSchedule[key] = (updatedSchedule[key] || []).map((cell) => {
+      if (!Array.isArray(cell)) {
+        return [];
+      }
+      const nextCell = [];
+      cell.forEach((entry) => {
+        const entryKey = buildSubjectKey(entry);
+        if (!entryKey || entryKey === fromKey) {
+          if (!hasSubjectKey(nextCell, toKey)) {
+            nextCell.push(toName);
+          }
+          return;
+        }
+        if (!hasSubjectKey(nextCell, entryKey)) {
+          nextCell.push(entry);
+        }
+      });
+      return nextCell;
+    });
+  });
+
+  return updatedSchedule;
+};
+
+const removeSubjectFromSchedule = (schedule, subjectValue) => {
+  const targetKey = buildSubjectKey(subjectValue);
+  const updatedSchedule = cloneSchedule(schedule);
+  if (!targetKey) {
+    return updatedSchedule;
+  }
+
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    updatedSchedule[key] = (updatedSchedule[key] || []).map((cell) =>
+      Array.isArray(cell) ? cell.filter((entry) => buildSubjectKey(entry) !== targetKey) : [],
+    );
+  });
+
+  return updatedSchedule;
+};
+
 const buildSubjectOption = (subject, isMissing = false) =>
   createEl('option', {
     attrs: { value: subject },
@@ -33,8 +99,13 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   let localSchedule = cloneSchedule(schedule);
   let isOpen = false;
   let isEditing = false;
-  let subjectRemoveButtons = [];
+  let subjectInputs = [];
   let lessonInputs = [];
+  let deleteSubjectName = '';
+  let deleteSubjectFeedbackMessage = '';
+  let deleteSubjectFeedbackState = 'idle';
+  let deleteSubjectConfirmationTarget = '';
+  let deleteSubjectConfirmationLabel = '';
 
   const status = {
     subjects: null,
@@ -66,11 +137,15 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const lessonsBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   lessonsCard.append(lessonsBody);
 
+  const cautionCard = createEl('section', { className: 'card border-0 shadow-sm' });
+  const cautionBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
+  cautionCard.append(cautionBody);
+
   const gridCard = createEl('section', { className: 'card border-0 shadow-sm' });
   const gridBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   gridCard.append(gridBody);
 
-  content.append(gridCard, subjectsCard, lessonsCard);
+  content.append(gridCard, subjectsCard, lessonsCard, cautionCard);
   panel.append(header, content);
   overlay.append(panel);
 
@@ -90,7 +165,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
   };
 
-  const subjectsList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+  const subjectsList = createEl('div', { className: 'd-flex flex-column gap-2' });
   const subjectInput = createEl('input', {
     className: 'form-control',
     attrs: { type: 'text', placeholder: 'Neues Fach hinzufügen' },
@@ -106,44 +181,112 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   });
   status.subjects = createEl('div', { className: 'small text-muted', text: '' });
 
+  const renderDeleteSubjectFeedback = () => {
+    if (!deleteSubjectFeedback) {
+      return;
+    }
+    deleteSubjectFeedback.textContent = deleteSubjectFeedbackMessage;
+    deleteSubjectFeedback.classList.toggle('d-none', !deleteSubjectFeedbackMessage);
+    deleteSubjectFeedback.classList.toggle('text-success', deleteSubjectFeedbackState === 'success');
+    deleteSubjectFeedback.classList.toggle('text-danger', deleteSubjectFeedbackState === 'error');
+    deleteSubjectFeedback.classList.toggle('text-muted', deleteSubjectFeedbackState === 'idle');
+  };
+
+  const resetDeleteSubjectFeedback = () => {
+    deleteSubjectFeedbackMessage = '';
+    deleteSubjectFeedbackState = 'idle';
+    renderDeleteSubjectFeedback();
+  };
+
+  const handleRenameSubject = (originalSubject, inputEl) => {
+    const originalKey = buildSubjectKey(originalSubject);
+    const nextValue = normalizeSubjectName(inputEl.value);
+    const nextKey = buildSubjectKey(nextValue);
+
+    if (!originalKey) {
+      inputEl.value = '';
+      return;
+    }
+    if (!nextKey) {
+      inputEl.value = originalSubject;
+      setStatus('subjects', 'Bitte einen Fachnamen eingeben.', 'error');
+      return;
+    }
+    if (nextValue.length > MAX_SUBJECT_LENGTH) {
+      inputEl.value = originalSubject;
+      setStatus('subjects', `Maximale Länge: ${MAX_SUBJECT_LENGTH} Zeichen.`, 'error');
+      return;
+    }
+    if (hasSubjectKey(localSubjects, nextKey, originalKey)) {
+      inputEl.value = originalSubject;
+      setStatus('subjects', 'Fach ist bereits vorhanden.', 'error');
+      return;
+    }
+    if (normalizeSubjectName(originalSubject) === nextValue) {
+      inputEl.value = originalSubject;
+      return;
+    }
+
+    const updatedSubjects = [
+      ...localSubjects.filter((item) => buildSubjectKey(item) !== originalKey),
+      nextValue,
+    ].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
+    const updatedSchedule = renameSubjectInSchedule(localSchedule, originalSubject, nextValue);
+
+    localSubjects = updatedSubjects;
+    localSchedule = updatedSchedule;
+    saveTimetableSubjects(localSubjects);
+    saveTimetableSchedule(localSchedule);
+    refreshSubjectsList();
+    refreshGridOptions();
+    setStatus('subjects', 'Fach umbenannt.', 'success');
+    setStatus('schedule', 'Stundenplan aktualisiert.', 'success');
+  };
+
   const refreshSubjectsList = () => {
-    subjectRemoveButtons = [];
+    subjectInputs = [];
     subjectsList.replaceChildren();
+    if (!localSubjects.length) {
+      subjectsList.append(
+        createEl('div', { className: 'text-muted small', text: 'Noch keine Fächer hinzugefügt.' }),
+      );
+      applyEditingState();
+      return;
+    }
+
     localSubjects.forEach((subject) => {
-      const pill = createEl('span', {
-        className: 'badge rounded-pill text-bg-secondary d-inline-flex align-items-center gap-2 timetable-pill',
+      const subjectRow = createEl('div', { className: 'd-flex flex-column gap-1' });
+      const input = createEl('input', {
+        className: 'form-control',
+        attrs: {
+          type: 'text',
+          value: subject,
+          'aria-label': `Fach ${subject}`,
+        },
       });
-      pill.append(createEl('span', { text: subject }));
-      const removeBtn = createEl('button', {
-        className: 'btn btn-link btn-sm text-white p-0',
-        attrs: { type: 'button', 'aria-label': `${subject} entfernen` },
-        text: '✕',
+
+      input.addEventListener('blur', () => handleRenameSubject(subject, input));
+      input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          handleRenameSubject(subject, input);
+        }
+        if (event.key === 'Escape') {
+          input.value = subject;
+        }
       });
-      removeBtn.addEventListener('click', () => {
-        localSubjects = localSubjects.filter((item) => item !== subject);
-        localSchedule = cloneSchedule(localSchedule);
-        TIMETABLE_DAY_ORDER.forEach(({ key }) => {
-          localSchedule[key] = (localSchedule[key] || []).map((cell) =>
-            cell.filter((entry) => entry !== subject),
-          );
-        });
-        saveTimetableSubjects(localSubjects);
-        saveTimetableSchedule(localSchedule);
-        refreshSubjectsList();
-        refreshGridOptions();
-        setStatus('subjects', 'Fach entfernt.', 'success');
-      });
-      removeBtn.disabled = !isEditing;
-      subjectRemoveButtons.push(removeBtn);
-      pill.append(removeBtn);
-      subjectsList.append(pill);
+
+      subjectInputs.push(input);
+      subjectRow.append(input);
+      subjectsList.append(subjectRow);
     });
     applyEditingState();
   };
 
   const handleAddSubject = () => {
-    const value = subjectInput.value.trim();
-    if (!value) {
+    const value = normalizeSubjectName(subjectInput.value);
+    const valueKey = buildSubjectKey(value);
+    if (!valueKey) {
       setStatus('subjects', 'Bitte einen Fachnamen eingeben.', 'error');
       return;
     }
@@ -151,7 +294,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
       setStatus('subjects', `Maximale Länge: ${MAX_SUBJECT_LENGTH} Zeichen.`, 'error');
       return;
     }
-    if (localSubjects.includes(value)) {
+    if (hasSubjectKey(localSubjects, valueKey)) {
       setStatus('subjects', 'Fach ist bereits vorhanden.', 'error');
       return;
     }
@@ -418,10 +561,8 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     subjectInput.disabled = disable;
     addSubjectButton.disabled = disable;
     subjectFormRow.classList.toggle('d-none', disable);
-    subjectRemoveButtons.forEach((btn) => {
-      btn.disabled = disable;
-      btn.classList.toggle('d-none', disable);
-      btn.classList.toggle('disabled', disable);
+    subjectInputs.forEach((input) => {
+      input.disabled = disable;
     });
     lessonInputs.forEach((input) => {
       input.disabled = disable;
@@ -501,6 +642,199 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     status.lessons,
   );
 
+  const deleteSubjectInput = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      placeholder: 'Name des Fachs',
+      'aria-label': 'Name des Fachs',
+    },
+  });
+  const deleteSubjectFeedback = createEl('div', { className: 'small d-none' });
+  const deleteSubjectButton = createEl('button', {
+    className: 'btn btn-outline-danger d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '⚠️' }), createEl('span', { text: 'Löschen…' })],
+  });
+
+  cautionBody.append(
+    createEl('h4', { className: 'h5 mb-1 text-danger', text: 'Vorsicht' }),
+    createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Ein Fach zu löschen entfernt es aus der Liste und aus allen Stundenplan-Einträgen.',
+    }),
+    createEl('div', {
+      className: 'd-flex flex-column gap-2',
+      children: [
+        createEl('label', {
+          className: 'form-label mb-0',
+          attrs: { for: 'delete-subject-name' },
+          text: 'Fachname zum Löschen',
+        }),
+        Object.assign(deleteSubjectInput, { id: 'delete-subject-name' }),
+      ],
+    }),
+    deleteSubjectButton,
+    deleteSubjectFeedback,
+  );
+
+  const deleteSubjectConfirmDialog = createEl('div', {
+    className: 'class-settings-confirm d-none',
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'delete-subject-confirm-title',
+      'aria-describedby': 'delete-subject-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const deleteSubjectConfirmPanel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const deleteSubjectConfirmTitle = createEl('h4', {
+    className: 'h6 mb-2 text-danger',
+    attrs: { id: 'delete-subject-confirm-title' },
+    text: 'Warnung',
+  });
+  const deleteSubjectConfirmMessage = createEl('p', {
+    className: 'mb-2',
+    attrs: { id: 'delete-subject-confirm-message' },
+    text: 'Beim Löschen dieses Fachs werden alle zugehörigen Stundenplan-Einträge entfernt.',
+  });
+  const deleteSubjectConfirmName = createEl('p', {
+    className: 'fw-semibold mb-3 text-danger',
+  });
+  const deleteSubjectConfirmActions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+  });
+  const deleteSubjectConfirmSubmit = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    text: 'Ich bin mir des Risikos bewusst und möchte löschen',
+  });
+  const deleteSubjectConfirmCancel = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    text: 'Abbrechen',
+  });
+  deleteSubjectConfirmActions.append(deleteSubjectConfirmSubmit, deleteSubjectConfirmCancel);
+  deleteSubjectConfirmPanel.append(
+    deleteSubjectConfirmTitle,
+    deleteSubjectConfirmMessage,
+    deleteSubjectConfirmName,
+    deleteSubjectConfirmActions,
+  );
+  deleteSubjectConfirmDialog.append(deleteSubjectConfirmPanel);
+  overlay.append(deleteSubjectConfirmDialog);
+
+  const updateDeleteConfirmationDialog = () => {
+    const hasLabel = Boolean(deleteSubjectConfirmationLabel);
+    deleteSubjectConfirmName.textContent = hasLabel ? `„${deleteSubjectConfirmationLabel}“` : '';
+    deleteSubjectConfirmName.classList.toggle('d-none', !hasLabel);
+  };
+
+  const hideDeleteSubjectConfirmation = () => {
+    deleteSubjectConfirmDialog.classList.add('d-none');
+    deleteSubjectConfirmDialog.setAttribute('aria-hidden', 'true');
+  };
+
+  const clearDeleteSubjectConfirmation = () => {
+    deleteSubjectConfirmationTarget = '';
+    deleteSubjectConfirmationLabel = '';
+  };
+
+  const closeDeleteSubjectConfirmation = () => {
+    hideDeleteSubjectConfirmation();
+    clearDeleteSubjectConfirmation();
+  };
+
+  const showDeleteSubjectConfirmation = () => {
+    updateDeleteConfirmationDialog();
+    deleteSubjectConfirmDialog.classList.remove('d-none');
+    deleteSubjectConfirmDialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => {
+      deleteSubjectConfirmSubmit?.focus();
+    });
+  };
+
+  const performDeleteSubject = (normalizedTarget) => {
+    if (!normalizedTarget) {
+      return;
+    }
+    const remainingSubjects = localSubjects.filter(
+      (subject) => buildSubjectKey(subject) !== normalizedTarget,
+    );
+    const targetLabel =
+      localSubjects.find((subject) => buildSubjectKey(subject) === normalizedTarget) || '';
+    localSubjects = remainingSubjects;
+    localSchedule = removeSubjectFromSchedule(localSchedule, normalizedTarget);
+    saveTimetableSubjects(localSubjects);
+    saveTimetableSchedule(localSchedule);
+    refreshSubjectsList();
+    refreshGridOptions();
+    deleteSubjectName = '';
+    deleteSubjectInput.value = '';
+    deleteSubjectFeedbackMessage = targetLabel
+      ? `„${targetLabel}“ wurde gelöscht.`
+      : 'Fach gelöscht.';
+    deleteSubjectFeedbackState = 'success';
+    renderDeleteSubjectFeedback();
+    setStatus('subjects', 'Fach entfernt.', 'success');
+    setStatus('schedule', 'Stundenplan aktualisiert.', 'success');
+  };
+
+  const handleDeleteSubject = () => {
+    const normalizedTarget = buildSubjectKey(deleteSubjectName);
+    if (!normalizedTarget) {
+      deleteSubjectFeedbackMessage = 'Bitte gib einen gültigen Fachnamen ein.';
+      deleteSubjectFeedbackState = 'error';
+      renderDeleteSubjectFeedback();
+      return;
+    }
+    const existingSubject = localSubjects.find(
+      (subject) => buildSubjectKey(subject) === normalizedTarget,
+    );
+    if (!existingSubject) {
+      deleteSubjectFeedbackMessage = 'Kein Fach mit diesem Namen gefunden.';
+      deleteSubjectFeedbackState = 'error';
+      renderDeleteSubjectFeedback();
+      return;
+    }
+    deleteSubjectConfirmationTarget = normalizedTarget;
+    deleteSubjectConfirmationLabel = existingSubject;
+    resetDeleteSubjectFeedback();
+    showDeleteSubjectConfirmation();
+  };
+
+  deleteSubjectInput.addEventListener('input', (event) => {
+    deleteSubjectName = event.target.value;
+    resetDeleteSubjectFeedback();
+  });
+  deleteSubjectInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      handleDeleteSubject();
+    }
+  });
+  deleteSubjectButton.addEventListener('click', handleDeleteSubject);
+  deleteSubjectConfirmCancel.addEventListener('click', closeDeleteSubjectConfirmation);
+  deleteSubjectConfirmSubmit.addEventListener('click', () => {
+    performDeleteSubject(deleteSubjectConfirmationTarget);
+    closeDeleteSubjectConfirmation();
+  });
+  deleteSubjectConfirmDialog.addEventListener('click', (event) => {
+    if (event.target === deleteSubjectConfirmDialog) {
+      closeDeleteSubjectConfirmation();
+    }
+  });
+  deleteSubjectConfirmDialog.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeDeleteSubjectConfirmation();
+    }
+  });
+
   const open = () => {
     if (isOpen) return;
     overlay.classList.add('is-open');
@@ -510,6 +844,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   };
 
   const close = () => {
+    closeDeleteSubjectConfirmation();
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('timetable-overlay-open');
@@ -540,6 +875,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     setStatus('subjects', '');
     setStatus('lessons', '');
     setStatus('schedule', '');
+    deleteSubjectName = '';
+    deleteSubjectInput.value = '';
+    closeDeleteSubjectConfirmation();
+    resetDeleteSubjectFeedback();
   };
 
   refreshSubjectsList();
