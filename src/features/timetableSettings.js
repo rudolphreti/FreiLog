@@ -413,8 +413,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     const disable = !isEditing;
     subjectInput.disabled = disable;
     addSubjectButton.disabled = disable;
+    subjectFormRow.classList.toggle('d-none', disable);
     subjectRemoveButtons.forEach((btn) => {
       btn.disabled = disable;
+      btn.classList.toggle('d-none', disable);
       btn.classList.toggle('disabled', disable);
     });
     lessonInputs.forEach((input) => {
