@@ -515,6 +515,9 @@ export const bindAngebotCatalog = ({
   };
 
   const openOverlay = () => {
+    if (isReadOnly) {
+      return;
+    }
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
@@ -532,6 +535,9 @@ export const bindAngebotCatalog = ({
   };
 
   const openCatalogOverlay = () => {
+    if (isReadOnly) {
+      return;
+    }
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
     render();
@@ -601,6 +607,7 @@ export const bindAngebotCatalog = ({
     setCreateGroups([]);
     const input = createOverlay.querySelector('[data-role="angebot-create-input"]');
     if (input instanceof HTMLInputElement) {
+      input.disabled = false;
       input.value = '';
       input.focus();
     }
@@ -817,8 +824,10 @@ export const bindAngebotCatalog = ({
         const key = normalizeAngebotKey(value);
         if (selectedKeys.has(key)) {
           removeOfferForDate(value);
+          catalogButton.classList.remove('is-selected');
         } else {
           addOfferForDate(value);
+          catalogButton.classList.add('is-selected');
         }
       }
     }
@@ -1034,6 +1043,9 @@ export const bindAngebotCatalog = ({
       render();
       if (nextOpenButton) {
         setOpenButton(nextOpenButton);
+      }
+      if (openButtonRef) {
+        openButtonRef.disabled = isReadOnly;
       }
     },
   };

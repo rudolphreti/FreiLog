@@ -426,6 +426,10 @@ export const buildAngebotSection = ({
     children: [openButton, infoTitle, selectedList],
   });
 
+  if (readOnly) {
+    openButton.disabled = true;
+  }
+
   return {
     element: content,
     refs: {
