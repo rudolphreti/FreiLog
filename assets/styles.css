@@ -1500,11 +1500,18 @@ body.child-detail-overlay-open {
   align-items: center;
   justify-content: center;
   box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
+  text-decoration: none;
 }
 
 .observation-templates__settings-btn.is-active {
   border-color: #adb8ca;
   background: #eef1f7;
+}
+
+.observation-templates__settings-btn:hover,
+.observation-templates__settings-btn:focus,
+.observation-templates__settings-btn:focus-visible {
+  text-decoration: none;
 }
 
 .observation-templates__settings-panel {
