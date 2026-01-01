@@ -200,6 +200,7 @@ const renderCatalogList = ({
     return;
   }
   const { selectedGroups, groupMode, selectedLetter, query } = filters;
+  const activeLetter = filters.showAlphabet ? selectedLetter : 'ALL';
   const normalizedQuery = normalizeFilterQuery(query);
   const items = (Array.isArray(catalog) ? catalog : []).filter((entry) => {
     const label =
@@ -209,7 +210,7 @@ const renderCatalogList = ({
     if (!label) {
       return false;
     }
-    if (selectedLetter !== 'ALL' && label[0]?.toLocaleUpperCase() !== selectedLetter) {
+    if (activeLetter !== 'ALL' && label[0]?.toLocaleUpperCase() !== activeLetter) {
       return false;
     }
     if (normalizedQuery && !label.toLocaleLowerCase('de').includes(normalizedQuery)) {
