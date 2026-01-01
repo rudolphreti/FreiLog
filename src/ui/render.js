@@ -6,10 +6,14 @@ import {
   buildDrawerShell,
   buildDrawerContent,
   buildAngebotSection,
+  buildAngebotCatalogOverlay,
+  buildAngebotCreateOverlay,
+  buildAngebotEditOverlay,
   buildObservationsSection,
 } from './components.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
+import { bindAngebotCatalog } from '../features/angebotCatalog.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
@@ -94,6 +98,10 @@ let classSettingsView = null;
 let freeDaysSettingsView = null;
 let angebotBinding = null;
 let timetableSettingsView = null;
+let angebotCatalogView = null;
+let angebotCatalogBinding = null;
+let angebotCreateOverlay = null;
+let angebotEditOverlay = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -157,12 +165,18 @@ export const renderApp = (root, state) => {
   const observations = normalizeObservations(entry.observations);
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
+  const angebotCatalog = db.angebotCatalog || [];
+  const angebotStats = db.angebotStats || {};
   const observationStats = db.observationStats || {};
   const observationCatalog = db.observationCatalog || [];
   const observationGroups = db.observationGroups || {};
+  const angebotGroups = Object.fromEntries(
+    Object.entries(observationGroups || {}).filter(([code]) => code !== 'SCHWARZ'),
+  );
   const timetableSubjects = db.timetableSubjects || [];
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
+  const savedAngebotFilters = state?.ui?.overlay?.savedAngebotFilters;
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
   const hasData =
@@ -193,6 +207,18 @@ export const renderApp = (root, state) => {
         readOnly: isReadOnlyDay,
         freeDayInfo,
     });
+  if (!angebotCatalogView) {
+    angebotCatalogView = buildAngebotCatalogOverlay({
+      angebotGroups,
+      savedFilters: savedAngebotFilters,
+    });
+  }
+  if (!angebotCreateOverlay) {
+    angebotCreateOverlay = buildAngebotCreateOverlay({ angebotGroups });
+  }
+  if (!angebotEditOverlay) {
+    angebotEditOverlay = buildAngebotEditOverlay({ angebotGroups });
+  }
   if (!weeklyTableViewBinding) {
     weeklyTableViewBinding = createWeeklyTableView({
       days: weeklyDays,
@@ -276,6 +302,9 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
+      angebotCatalogView.element,
+      angebotCreateOverlay.element,
+      angebotEditOverlay.element,
     );
     root.appendChild(container);
 
@@ -330,6 +359,19 @@ export const renderApp = (root, state) => {
       date: selectedDate,
       readOnly: isReadOnlyDay,
     });
+    angebotCatalogBinding = bindAngebotCatalog({
+      openButton: angebotSection.refs.catalogButton,
+      overlay: angebotCatalogView.element,
+      createOverlay: angebotCreateOverlay.element,
+      editOverlay: angebotEditOverlay.element,
+      date: selectedDate,
+      angebotGroups,
+      selectedAngebote,
+      catalog: angebotCatalog,
+      topStats: angebotStats,
+      savedFilters: savedAngebotFilters,
+      readOnly: isReadOnlyDay,
+    });
     observationsBinding = bindObservations({
       list: observationsSection.refs.list,
       overlay: observationsSection.refs.overlay,
@@ -382,6 +424,19 @@ export const renderApp = (root, state) => {
   }
   if (observationsBinding?.updateReadOnly) {
     observationsBinding.updateReadOnly(isReadOnlyDay);
+  }
+
+  if (angebotCatalogBinding) {
+    angebotCatalogBinding.update({
+      date: selectedDate,
+      selectedAngebote,
+      catalog: angebotCatalog,
+      topStats: angebotStats,
+      angebotGroups,
+      savedFilters: savedAngebotFilters,
+      readOnly: isReadOnlyDay,
+      openButton: angebotSection.refs.catalogButton,
+    });
   }
 
   const actions = drawerContentRefs?.actions;

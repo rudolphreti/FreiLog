@@ -1,4 +1,11 @@
-import { addPreset, getEntry, getPresets, updateEntry } from '../db/dbRepository.js';
+import {
+  addPreset,
+  getEntry,
+  getPresets,
+  updateEntry,
+  upsertAngebotCatalogEntry,
+} from '../db/dbRepository.js';
+import { normalizeAngebotText } from '../utils/angebotCatalog.js';
 
 const normalizeOffers = (value) => {
   if (!Array.isArray(value)) {
@@ -10,7 +17,7 @@ const normalizeOffers = (value) => {
     if (typeof item !== 'string') {
       return false;
     }
-    const trimmed = item.trim();
+    const trimmed = normalizeAngebotText(item);
     if (!trimmed || seen.has(trimmed)) {
       return false;
     }
@@ -20,7 +27,7 @@ const normalizeOffers = (value) => {
 };
 
 const addOffer = ({ date, value }) => {
-  const trimmed = value.trim();
+  const trimmed = normalizeAngebotText(value);
   if (!trimmed) {
     return;
   }
@@ -36,6 +43,7 @@ const addOffer = ({ date, value }) => {
   if (!presets.includes(trimmed)) {
     addPreset('angebote', trimmed);
   }
+  upsertAngebotCatalogEntry(trimmed);
 };
 
 const removeOffer = (date, value) => {

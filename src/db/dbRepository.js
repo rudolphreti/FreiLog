@@ -8,6 +8,14 @@ import { clearAppData } from '../state/persistence.js';
 import { getState, initStore, setSelectedDate, updateAppData } from '../state/store.js';
 import { ensureYmd, isValidYmd, todayYmd } from '../utils/date.js';
 import {
+  buildAngebotId,
+  getAngebotCatalogLabels,
+  normalizeAngebotCatalog,
+  normalizeAngebotGroups,
+  normalizeAngebotKey,
+  normalizeAngebotText,
+} from '../utils/angebotCatalog.js';
+import {
   buildObservationId,
   normalizeObservationGroups,
   normalizeObservationKey,
@@ -125,6 +133,30 @@ const replaceObservationReferences = (days, fromKey, toText) => {
       });
       entry.observations[child] = updated;
     });
+  });
+};
+
+const replaceAngebotReferences = (days, fromKey, toText) => {
+  if (!days || typeof days !== 'object') {
+    return;
+  }
+  const normalizedTarget = normalizeAngebotText(toText);
+  const targetKey = normalizeAngebotKey(normalizedTarget);
+  if (!targetKey) {
+    return;
+  }
+
+  Object.values(days).forEach((entry) => {
+    if (!entry || !Array.isArray(entry.angebote)) {
+      return;
+    }
+    const normalized = ensureUniqueSortedStrings(
+      entry.angebote
+        .map((item) => normalizeAngebotText(item))
+        .filter(Boolean)
+        .map((item) => (normalizeAngebotKey(item) === fromKey ? normalizedTarget : item)),
+    );
+    entry.angebote = normalized;
   });
 };
 
@@ -451,6 +483,14 @@ export const getPresets = (type) => {
   }
 
   if (type === 'angebote') {
+    const catalog = normalizeAngebotCatalog(
+      presets.angebotCatalog || presets.angebote,
+      presets.angebote,
+    );
+    const labels = getAngebotCatalogLabels(catalog);
+    if (labels.length) {
+      return labels;
+    }
     return presets.angebote || [];
   }
 
@@ -506,6 +546,11 @@ export const updateEntry = (date, patch) => {
     const existing =
       data.days[ymd] || createDefaultDay(ymd, childrenList);
     const merged = { ...existing, ...payload };
+    merged.angebote = ensureUniqueSortedStrings(
+      Array.isArray(merged.angebote)
+        ? merged.angebote.map((item) => normalizeAngebotText(item)).filter(Boolean)
+        : [],
+    );
     if (payload.observations) {
       merged.observations = mergeObservations(
         existing.observations,
@@ -526,6 +571,180 @@ export const updateEntry = (date, patch) => {
     merged.date = ymd;
     data.days[ymd] = merged;
   });
+};
+
+export const getAngebotCatalog = () => {
+  const data = getState().db;
+  if (!data) {
+    return [];
+  }
+  return normalizeAngebotCatalog(data.angebotCatalog || data.angebote, data.angebote);
+};
+
+export const upsertAngebotCatalogEntry = (value, groups = []) => {
+  const normalizedText = normalizeAngebotText(value);
+  if (!normalizedText) {
+    return '';
+  }
+
+  const normalizedGroups = normalizeAngebotGroups(groups);
+  let resolvedText = normalizedText;
+
+  updateAppData((data) => {
+    const catalog = normalizeAngebotCatalog(
+      data.angebotCatalog || data.angebote,
+      data.angebote,
+    );
+    const normalizedKey = normalizeAngebotKey(normalizedText);
+    const index = catalog.findIndex(
+      (entry) => normalizeAngebotKey(entry?.text || entry || '') === normalizedKey,
+    );
+
+    if (index >= 0) {
+      const existing = catalog[index];
+      resolvedText = normalizeAngebotText(existing?.text || existing || normalizedText);
+      const mergedGroups = normalizeAngebotGroups([
+        ...(Array.isArray(existing?.groups) ? existing.groups : []),
+        ...normalizedGroups,
+      ]);
+      catalog[index] =
+        typeof existing === 'string'
+          ? {
+              id: buildAngebotId(resolvedText),
+              text: resolvedText,
+              groups: mergedGroups,
+              createdAt: new Date().toISOString(),
+            }
+          : {
+              ...existing,
+              text: resolvedText,
+              groups: mergedGroups,
+            };
+    } else {
+      catalog.push({
+        id: buildAngebotId(normalizedText),
+        text: normalizedText,
+        groups: normalizedGroups,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    data.angebotCatalog = catalog;
+    data.angebote = ensureUniqueSortedStrings([...(data.angebote || []), resolvedText]);
+  });
+
+  return resolvedText;
+};
+
+export const updateAngebotCatalogEntry = ({ currentText, nextText, groups = [] }) => {
+  const normalizedCurrent = normalizeAngebotText(currentText);
+  const normalizedNext = normalizeAngebotText(nextText);
+  if (!normalizedCurrent || !normalizedNext) {
+    return { status: 'invalid', value: normalizedNext || '' };
+  }
+
+  const normalizedGroups = normalizeAngebotGroups(groups);
+  const currentKey = normalizeAngebotKey(normalizedCurrent);
+  const nextKey = normalizeAngebotKey(normalizedNext);
+  let result = { status: 'updated', value: normalizedNext };
+
+  updateAppData((data) => {
+    const catalog = normalizeAngebotCatalog(
+      data.angebotCatalog || data.angebote,
+      data.angebote,
+    );
+    const currentIndex = catalog.findIndex(
+      (entry) => normalizeAngebotKey(entry?.text || entry || '') === currentKey,
+    );
+    if (currentIndex < 0) {
+      catalog.push({
+        id: buildAngebotId(normalizedNext),
+        text: normalizedNext,
+        groups: normalizedGroups,
+        createdAt: new Date().toISOString(),
+      });
+      data.angebotCatalog = catalog;
+      data.angebote = ensureUniqueSortedStrings([...(data.angebote || []), normalizedNext]);
+      result = { status: 'created', value: normalizedNext };
+      return;
+    }
+
+    const targetIndex = catalog.findIndex(
+      (entry, index) =>
+        index !== currentIndex &&
+        normalizeAngebotKey(entry?.text || entry || '') === nextKey,
+    );
+
+    if (targetIndex >= 0) {
+      const targetEntry = catalog[targetIndex];
+      const targetText = normalizeAngebotText(targetEntry?.text || targetEntry || normalizedNext);
+      const mergedGroups = normalizeAngebotGroups([
+        ...(Array.isArray(targetEntry?.groups) ? targetEntry.groups : []),
+        ...normalizedGroups,
+      ]);
+      catalog[targetIndex] =
+        typeof targetEntry === 'string'
+          ? {
+              id: buildAngebotId(targetText || normalizedNext),
+              text: targetText || normalizedNext,
+              groups: mergedGroups,
+              createdAt: new Date().toISOString(),
+            }
+          : {
+              ...targetEntry,
+              text: targetText || normalizedNext,
+              groups: mergedGroups,
+            };
+      catalog.splice(currentIndex, 1);
+      if (data.days) {
+        replaceAngebotReferences(data.days, currentKey, targetText || normalizedNext);
+      }
+      result = {
+        status: 'merged',
+        value: targetText || normalizedNext,
+      };
+      data.angebotCatalog = catalog;
+      data.angebote = ensureUniqueSortedStrings([
+        ...(data.angebote || []),
+        targetText || normalizedNext,
+      ]);
+      return;
+    }
+
+    const existing = catalog[currentIndex];
+    const existingText =
+      typeof existing === 'string'
+        ? normalizeAngebotText(existing)
+        : normalizeAngebotText(existing?.text);
+    const mergedGroups = normalizeAngebotGroups([
+      ...(Array.isArray(existing?.groups) ? existing.groups : []),
+      ...normalizedGroups,
+    ]);
+    if (existingText !== normalizedNext && data.days) {
+      replaceAngebotReferences(data.days, currentKey, normalizedNext);
+    }
+    catalog[currentIndex] =
+      typeof existing === 'string'
+        ? {
+            id: buildAngebotId(normalizedNext),
+            text: normalizedNext,
+            groups: mergedGroups,
+            createdAt: new Date().toISOString(),
+          }
+        : {
+            ...existing,
+            id: buildAngebotId(normalizedNext),
+            text: normalizedNext,
+            groups: mergedGroups,
+          };
+    data.angebotCatalog = catalog;
+    data.angebote = ensureUniqueSortedStrings([
+      ...(data.angebote || []),
+      normalizedNext,
+    ]);
+  });
+
+  return result;
 };
 
 export const upsertObservationCatalogEntry = (value, groups = []) => {
@@ -709,9 +928,11 @@ export const addPreset = (type, value) => {
   const trimmed =
     type === 'observations'
       ? normalizeObservationText(value)
-      : typeof value === 'string'
-        ? value.trim()
-        : '';
+      : type === 'angebote'
+        ? normalizeAngebotText(value)
+        : typeof value === 'string'
+          ? value.trim()
+          : '';
   if (!trimmed) {
     return;
   }
@@ -723,10 +944,23 @@ export const addPreset = (type, value) => {
 
   updateAppData((data) => {
     if (type === 'angebote') {
-      data.angebote = ensureUniqueSortedStrings([
-        ...(data.angebote || []),
-        trimmed,
-      ]);
+      const catalog = normalizeAngebotCatalog(
+        data.angebotCatalog || data.angebote,
+        data.angebote,
+      );
+      const existing = catalog.find(
+        (entry) => normalizeAngebotKey(entry?.text || entry || '') === normalizeAngebotKey(trimmed),
+      );
+      if (!existing) {
+        catalog.push({
+          id: buildAngebotId(trimmed),
+          text: trimmed,
+          groups: [],
+          createdAt: new Date().toISOString(),
+        });
+      }
+      data.angebotCatalog = catalog;
+      data.angebote = ensureUniqueSortedStrings([...(data.angebote || []), trimmed]);
       return;
     }
 

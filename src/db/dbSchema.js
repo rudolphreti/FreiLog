@@ -2,6 +2,15 @@ import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import { isValidYmd } from '../utils/date.js';
 import { DEFAULT_FREE_DAYS, isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
 import {
+  ANGEBOT_GROUP_CODES,
+  buildAngebotId,
+  getAngebotCatalogLabels,
+  normalizeAngebotCatalog,
+  normalizeAngebotGroups,
+  normalizeAngebotKey,
+  normalizeAngebotText,
+} from '../utils/angebotCatalog.js';
+import {
   OBSERVATION_GROUP_CODES,
   buildObservationId,
   getObservationCatalogLabels,
@@ -16,7 +25,7 @@ import {
   TIMETABLE_DAY_ORDER,
 } from '../utils/timetable.js';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -24,6 +33,15 @@ const DEFAULT_CLASS_PROFILE = {
   motto: '',
   notes: '',
   childrenNotes: {},
+};
+
+export const DEFAULT_SAVED_ANGEBOT_FILTERS = {
+  multiGroups: false,
+  andOrMode: 'AND',
+  showAndOr: true,
+  showAlphabet: false,
+  selectedGroups: [],
+  selectedLetter: 'ALL',
 };
 
 const DEFAULT_OBSERVATION_CREATED_AT = '2025-01-01T00:00:00Z';
@@ -289,7 +307,9 @@ const normalizeDayEntry = (entry, date, childrenSet, freeDays) => {
   if (legacyAngebot && !angebotList.includes(legacyAngebot)) {
     angebotList.push(legacyAngebot);
   }
-  const angebote = ensureUniqueStrings(angebotList);
+  const angebote = ensureUniqueSortedStrings(
+    angebotList.map((item) => normalizeAngebotText(item)).filter(Boolean),
+  );
   const absentChildren = ensureUniqueStrings(
     source.absentChildIds || source.absentChildren,
   );
@@ -347,6 +367,30 @@ export const sanitizeDaysByDate = (days, childrenList, freeDays = DEFAULT_FREE_D
 export const normalizeSavedObservationFilters = (value) => {
   const source = isPlainObject(value) ? value : {};
   const selectedGroups = normalizeObservationGroups(source.selectedGroups);
+  const multiGroups = source.multiGroups === true;
+  const andOrMode = source.andOrMode === 'OR' ? 'OR' : 'AND';
+  const showAndOr = source.showAndOr !== false;
+  const showAlphabet = source.showAlphabet === true;
+  const letterRaw =
+    typeof source.selectedLetter === 'string' && source.selectedLetter.trim()
+      ? source.selectedLetter.trim()
+      : 'ALL';
+  const selectedLetter =
+    letterRaw === 'ALL' ? 'ALL' : letterRaw.slice(0, 1).toLocaleUpperCase();
+
+  return {
+    multiGroups,
+    andOrMode,
+    showAndOr,
+    showAlphabet,
+    selectedGroups,
+    selectedLetter,
+  };
+};
+
+export const normalizeSavedAngebotFilters = (value) => {
+  const source = isPlainObject(value) ? value : {};
+  const selectedGroups = normalizeAngebotGroups(source.selectedGroups);
   const multiGroups = source.multiGroups === true;
   const andOrMode = source.andOrMode === 'OR' ? 'OR' : 'AND';
   const showAndOr = source.showAndOr !== false;
@@ -454,6 +498,9 @@ const normalizeUi = (ui) => {
         ? source.observationsFilter
         : 'ALL',
     overlay: {
+      savedAngebotFilters: normalizeSavedAngebotFilters(
+        overlay.savedAngebotFilters || DEFAULT_SAVED_ANGEBOT_FILTERS,
+      ),
       savedObsFilters: normalizeSavedObservationFilters(
         overlay.savedObsFilters,
         source.observationsFilter,
@@ -556,6 +603,31 @@ const normalizeObservationCatalog = (value, fallback = []) => {
   return result;
 };
 
+export const buildAngebotStats = (days) => {
+  if (!isPlainObject(days)) {
+    return {};
+  }
+
+  const stats = {};
+
+  Object.values(days).forEach((entry) => {
+    if (!entry || !Array.isArray(entry.angebote)) {
+      return;
+    }
+
+    entry.angebote.forEach((angebot) => {
+      const normalized = normalizeAngebotText(angebot);
+      const key = normalizeAngebotKey(normalized);
+      if (!key) {
+        return;
+      }
+      stats[normalized] = (stats[normalized] || 0) + 1;
+    });
+  });
+
+  return stats;
+};
+
 export const buildObservationStats = (days) => {
   if (!isPlainObject(days)) {
     return {};
@@ -597,6 +669,7 @@ export const createEmptyAppData = () => ({
   children: [],
   classProfile: { ...DEFAULT_CLASS_PROFILE },
   angebote: [],
+  angebotCatalog: [],
   observationTemplates: [],
   observationCatalog: [],
   observationGroups: { ...DEFAULT_OBSERVATION_GROUPS },
@@ -604,6 +677,7 @@ export const createEmptyAppData = () => ({
   timetableLessons: cloneTimetableLessons(DEFAULT_TIMETABLE_LESSONS),
   timetableSchedule: cloneTimetableSchedule(DEFAULT_TIMETABLE_SCHEDULE),
   days: {},
+  angebotStats: {},
   observationStats: {},
   settings: {
     exportMode: DEFAULT_EXPORT_MODE,
@@ -612,6 +686,7 @@ export const createEmptyAppData = () => ({
   ui: {
     ...normalizeUi(null),
     overlay: {
+      savedAngebotFilters: { ...DEFAULT_SAVED_ANGEBOT_FILTERS },
       savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS },
     },
   },
@@ -636,8 +711,16 @@ export const normalizeAppData = (source, fallback = {}) => {
     fallbackData.classProfile || { childrenNotes: fallbackData.childNotes },
   );
 
+  const angebotCatalog = normalizeAngebotCatalog(
+    Array.isArray(base.angebotCatalog) ? base.angebotCatalog : base.angebote,
+    fallbackData.angebotCatalog || fallbackData.angebote,
+  );
+
   const angebote = ensureUniqueSortedStrings(
-    Array.isArray(base.angebote) ? base.angebote : fallbackData.angebote,
+    [
+      ...(Array.isArray(base.angebote) ? base.angebote : fallbackData.angebote || []),
+      ...getAngebotCatalogLabels(angebotCatalog),
+    ].map((item) => normalizeAngebotText(item)),
   );
 
   const observationTemplates = ensureUniqueSortedStrings(
@@ -694,6 +777,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     children,
     classProfile,
     angebote,
+    angebotCatalog,
     observationTemplates: getObservationCatalogLabels(observationCatalog),
     observationCatalog,
     observationGroups,
@@ -701,6 +785,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     timetableLessons,
     timetableSchedule,
     days,
+    angebotStats: buildAngebotStats(days),
     observationStats: buildObservationStats(days),
     settings: {
       exportMode,

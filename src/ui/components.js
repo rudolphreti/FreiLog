@@ -1,6 +1,8 @@
 import { createEl } from './dom.js';
 import {
+  DEFAULT_SAVED_ANGEBOT_FILTERS,
   DEFAULT_SAVED_OBSERVATION_FILTERS,
+  normalizeSavedAngebotFilters,
   normalizeSavedObservationFilters,
 } from '../db/dbSchema.js';
 import {
@@ -9,6 +11,7 @@ import {
   normalizeObservationGroups,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import { ANGEBOT_GROUP_CODES } from '../utils/angebotCatalog.js';
 import { todayYmd } from '../utils/date.js';
 
 export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
@@ -432,27 +435,547 @@ export const buildAngebotSection = ({
     selectedList.appendChild(pill);
   });
 
+  const catalogButton = createEl('button', {
+    className:
+      'btn btn-outline-primary d-inline-flex align-items-center gap-2 angebot-catalog-open-btn',
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-catalog-open' },
+    children: [
+      createEl('span', { text: '⌕' }),
+      createEl('span', { text: 'Angebot-Katalog...' }),
+    ],
+  });
+
   const comboRow = createEl('div', {
-    className: 'd-flex align-items-center gap-2',
+    className: 'd-flex align-items-center gap-2 flex-wrap',
     children: [comboInput, addButton, datalist],
   });
 
   comboInput.disabled = readOnly;
   addButton.disabled = readOnly;
+  catalogButton.disabled = false;
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [comboRow, selectedTitle, selectedList],
+    children: [catalogButton, comboRow, selectedTitle, selectedList],
   });
 
   return {
     element: content,
     refs: {
+      catalogButton,
       comboInput,
       addButton,
       selectedList,
     },
   };
+};
+
+export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
+  const normalizedSavedFilters = normalizeSavedAngebotFilters(
+    savedFilters || DEFAULT_SAVED_ANGEBOT_FILTERS,
+  );
+  const normalizedSelectedGroups = normalizeObservationGroups(
+    normalizedSavedFilters.selectedGroups,
+  ).filter((group) => group !== 'SCHWARZ');
+
+  const overlay = createEl('div', {
+    className: 'angebot-catalog-overlay observation-templates-overlay',
+    dataset: {
+      role: 'angebot-catalog-overlay',
+      angebotFilter: normalizedSavedFilters.selectedLetter || 'ALL',
+      angebotQuery: '',
+      angebotGroups: normalizedSelectedGroups.join(','),
+      angebotGroupMode: normalizedSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+      angebotMulti: normalizedSavedFilters.multiGroups ? 'true' : 'false',
+      angebotShowAndOr: normalizedSavedFilters.showAndOr ? 'true' : 'false',
+      angebotShowAlphabet: normalizedSavedFilters.showAlphabet ? 'true' : 'false',
+      angebotSettingsOpen: 'false',
+    },
+    attrs: { 'aria-hidden': 'true' },
+  });
+
+  const panel = createEl('div', {
+    className: 'observation-templates-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-templates-overlay__header',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Angebotskatalog',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-templates-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'angebot-catalog-close' },
+  });
+  header.append(title, closeButton);
+
+  const groupFilterBar = createEl('div', {
+    className: 'observation-templates__group-dots',
+  });
+
+  const addGroupButton = (code) => {
+    const color =
+      angebotGroups && angebotGroups[code]?.color
+        ? angebotGroups[code].color
+        : '#6c757d';
+    const label =
+      angebotGroups && angebotGroups[code]?.label ? angebotGroups[code].label : code;
+    const button = createEl('button', {
+      className: 'observation-group-dot-btn',
+      children: [
+        createEl('span', {
+          className: 'observation-group-dot',
+          attrs: { 'aria-hidden': 'true' },
+        }),
+        createEl('span', {
+          className: 'visually-hidden',
+          text: `${label} (${code})`,
+        }),
+      ],
+      attrs: {
+        type: 'button',
+        'aria-pressed': 'false',
+        style: `--group-color: ${color};`,
+        title: `${label} (${code})`,
+      },
+      dataset: { role: 'angebot-group-filter', value: code },
+    });
+    groupFilterBar.appendChild(button);
+  };
+
+  ANGEBOT_GROUP_CODES.forEach((code) => addGroupButton(code));
+
+  const groupModeToggle = createEl('div', {
+    className: 'observation-templates__group-mode',
+    attrs: { role: 'group', 'aria-label': 'Gruppenfilter Modus' },
+    dataset: { role: 'angebot-group-mode-toggle' },
+  });
+
+  const addGroupModeButton = (label, value, isActive = false) => {
+    const button = createEl('button', {
+      className: `observation-templates__mode-btn${isActive ? ' active' : ''}`,
+      text: label,
+      attrs: {
+        type: 'button',
+        'aria-pressed': isActive ? 'true' : 'false',
+      },
+      dataset: { role: 'angebot-group-mode', value },
+    });
+    groupModeToggle.appendChild(button);
+  };
+
+  addGroupModeButton('UND', 'AND', normalizedSavedFilters.andOrMode !== 'OR');
+  addGroupModeButton('ODER', 'OR', normalizedSavedFilters.andOrMode === 'OR');
+
+  const groupControls = createEl('div', {
+    className: 'observation-templates__group-set',
+    children: [groupFilterBar, groupModeToggle],
+  });
+
+  const filterBar = createEl('div', {
+    className: 'observation-templates__filters',
+    dataset: { role: 'angebot-letter-bar' },
+  });
+
+  const addFilterButton = (label, value, isActive = false) => {
+    const button = createEl('button', {
+      className: `btn btn-outline-secondary btn-sm observation-letter${
+        isActive ? ' active' : ''
+      }`,
+      text: label,
+      attrs: {
+        type: 'button',
+        'aria-pressed': isActive ? 'true' : 'false',
+      },
+      dataset: { role: 'angebot-letter', value },
+    });
+    filterBar.appendChild(button);
+  };
+
+  addFilterButton('Alle', 'ALL', normalizedSavedFilters.selectedLetter === 'ALL');
+
+  const searchInput = createEl('input', {
+    className: 'form-control form-control-sm observation-templates__search',
+    attrs: { type: 'search', placeholder: 'Suchen...', autocomplete: 'off' },
+    dataset: { role: 'angebot-search' },
+  });
+
+  const settingsToggle = createEl('button', {
+    className: 'btn btn-link observation-templates__settings-btn',
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-settings-toggle' },
+    children: [
+      createEl('span', { text: '⚙️' }),
+      createEl('span', { text: 'Einstellungen' }),
+    ],
+  });
+
+  const multiSwitch = createEl('div', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox', role: 'switch', id: 'angebot-multi-switch' },
+        dataset: { role: 'angebot-multi-switch' },
+      }),
+      createEl('label', {
+        className: 'form-check-label',
+        attrs: { for: 'angebot-multi-switch' },
+        text: 'Mehrfach-Gruppen aktivieren',
+      }),
+    ],
+  });
+
+  const alphabetSwitch = createEl('div', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox', role: 'switch', id: 'angebot-alphabet-switch' },
+        dataset: { role: 'angebot-alphabet-switch' },
+      }),
+      createEl('label', {
+        className: 'form-check-label',
+        attrs: { for: 'angebot-alphabet-switch' },
+        text: 'Alphabetleiste anzeigen',
+      }),
+    ],
+  });
+
+  const andOrSwitch = createEl('div', {
+    className: 'form-check form-switch observation-templates__setting-option',
+    children: [
+      createEl('input', {
+        className: 'form-check-input',
+        attrs: { type: 'checkbox', role: 'switch', id: 'angebot-andor-switch' },
+        dataset: { role: 'angebot-andor-switch' },
+      }),
+      createEl('label', {
+        className: 'form-check-label',
+        attrs: { for: 'angebot-andor-switch' },
+        text: 'UND/ODER Anzeige aktivieren',
+      }),
+    ],
+  });
+
+  const settingsPanel = createEl('div', {
+    className: 'observation-templates__settings-panel',
+    dataset: { role: 'angebot-settings-panel' },
+    children: [multiSwitch, alphabetSwitch, andOrSwitch],
+  });
+  settingsPanel.hidden = true;
+
+  const searchRow = createEl('div', {
+    className: 'observation-templates__search-row',
+    children: [searchInput, settingsToggle],
+  });
+
+  const filterRow = createEl('div', {
+    className: 'observation-templates__filters-shell',
+    children: [
+      createEl('div', {
+        className: 'observation-templates__filter-row',
+        children: [groupControls, filterBar],
+      }),
+    ],
+  });
+
+  const todayTitle = createEl('p', {
+    className: 'observation-section__title mb-0',
+    text: 'Heutige Angebote',
+  });
+
+  const todayList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    dataset: { role: 'angebot-today-list' },
+  });
+
+  const topTitle = createEl('p', {
+    className: 'observation-section__subtitle mb-0',
+    text: 'Top 10',
+  });
+
+  const topList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 small observation-top-list',
+    dataset: { role: 'angebot-top-list' },
+  });
+
+  const createButton = createEl('button', {
+    className:
+      'btn btn-outline-primary d-inline-flex align-items-center gap-2 angebot-create-trigger',
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-create-open' },
+    children: [
+      createEl('span', { text: '+' }),
+      createEl('span', { text: 'Erstelle Angebot' }),
+    ],
+  });
+
+  const catalogTitle = createEl('p', {
+    className: 'observation-section__title mb-0',
+    text: 'Angebotskatalog',
+  });
+
+  const catalogList = createEl('div', {
+    className: 'd-flex flex-column gap-3 observation-templates__list',
+    dataset: { role: 'angebot-catalog-list' },
+  });
+
+  const todaySection = createEl('div', {
+    className: 'observation-section d-flex flex-column gap-2',
+    children: [todayTitle, todayList],
+  });
+
+  const addSection = createEl('div', {
+    className: 'observation-section observation-section--add d-flex flex-column gap-2',
+    children: [topTitle, topList, createButton],
+  });
+
+  const catalogSection = createEl('div', {
+    className: 'observation-section d-flex flex-column gap-2',
+    children: [
+      catalogTitle,
+      searchRow,
+      settingsPanel,
+      filterRow,
+      catalogList,
+    ],
+  });
+
+  const content = createEl('div', {
+    className: 'observation-templates-overlay__content',
+    children: [todaySection, addSection, catalogSection],
+  });
+
+  panel.append(header, content);
+  overlay.appendChild(panel);
+
+  return {
+    element: overlay,
+    refs: {
+      closeButton,
+      content,
+      todayList,
+      topList,
+      catalogList,
+      searchInput,
+      settingsPanel,
+      settingsToggle,
+      letterBar: filterBar,
+      groupDots: groupFilterBar,
+      groupModeToggle,
+      createButton,
+    },
+  };
+};
+
+export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
+  const overlay = createEl('div', {
+    className: 'angebot-create-overlay observation-create-overlay',
+    dataset: { role: 'angebot-create-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const panel = createEl('div', {
+    className: 'observation-create-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-create-overlay__header',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Neues Angebot',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-create-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'angebot-create-close' },
+  });
+  header.append(title, closeButton);
+
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Angebot',
+  });
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      placeholder: 'Neues Angebot…',
+      autocomplete: 'off',
+    },
+    dataset: { role: 'angebot-create-input' },
+  });
+
+  const groupsTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Gruppen',
+  });
+  const groupButtons = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-create-groups',
+    dataset: { role: 'angebot-create-groups' },
+  });
+
+  ANGEBOT_GROUP_CODES.forEach((code) => {
+    const entry = angebotGroups?.[code];
+    const label = entry?.label || code;
+    const color = entry?.color || '#6c757d';
+    const button = createEl('button', {
+      className: 'btn observation-create-group-toggle',
+      attrs: { type: 'button', style: `--group-color: ${color};` },
+      dataset: { role: 'angebot-create-group', value: code },
+      text: label,
+    });
+    groupButtons.appendChild(button);
+  });
+
+  const previewTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Vorschau',
+  });
+  const previewDots = createEl('span', {
+    className: 'observation-group-dots',
+    dataset: { role: 'angebot-create-preview-dots' },
+  });
+  const previewText = createEl('span', {
+    dataset: { role: 'angebot-create-preview-text' },
+  });
+  const previewPill = createEl('span', {
+    className:
+      'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
+    dataset: { role: 'angebot-create-preview-pill' },
+    children: [previewDots, previewText],
+  });
+  const previewEmpty = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Vorschau erscheint hier.',
+    dataset: { role: 'angebot-create-preview-empty' },
+  });
+  previewPill.hidden = true;
+
+  const actions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    children: [
+      createEl('button', {
+        className: 'btn btn-primary',
+        text: 'Speichern',
+        attrs: { type: 'submit' },
+        dataset: { role: 'angebot-create-save' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-create-cancel' },
+      }),
+    ],
+  });
+
+  const form = createEl('form', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'angebot-create-form' },
+    children: [
+      inputLabel,
+      input,
+      groupsTitle,
+      groupButtons,
+      previewTitle,
+      previewPill,
+      previewEmpty,
+      actions,
+    ],
+  });
+
+  const content = createEl('div', {
+    className: 'observation-create-overlay__content',
+    children: [form],
+  });
+
+  panel.append(header, content);
+  overlay.appendChild(panel);
+
+  return {
+    element: overlay,
+  };
+};
+
+export const buildAngebotEditOverlay = ({ angebotGroups }) => {
+  const overlay = createEl('div', {
+    className: 'angebot-edit-overlay observation-edit-overlay',
+    dataset: { role: 'angebot-edit-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const panel = createEl('div', {
+    className: 'observation-edit-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-edit-overlay__header',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Angebot bearbeiten',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-edit-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'angebot-edit-close' },
+  });
+  header.append(title, closeButton);
+
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: { type: 'text', placeholder: 'Angebotstitel...' },
+    dataset: { role: 'angebot-edit-input' },
+  });
+
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Angebot',
+  });
+
+  const groupsTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Gruppen',
+  });
+
+  const groupButtons = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-create-groups',
+    dataset: { role: 'angebot-edit-groups' },
+  });
+
+  ANGEBOT_GROUP_CODES.forEach((code) => {
+    const entry = angebotGroups?.[code];
+    const label = entry?.label || code;
+    const color = entry?.color || '#6c757d';
+    const button = createEl('button', {
+      className: 'btn observation-create-group-toggle',
+      attrs: { type: 'button', style: `--group-color: ${color};` },
+      dataset: { role: 'angebot-edit-group', value: code },
+      text: label,
+    });
+    groupButtons.appendChild(button);
+  });
+
+  const content = createEl('div', {
+    className: 'observation-edit-overlay__content',
+    children: [inputLabel, input, groupsTitle, groupButtons],
+  });
+
+  const form = createEl('form', {
+    className: 'observation-edit-overlay__form',
+    dataset: { role: 'angebot-edit-form' },
+    children: [header, content],
+  });
+
+  panel.appendChild(form);
+  overlay.appendChild(panel);
+
+  return { element: overlay };
 };
 
 const buildPillList = ({

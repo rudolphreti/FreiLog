@@ -1,7 +1,9 @@
 import { DEFAULT_DRAWER_SECTIONS, DEFAULT_EXPORT_MODE } from '../config.js';
 import {
+  DEFAULT_SAVED_ANGEBOT_FILTERS,
   DEFAULT_SAVED_OBSERVATION_FILTERS,
   normalizeAppData,
+  normalizeSavedAngebotFilters,
   normalizeSavedObservationFilters,
 } from '../db/dbSchema.js';
 import { loadAppData, saveAppData } from './persistence.js';
@@ -47,6 +49,9 @@ export const getState = () => {
   const savedObsFilters = appData?.ui?.overlay?.savedObsFilters
     ? normalizeSavedObservationFilters(appData.ui.overlay.savedObsFilters)
     : { ...DEFAULT_SAVED_OBSERVATION_FILTERS };
+  const savedAngebotFilters = appData?.ui?.overlay?.savedAngebotFilters
+    ? normalizeSavedAngebotFilters(appData.ui.overlay.savedAngebotFilters)
+    : { ...DEFAULT_SAVED_ANGEBOT_FILTERS };
 
   return {
     db: appData,
@@ -55,6 +60,7 @@ export const getState = () => {
       exportMode,
       observationsFilter,
       overlay: {
+        savedAngebotFilters,
         savedObsFilters,
       },
       drawer: {
@@ -111,11 +117,18 @@ const ensureUiDraft = (draft) => {
   }
 
   if (!draft.ui.overlay) {
-    draft.ui.overlay = { savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS } };
+    draft.ui.overlay = {
+      savedObsFilters: { ...DEFAULT_SAVED_OBSERVATION_FILTERS },
+      savedAngebotFilters: { ...DEFAULT_SAVED_ANGEBOT_FILTERS },
+    };
   }
 
   if (!draft.ui.overlay.savedObsFilters) {
     draft.ui.overlay.savedObsFilters = { ...DEFAULT_SAVED_OBSERVATION_FILTERS };
+  }
+
+  if (!draft.ui.overlay.savedAngebotFilters) {
+    draft.ui.overlay.savedAngebotFilters = { ...DEFAULT_SAVED_ANGEBOT_FILTERS };
   }
 };
 
@@ -143,6 +156,16 @@ export const setSavedObservationFilters = (value) => {
     const current = draft.ui.overlay.savedObsFilters || DEFAULT_SAVED_OBSERVATION_FILTERS;
     const merged = normalizeSavedObservationFilters({ ...current, ...(value || {}) });
     draft.ui.overlay.savedObsFilters = merged;
+  });
+};
+
+export const setSavedAngebotFilters = (value) => {
+  updateAppData((draft) => {
+    ensureUiDraft(draft);
+    const current =
+      draft.ui.overlay.savedAngebotFilters || DEFAULT_SAVED_ANGEBOT_FILTERS;
+    const merged = normalizeSavedAngebotFilters({ ...current, ...(value || {}) });
+    draft.ui.overlay.savedAngebotFilters = merged;
   });
 };
 

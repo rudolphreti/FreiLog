@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 7,
   "children": [
     "Aylin",
     "Ben",
@@ -50,6 +50,23 @@
     "Spiele",
     "Sport",
     "Theater"
+  ],
+  "angebotCatalog": [
+    { "id": "ausflug", "text": "Ausflug", "groups": ["ORANGE", "LILA"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "basteln", "text": "Basteln", "groups": ["ROT"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "bau-ecke", "text": "Bau-Ecke", "groups": ["GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "bewegung", "text": "Bewegung", "groups": ["ORANGE"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "forschen", "text": "Forschen", "groups": ["GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "freispiel", "text": "Freispiel", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "kochen", "text": "Kochen", "groups": ["GRUEN", "ROT"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "kreativatelier", "text": "Kreativatelier", "groups": ["ROT"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "lernzeit", "text": "Lernzeit", "groups": ["LILA", "GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "lesen", "text": "Lesen", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "musik", "text": "Musik", "groups": ["BLAU"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "musikraum", "text": "Musikraum", "groups": ["BLAU"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "spiele", "text": "Spiele", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "sport", "text": "Sport", "groups": ["ORANGE"], "createdAt": "2025-01-01T00:00:00Z" },
+    { "id": "theater", "text": "Theater", "groups": ["ROT", "LILA"], "createdAt": "2025-01-01T00:00:00Z" }
   ],
   "timetableSubjects": [
     "Bewegung und Sport",
