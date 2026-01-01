@@ -11,6 +11,7 @@ import { debounce } from '../utils/debounce.js';
 import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 import { setSavedObservationFilters } from '../state/store.js';
 import { formatDisplayDate } from '../utils/schoolWeeks.js';
+import { focusTextInput } from '../utils/focus.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -909,13 +910,8 @@ export const bindObservations = ({
     createOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-create-open');
     setCreateGroups([]);
-    const input = createOverlay.querySelector(
-      '[data-role="observation-create-input"]',
-    );
-    if (isInputElement(input)) {
-      input.value = '';
-      input.focus();
-    }
+    const input = createOverlay.querySelector('[data-role="observation-create-input"]');
+    focusTextInput(input, { resetValue: true, caret: 'end' });
     updateCreatePreview();
   };
 
@@ -962,12 +958,10 @@ export const bindObservations = ({
     editOverlay.setAttribute('aria-hidden', 'false');
     overlayPanel.classList.add('is-edit-open');
     setEditGroups(groups || []);
-    const input = editOverlay.querySelector(
-      '[data-role="observation-edit-input"]',
-    );
+    const input = editOverlay.querySelector('[data-role="observation-edit-input"]');
     if (isInputElement(input)) {
       input.value = text;
-      input.focus();
+      focusTextInput(input, { caret: 'end' });
       input.select();
     }
   };

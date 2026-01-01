@@ -14,6 +14,7 @@ import {
   normalizeAngebotText,
 } from '../utils/angebotCatalog.js';
 import { debounce } from '../utils/debounce.js';
+import { focusTextInput } from '../utils/focus.js';
 
 const LONG_PRESS_MS = 600;
 
@@ -578,41 +579,8 @@ export const bindAngebotCatalog = ({
         : [],
     );
 
-  const getCreateInput = () => {
-    const input = createOverlay.querySelector('[data-role="angebot-create-input"]');
-    return input instanceof HTMLInputElement ? input : null;
-  };
-
-  const focusCreateInput = (reason = 'focus-create') => {
-    const input = getCreateInput();
-    if (!input || input.disabled || input.readOnly) {
-      return;
-    }
-    const logState = (label) =>
-      console.log(`angebot-create: ${label}`, {
-        disabled: input.disabled,
-        readOnly: input.readOnly,
-        tabIndex: input.tabIndex,
-        value: input.value,
-      });
-    logState(`${reason} (pre-raf)`);
-    const placeCaret = () => {
-      input.focus({ preventScroll: true });
-      const caret = input.value.length;
-      input.setSelectionRange(caret, caret);
-    };
-    requestAnimationFrame(() => {
-      placeCaret();
-      logState(`${reason} (raf 1)`);
-      requestAnimationFrame(() => {
-        placeCaret();
-        logState(`${reason} (raf 2)`);
-      });
-    });
-  };
-
   const updateCreatePreview = () => {
-    const input = getCreateInput();
+    const input = createOverlay.querySelector('[data-role="angebot-create-input"]');
     const previewPill = createOverlay.querySelector('[data-role="angebot-create-preview-pill"]');
     const previewText = createOverlay.querySelector('[data-role="angebot-create-preview-text"]');
     const previewDots = createOverlay.querySelector('[data-role="angebot-create-preview-dots"]');
@@ -652,15 +620,11 @@ export const bindAngebotCatalog = ({
     createOverlay.classList.add('is-open');
     createOverlay.setAttribute('aria-hidden', 'false');
     setCreateGroups([]);
-    const input = getCreateInput();
+    const input = createOverlay.querySelector('[data-role="angebot-create-input"]');
     if (input instanceof HTMLInputElement) {
-      input.disabled = false;
-      input.readOnly = false;
       input.tabIndex = 0;
-      input.removeAttribute('aria-disabled');
-      input.value = '';
-      focusCreateInput('opening overlay');
     }
+    focusTextInput(input, { resetValue: true, caret: 'end' });
     updateCreatePreview();
   };
 
@@ -950,11 +914,6 @@ export const bindAngebotCatalog = ({
     if (!(input instanceof HTMLInputElement)) {
       return;
     }
-    console.log('angebot-create: submit', {
-      disabled: input.disabled,
-      readOnly: input.readOnly,
-      raw: input.value,
-    });
     const normalized = normalizeAngebotText(input.value);
     if (!normalized) {
       return;
@@ -1005,10 +964,6 @@ export const bindAngebotCatalog = ({
     const target = event.target;
     if (!(target instanceof HTMLElement)) {
       return;
-    }
-    if (target.dataset.role === 'angebot-create-input') {
-      console.log('angebot-create: click on input');
-      focusCreateInput('click on input');
     }
     const closeButton = target.closest('[data-role="angebot-create-close"]');
     if (closeButton) {
@@ -1068,31 +1023,6 @@ export const bindAngebotCatalog = ({
     const target = event.target;
     if (target instanceof HTMLInputElement && target.dataset.role === 'angebot-create-input') {
       updateCreatePreview();
-      console.log('angebot-create: input', {
-        value: target.value,
-        disabled: target.disabled,
-        readOnly: target.readOnly,
-      });
-    }
-  });
-  createOverlay.addEventListener('focusin', (event) => {
-    const target = event.target;
-    if (target instanceof HTMLInputElement && target.dataset.role === 'angebot-create-input') {
-      console.log('angebot-create: focusin', {
-        disabled: target.disabled,
-        readOnly: target.readOnly,
-        value: target.value,
-      });
-    }
-  });
-  createOverlay.addEventListener('focusout', (event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement) || target.dataset.role !== 'angebot-create-input') {
-      return;
-    }
-    const next = event.relatedTarget;
-    if (createOverlay.classList.contains('is-open') && (!next || !createOverlay.contains(next))) {
-      focusCreateInput('refocus after blur');
     }
   });
   createOverlay.addEventListener('click', handleCreateClick);
