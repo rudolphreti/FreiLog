@@ -1305,6 +1305,17 @@ export const bindObservations = ({
       return;
     }
 
+    const settingsPanel = templatesOverlay.querySelector(
+      '[data-role="observation-template-settings-panel"]',
+    );
+    const isSettingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    const { settingsOpen } = getTemplateFlags(templatesOverlay);
+    if (settingsOpen && settingsPanel && !isSettingsToggle && !settingsPanel.contains(target)) {
+      setTemplateSettingsOpen(templatesOverlay, false);
+    }
+
     if (isEditOverlayOpen) {
       return;
     }

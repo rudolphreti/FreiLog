@@ -748,6 +748,18 @@ export const bindAngebotCatalog = ({
     if (!(target instanceof HTMLElement)) {
       return;
     }
+    const settingsPanel = catalogOverlay.querySelector('[data-role="angebot-settings-panel"]');
+    const isSettingsToggle = target.closest('[data-role="angebot-settings-toggle"]');
+    const { settingsOpen } = getFilterState(catalogOverlay);
+    if (
+      settingsOpen &&
+      settingsPanel &&
+      !isSettingsToggle &&
+      !settingsPanel.contains(target)
+    ) {
+      setFilterState(catalogOverlay, { settingsOpen: false });
+      syncGroupUi(catalogOverlay, angebotGroups);
+    }
     if (target === overlay || target.closest('[data-role="angebot-close"]')) {
       closeOverlay();
       return;
