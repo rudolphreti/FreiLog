@@ -10,6 +10,7 @@ import {
 } from '../utils/observationCatalog.js';
 import { setSelectedDate } from '../state/store.js';
 import { getFreeDayInfo } from '../utils/freeDays.js';
+import { UI_LABELS } from '../ui/labels.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -428,7 +429,7 @@ export const createWeeklyTableView = ({
   });
   const panel = createEl('div', { className: 'weekly-table-overlay__panel' });
   const header = createEl('div', { className: 'weekly-table-overlay__header' });
-  const title = createEl('h3', { className: 'h4 mb-0', text: 'Wochentabelle' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: UI_LABELS.weeklyTable });
   const closeButton = createEl('button', {
     className: 'btn-close weekly-table-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },

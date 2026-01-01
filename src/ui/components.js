@@ -13,6 +13,7 @@ import {
 } from '../utils/observationCatalog.js';
 import { ANGEBOT_GROUP_CODES } from '../utils/angebotCatalog.js';
 import { todayYmd } from '../utils/date.js';
+import { UI_LABELS } from './labels.js';
 
 export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
   const header = createEl('header', {
@@ -208,7 +209,7 @@ export const buildDrawerContent = ({
       children: [createEl('span', { text: icon }), createEl('span', { text })],
     });
 
-  const weeklyTableButton = showWeekly ? actionButton('Wochentabelle...', '📅') : null;
+  const weeklyTableButton = showWeekly ? actionButton(`${UI_LABELS.weeklyTable}...`, '📅') : null;
   const exportButton = showExport ? actionButton('DB Exportieren...', '⬇️') : null;
   const importButton = actionButton('DB importieren...', '⬆️');
   const dummyDataButton = showDummy ? actionButton('Dummy-Daten laden', '🧪') : null;
@@ -250,13 +251,13 @@ export const buildDrawerContent = ({
   });
 
   const settingsContent = createEl('div', { className: 'd-flex flex-column gap-2' });
-  const classButton = actionButton('Meine Klasse', '🎒', {
+  const classButton = actionButton(UI_LABELS.classSettings, '🎒', {
     'data-role': 'class-settings',
   });
-  const freeDaysButton = actionButton('Freie Tage', '🏖️', {
+  const freeDaysButton = actionButton(UI_LABELS.freeDays, '🏖️', {
     'data-role': 'free-days-settings',
   });
-  const timetableButton = actionButton('Stundenplan', '🗓️', {
+  const timetableButton = actionButton(UI_LABELS.timetable, '🗓️', {
     'data-role': 'timetable-settings',
   });
   settingsContent.append(classButton, freeDaysButton, timetableButton);
@@ -398,7 +399,7 @@ export const buildAngebotSection = ({
     dataset: { role: 'angebot-open' },
     children: [
       createEl('span', { text: '📋' }),
-      createEl('span', { text: 'Heutige Angebote...' }),
+      createEl('span', { text: `${UI_LABELS.angebotToday}...` }),
     ],
   });
 
@@ -454,7 +455,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
   });
   const overlayTitle = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Heutige Angebote',
+    text: UI_LABELS.angebotToday,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-overlay__close',
@@ -469,7 +470,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
 
   const todayTitle = createEl('p', {
     className: 'observation-section__title mb-0',
-    text: 'Heutige Angebote',
+    text: UI_LABELS.angebotToday,
   });
   const todayList = createEl('div', {
     className: 'd-flex flex-wrap gap-2',
@@ -482,7 +483,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
 
   const addTitle = createEl('p', {
     className: 'observation-section__title mb-0',
-    text: 'Angebote hinzufügen',
+    text: UI_LABELS.angebotAdd,
   });
   const topTitle = createEl('p', {
     className: 'observation-section__subtitle mb-0',
@@ -502,7 +503,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
         attrs: { 'aria-hidden': 'true' },
         text: '⌕',
       }),
-      createEl('span', { className: 'observation-action-label', text: 'Angebotskatalog' }),
+      createEl('span', { className: 'observation-action-label', text: UI_LABELS.angebotCatalog }),
     ],
     attrs: { type: 'button' },
     dataset: { role: 'angebot-catalog-open' },
@@ -516,7 +517,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
         attrs: { 'aria-hidden': 'true' },
         text: '+',
       }),
-      createEl('span', { className: 'observation-action-label', text: 'Erstelle Angebot' }),
+      createEl('span', { className: 'observation-action-label', text: UI_LABELS.angebotCreate }),
     ],
     attrs: { type: 'button' },
     dataset: { role: 'angebot-create-open' },
@@ -580,7 +581,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   });
   const title = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Angebotskatalog',
+    text: UI_LABELS.angebotCatalog,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
@@ -676,7 +677,12 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
 
   const searchInput = createEl('input', {
     className: 'form-control form-control-sm observation-templates__search',
-    attrs: { type: 'search', placeholder: 'Suchen...', autocomplete: 'off' },
+    attrs: {
+      type: 'search',
+      placeholder: 'Suchen...',
+      autocomplete: 'off',
+      'aria-label': `${UI_LABELS.angebotCatalog} durchsuchen`,
+    },
     dataset: { role: 'angebot-search' },
   });
 
@@ -799,7 +805,7 @@ export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
   });
   const title = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Neues Angebot',
+    text: UI_LABELS.angebotCreate,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-create-overlay__close',
@@ -816,7 +822,7 @@ export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
     className: 'form-control',
     attrs: {
       type: 'text',
-      placeholder: 'Neues Angebot…',
+      placeholder: `${UI_LABELS.angebotCreate}…`,
       autocomplete: 'off',
     },
     dataset: { role: 'angebot-create-input' },
@@ -1245,7 +1251,7 @@ const buildObservationTemplatesOverlay = ({
   });
   const title = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Gespeicherte Beobachtungen',
+    text: UI_LABELS.observationCatalog,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
@@ -1347,7 +1353,7 @@ const buildObservationTemplatesOverlay = ({
     attrs: {
       type: 'search',
       placeholder: 'Suchen…',
-      'aria-label': 'Gespeicherte Beobachtungen durchsuchen',
+      'aria-label': `${UI_LABELS.observationCatalog} durchsuchen`,
     },
     dataset: { role: 'observation-template-search' },
   });
@@ -1635,7 +1641,7 @@ const createDetailPanel = ({
         attrs: { 'aria-hidden': 'true' },
         text: '⌕',
       }),
-      createEl('span', { className: 'observation-action-label', text: 'Beobachtungen-Katalog' }),
+      createEl('span', { className: 'observation-action-label', text: UI_LABELS.observationCatalog }),
     ],
     attrs: { type: 'button' },
     dataset: { role: 'observation-template-open' },
@@ -1649,7 +1655,7 @@ const createDetailPanel = ({
         attrs: { 'aria-hidden': 'true' },
         text: '+',
       }),
-      createEl('span', { className: 'observation-action-label', text: 'Erstelle Beobachtung' }),
+      createEl('span', { className: 'observation-action-label', text: UI_LABELS.observationCreate }),
     ],
     attrs: { type: 'button' },
     dataset: { role: 'observation-create-open' },
@@ -1826,7 +1832,7 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
   });
   const title = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Neue Beobachtung',
+    text: UI_LABELS.observationCreate,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-create-overlay__close',
@@ -1843,7 +1849,7 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
     className: 'form-control',
     attrs: {
       type: 'text',
-      placeholder: 'Neue Beobachtung…',
+      placeholder: `${UI_LABELS.observationCreate}…`,
       autocomplete: 'off',
     },
     dataset: { role: 'observation-create-input' },

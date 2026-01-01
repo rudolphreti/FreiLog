@@ -4,6 +4,7 @@ import {
   saveTimetableSubjects,
 } from '../db/dbRepository.js';
 import { createEl } from '../ui/dom.js';
+import { UI_LABELS } from '../ui/labels.js';
 import { TIMETABLE_DAY_ORDER, formatSubjectsList } from '../utils/timetable.js';
 
 const MAX_SUBJECT_LENGTH = 80;
@@ -120,7 +121,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const panel = createEl('div', { className: 'timetable-overlay__panel' });
 
   const header = createEl('div', { className: 'timetable-overlay__header' });
-  const title = createEl('h3', { className: 'h4 mb-0', text: 'Stundenplan' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: UI_LABELS.timetable });
   const closeButton = createEl('button', {
     className: 'btn-close timetable-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Stundenplan schließen' },

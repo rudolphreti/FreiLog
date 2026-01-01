@@ -1,6 +1,7 @@
 import { saveClassChildren, saveClassProfileFields } from '../db/dbRepository.js';
 import { normalizeChildName } from '../db/dbSchema.js';
 import { createEl } from '../ui/dom.js';
+import { UI_LABELS } from '../ui/labels.js';
 import { debounce } from '../utils/debounce.js';
 
 const SEPARATORS = [' ', '-', '\u2010', "'", '’', 'ʼ', '.'];
@@ -209,7 +210,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   });
   const panel = createEl('div', { className: 'class-settings-overlay__panel' });
   const header = createEl('div', { className: 'class-settings-overlay__header' });
-  const title = createEl('h3', { className: 'h4 mb-0', text: 'Meine Klasse' });
+  const title = createEl('h3', { className: 'h4 mb-0', text: UI_LABELS.classSettings });
   const closeButton = createEl('button', {
     className: 'btn-close class-settings-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
