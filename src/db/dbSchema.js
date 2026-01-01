@@ -39,7 +39,7 @@ export const DEFAULT_SAVED_ANGEBOT_FILTERS = {
   multiGroups: false,
   andOrMode: 'AND',
   showAndOr: true,
-  showAlphabet: true,
+  showAlphabet: false,
   selectedGroups: [],
   selectedLetter: 'ALL',
 };

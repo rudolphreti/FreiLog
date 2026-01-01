@@ -367,17 +367,18 @@ const syncGroupUi = (overlay, angebotGroups) => {
     button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
 
-  const letterButtons = overlay.querySelectorAll('[data-role="angebot-letter"]');
-  letterButtons.forEach((button) => {
-    const value = button.dataset.value || 'ALL';
-    const isActive = value === (selectedLetter || 'ALL');
-    button.classList.toggle('active', isActive);
-    button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  });
-  const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
-  if (letterBar) {
-    letterBar.classList.toggle('d-none', !showAlphabet);
-  }
+    const letterButtons = overlay.querySelectorAll('[data-role="angebot-letter"]');
+    letterButtons.forEach((button) => {
+      const value = button.dataset.value || 'ALL';
+      const isActive = value === (selectedLetter || 'ALL');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
+    if (letterBar) {
+      letterBar.classList.toggle('d-none', !showAlphabet);
+      letterBar.classList.toggle('is-hidden', !showAlphabet);
+    }
 
   const multiSwitch = overlay.querySelector('[data-role="angebot-multi-switch"]');
   const alphabetSwitch = overlay.querySelector('[data-role="angebot-alphabet-switch"]');
@@ -471,7 +472,7 @@ export const bindAngebotCatalog = ({
     groupMode: savedFilters?.andOrMode === 'OR' ? 'OR' : 'AND',
     multi: savedFilters?.multiGroups === true,
     showAndOr: savedFilters?.showAndOr !== false,
-    showAlphabet: savedFilters?.showAlphabet !== false,
+    showAlphabet: savedFilters?.showAlphabet === true,
   });
 
   const getGroupMap = () => buildAngebotCatalogGroupMap(currentCatalog);
@@ -1072,7 +1073,7 @@ export const bindAngebotCatalog = ({
           groupMode: nextSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
           multi: nextSavedFilters.multiGroups === true,
           showAndOr: nextSavedFilters.showAndOr !== false,
-          showAlphabet: nextSavedFilters.showAlphabet !== false,
+          showAlphabet: nextSavedFilters.showAlphabet === true,
         });
       }
       syncGroupUi(catalogOverlay, angebotGroups);
