@@ -749,7 +749,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
 
   const searchRow = createEl('div', {
     className: 'observation-templates__search-row',
-    children: [searchInput, settings],
+    children: [searchInput],
   });
 
   const filterRow = createEl('div', {
@@ -757,8 +757,9 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
     children: [
       createEl('div', {
         className: 'observation-templates__filter-row',
-        children: [groupControls, filterBar],
+        children: [groupControls, settings],
       }),
+      filterBar,
     ],
   });
 
