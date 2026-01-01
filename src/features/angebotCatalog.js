@@ -141,22 +141,26 @@ const renderTopList = ({ container, stats, groupMap, angebotGroups, selectedSet 
   if (!container) {
     return;
   }
+  const selectedKeys = selectedSet instanceof Set ? selectedSet : new Set();
   const entries = Object.entries(stats || {}).map(([label, count]) => ({
     label,
     count: Number(count) || 0,
   }));
-  const topItems = entries
+  const sorted = entries
     .filter((item) => item.count > 0)
     .sort((a, b) => {
       if (b.count !== a.count) {
         return b.count - a.count;
       }
       return a.label.localeCompare(b.label, 'de', { sensitivity: 'base' });
-    })
+    });
+
+  const availableTopItems = sorted
+    .filter(({ label }) => !selectedKeys.has(normalizeAngebotKey(label)))
     .slice(0, 10);
 
   container.replaceChildren();
-  if (!topItems.length) {
+  if (!availableTopItems.length) {
     const empty = document.createElement('p');
     empty.className = 'text-muted small mb-0';
     empty.textContent = 'Noch keine Daten';
@@ -164,7 +168,7 @@ const renderTopList = ({ container, stats, groupMap, angebotGroups, selectedSet 
     return;
   }
 
-  topItems.forEach(({ label, count }) => {
+  availableTopItems.forEach(({ label, count }) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.role = 'angebot-top-add';
@@ -173,7 +177,7 @@ const renderTopList = ({ container, stats, groupMap, angebotGroups, selectedSet 
       'btn btn-outline-secondary btn-sm observation-chip observation-top-button d-inline-flex align-items-center gap-2';
     const plus = document.createElement('span');
     plus.className = 'observation-top-plus';
-    plus.textContent = selectedSet.has(normalizeAngebotKey(label)) ? '✓' : '+';
+    plus.textContent = '+';
     const dots = buildGroupDots(
       groupMap.get(normalizeAngebotKey(label)) || [],
       angebotGroups,
@@ -714,9 +718,12 @@ export const bindAngebotCatalog = ({
     if (currentList.includes(normalized)) {
       return;
     }
+    const nextSelected = [...currentList, normalized];
     addPreset('angebote', normalized);
     upsertAngebotCatalogEntry(normalized);
-    updateEntry(currentDate, { angebote: [...currentList, normalized] });
+    updateEntry(currentDate, { angebote: nextSelected });
+    currentSelected = nextSelected;
+    render();
   };
 
   const removeOfferForDate = (label) => {
@@ -728,6 +735,8 @@ export const bindAngebotCatalog = ({
     const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
     const updated = currentList.filter((item) => normalizeAngebotText(item) !== normalized);
     updateEntry(currentDate, { angebote: updated });
+    currentSelected = updated;
+    render();
   };
 
   const handleOpen = () => {

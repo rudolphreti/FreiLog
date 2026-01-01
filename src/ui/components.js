@@ -1055,7 +1055,16 @@ const buildTopList = (items, getGroups, observationGroups) => {
   return list;
 };
 
-const buildTopItems = (stats, catalog) => {
+const buildTopItems = (stats, catalog, options = {}) => {
+  const { excludeKeys = new Set(), limit = 10 } = options;
+  const normalizedExclude =
+    excludeKeys instanceof Set
+      ? excludeKeys
+      : new Set(
+          (Array.isArray(excludeKeys) ? excludeKeys : [])
+            .map((key) => normalizeObservationKey(key))
+            .filter(Boolean),
+        );
   if (!stats || typeof stats !== 'object') {
     return [];
   }
@@ -1103,7 +1112,8 @@ const buildTopItems = (stats, catalog) => {
       }
       return a.label.localeCompare(b.label, 'de');
     })
-    .slice(0, 10);
+    .filter(({ label }) => !normalizedExclude.has(normalizeObservationKey(label)))
+    .slice(0, Number.isFinite(limit) && limit > 0 ? limit : 10);
 };
 
 export const buildInitialFilterBar = ({ initials, selectedInitial }) => {
@@ -1590,22 +1600,42 @@ const rebuildTodayList = (items, getGroupsForLabel, observationGroups) =>
     observationGroups,
   });
 
-const rebuildTopList = (topItems, getGroupsForLabel, observationGroups) =>
-  topItems.length
-    ? buildTopList(topItems, getGroupsForLabel, observationGroups)
+const buildSelectedObservationKeys = (items) => {
+  const keys = new Set();
+  if (!Array.isArray(items)) {
+    return keys;
+  }
+  items.forEach((item) => {
+    const key = normalizeObservationKey(item);
+    if (key) {
+      keys.add(key);
+    }
+  });
+  return keys;
+};
+
+const rebuildTopList = (topItems, getGroupsForLabel, observationGroups, selectedSet = new Set()) => {
+  const availableItems = topItems.filter(
+    ({ label }) => !selectedSet.has(normalizeObservationKey(label)),
+  );
+  return availableItems.length
+    ? buildTopList(availableItems, getGroupsForLabel, observationGroups)
     : createEl('p', {
         className: 'text-muted small mb-0',
         text: 'Noch keine Daten',
       });
+};
 
 const createDetailPanel = ({
   child,
   isAbsent,
-  topItems,
+  topItems = [],
   observationGroups,
   getGroupsForLabel,
+  todayItems = [],
 }) => {
-  const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups);
+  const selectedKeys = buildSelectedObservationKeys(todayItems);
+  const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups, selectedKeys);
 
   const todayTitle = createEl('p', {
     className: 'observation-section__title mb-0',
@@ -2034,7 +2064,10 @@ export const buildObservationsSection = ({
 
   children.forEach((child) => {
     const data = observations[child] || {};
-    const topItems = buildTopItems(observationStats?.[child], observationCatalog);
+    const selectedKeys = buildSelectedObservationKeys(data);
+    const topItems = buildTopItems(observationStats?.[child], observationCatalog, {
+      excludeKeys: selectedKeys,
+    });
     const isAbsent = absentSet.has(child);
     const { detail, refs } = createDetailPanel({
       child,
@@ -2042,6 +2075,7 @@ export const buildObservationsSection = ({
       topItems,
       observationGroups,
       getGroupsForLabel,
+      todayItems: data,
     });
     const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
     nextToday.dataset.role = 'observation-today-list';
@@ -2082,6 +2116,7 @@ export const buildObservationsSection = ({
         topItems,
         observationGroups,
         getGroupsForLabel,
+        todayItems: data,
       });
       panel.detail.hidden = true;
       detailRefs.set(child, panel.refs);
@@ -2097,7 +2132,8 @@ export const buildObservationsSection = ({
       refs.absentNotice.remove();
     }
 
-    const nextTop = rebuildTopList(topItems, getGroupsForLabel, observationGroups);
+    const selectedKeys = buildSelectedObservationKeys(data);
+    const nextTop = rebuildTopList(topItems, getGroupsForLabel, observationGroups, selectedKeys);
     nextTop.dataset.role = 'observation-top-list';
     refs.topList.replaceWith(nextTop);
     refs.topList = nextTop;
@@ -2207,7 +2243,10 @@ export const buildObservationsSection = ({
 
     nextChildren.forEach((child) => {
       const data = nextObservations[child] || {};
-      const topItems = buildTopItems(nextObservationStats?.[child], nextObservationCatalog);
+      const selectedKeys = buildSelectedObservationKeys(data);
+      const topItems = buildTopItems(nextObservationStats?.[child], nextObservationCatalog, {
+        excludeKeys: selectedKeys,
+      });
       updateChildDetail({
         child,
         data,
