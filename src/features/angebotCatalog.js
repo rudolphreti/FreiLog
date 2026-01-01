@@ -534,6 +534,18 @@ export const bindAngebotCatalog = ({
     catalogOverlay.setAttribute('aria-hidden', 'true');
   };
 
+  const focusCatalogSearchInput = () => {
+    const searchInput = catalogOverlay.querySelector('[data-role="angebot-search"]');
+    if (!(searchInput instanceof HTMLInputElement) || searchInput.disabled || searchInput.readOnly) {
+      return;
+    }
+    const caret = searchInput.value.length;
+    requestAnimationFrame(() => {
+      searchInput.focus({ preventScroll: true });
+      searchInput.setSelectionRange(caret, caret);
+    });
+  };
+
   const openCatalogOverlay = () => {
     if (isReadOnly) {
       return;
@@ -541,6 +553,7 @@ export const bindAngebotCatalog = ({
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
     render();
+    focusCatalogSearchInput();
   };
   const closeCatalogOverlay = () => {
     catalogOverlay.classList.remove('is-open');
@@ -602,6 +615,7 @@ export const bindAngebotCatalog = ({
     if (isReadOnly) {
       return;
     }
+    closeCatalogOverlay();
     createOverlay.classList.add('is-open');
     createOverlay.setAttribute('aria-hidden', 'false');
     setCreateGroups([]);
@@ -609,14 +623,28 @@ export const bindAngebotCatalog = ({
     if (input instanceof HTMLInputElement) {
       input.disabled = false;
       input.readOnly = false;
+      input.tabIndex = 0;
+      input.removeAttribute('aria-disabled');
       input.value = '';
-      // Debug: ensure the input can receive focus and is enabled.
-      console.log('angebot-create: opening overlay', {
-        disabled: input.disabled,
-        readOnly: input.readOnly,
-        value: input.value,
+      const logState = (reason) =>
+        console.log(`angebot-create: ${reason}`, {
+          disabled: input.disabled,
+          readOnly: input.readOnly,
+          tabIndex: input.tabIndex,
+          value: input.value,
+        });
+      logState('opening overlay (pre-focus)');
+      // Focus twice (two rafs) to ensure the overlay is fully visible before trying to place the caret.
+      requestAnimationFrame(() => {
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(0, 0);
+        logState('focused (raf 1)');
+        requestAnimationFrame(() => {
+          input.focus({ preventScroll: true });
+          input.setSelectionRange(0, 0);
+          logState('focused (raf 2)');
+        });
       });
-      input.focus();
     }
     updateCreatePreview();
   };
@@ -1028,6 +1056,16 @@ export const bindAngebotCatalog = ({
         value: target.value,
         disabled: target.disabled,
         readOnly: target.readOnly,
+      });
+    }
+  });
+  createOverlay.addEventListener('focusin', (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.dataset.role === 'angebot-create-input') {
+      console.log('angebot-create: focusin', {
+        disabled: target.disabled,
+        readOnly: target.readOnly,
+        value: target.value,
       });
     }
   });
