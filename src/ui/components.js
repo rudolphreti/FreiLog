@@ -797,7 +797,6 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
       letterBar: filterBar,
       groupDots: groupFilterBar,
       groupModeToggle,
-      createButton,
     },
   };
 };
