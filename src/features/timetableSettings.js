@@ -118,6 +118,7 @@ export const createTimetableSettingsView = ({
   let isEditing = false;
   let subjectInputs = [];
   let subjectColorInputs = [];
+  let subjectColorClearButtons = [];
   let lessonInputs = [];
   let deleteSubjectName = '';
   let deleteSubjectFeedbackMessage = '';
@@ -143,10 +144,13 @@ export const createTimetableSettingsView = ({
   const getColorForSubject = (subject) =>
     getSubjectColor(subject, localSubjectColors, DEFAULT_TIMETABLE_SUBJECT_COLORS);
 
+  const NEUTRAL_COLOR = '#e2e8f0';
+
   const buildColorStyle = (subject) => {
     const color = getColorForSubject(subject);
-    const textColor = getAccessibleTextColor(color);
-    return { color, textColor };
+    const displayColor = color || NEUTRAL_COLOR;
+    const textColor = getAccessibleTextColor(displayColor);
+    return { color, displayColor, textColor, hasColor: Boolean(color) };
   };
 
   const overlay = createEl('div', {
@@ -242,11 +246,12 @@ export const createTimetableSettingsView = ({
     const nextColor = typeof inputEl?.value === 'string' ? inputEl.value.trim() : '';
     if (!/^#([0-9a-fA-F]{6})$/.test(nextColor)) {
       const fallback = getColorForSubject(subject);
+      const safeColor = fallback || NEUTRAL_COLOR;
       if (inputEl) {
-        inputEl.value = fallback;
+        inputEl.value = safeColor;
       }
       if (labelEl) {
-        labelEl.textContent = fallback.toUpperCase();
+        labelEl.textContent = fallback ? safeColor.toUpperCase() : 'Keine Farbe';
       }
       setStatus('subjects', 'Bitte eine gültige Farbe (#RRGGBB) wählen.', 'error');
       return;
@@ -258,6 +263,24 @@ export const createTimetableSettingsView = ({
       labelEl.textContent = nextColor.toUpperCase();
     }
     setStatus('subjects', 'Farbe aktualisiert.', 'success');
+  };
+
+  const handleClearSubjectColor = (subject, inputEl, labelEl) => {
+    const key = buildSubjectKey(subject);
+    if (!key) {
+      return;
+    }
+    const updatedColors = { ...localSubjectColors };
+    delete updatedColors[key];
+    syncSubjectColors(updatedColors);
+    if (inputEl) {
+      inputEl.value = NEUTRAL_COLOR;
+    }
+    if (labelEl) {
+      labelEl.textContent = 'Keine Farbe';
+    }
+    refreshGridOptions();
+    setStatus('subjects', 'Farbe entfernt.', 'success');
   };
 
   const handleRenameSubject = (originalSubject, inputEl) => {
@@ -320,6 +343,7 @@ export const createTimetableSettingsView = ({
   const refreshSubjectsList = () => {
     subjectInputs = [];
     subjectColorInputs = [];
+    subjectColorClearButtons = [];
     subjectsList.replaceChildren();
     if (!localSubjects.length) {
       subjectsList.append(
@@ -333,18 +357,23 @@ export const createTimetableSettingsView = ({
       const subjectRow = createEl('div', {
         className: 'timetable-subject-row d-flex flex-wrap gap-2 align-items-center',
       });
-      const { color } = buildColorStyle(subject);
+      const { displayColor, hasColor } = buildColorStyle(subject);
       const colorInput = createEl('input', {
         className: 'form-control form-control-color timetable-color-input',
         attrs: {
           type: 'color',
-          value: color,
+          value: displayColor,
           'aria-label': `Farbe für ${subject}`,
         },
       });
       const colorLabel = createEl('span', {
         className: 'small text-muted timetable-color-value',
-        text: color.toUpperCase(),
+        text: hasColor ? displayColor.toUpperCase() : 'Keine Farbe',
+      });
+      const clearColorButton = createEl('button', {
+        className: 'btn btn-outline-secondary btn-sm timetable-color-clear',
+        attrs: { type: 'button' },
+        text: 'Farbe entfernen',
       });
 
       const input = createEl('input', {
@@ -361,6 +390,9 @@ export const createTimetableSettingsView = ({
         colorLabel.textContent = colorInput.value.toUpperCase();
       });
       colorInput.addEventListener('change', colorChangeHandler);
+      clearColorButton.addEventListener('click', () =>
+        handleClearSubjectColor(subject, colorInput, colorLabel),
+      );
 
       input.addEventListener('blur', () => handleRenameSubject(subject, input));
       input.addEventListener('keydown', (event) => {
@@ -375,7 +407,8 @@ export const createTimetableSettingsView = ({
 
       subjectInputs.push(input);
       subjectColorInputs.push(colorInput);
-      subjectRow.append(colorInput, colorLabel, input);
+      subjectColorClearButtons.push(clearColorButton);
+      subjectRow.append(colorInput, colorLabel, clearColorButton, input);
       subjectsList.append(subjectRow);
     });
     applyEditingState();
@@ -507,12 +540,12 @@ export const createTimetableSettingsView = ({
       return wrapper;
     }
     subjectsForCell.forEach((subject) => {
-      const { color, textColor } = buildColorStyle(subject);
+      const { displayColor, textColor } = buildColorStyle(subject);
       wrapper.append(
         createEl('div', {
           className: 'timetable-cell-visual__segment',
           attrs: {
-            style: `--segment-color:${color};--segment-text:${textColor};`,
+            style: `--segment-color:${displayColor};--segment-text:${textColor};`,
             title: subject,
           },
           children: [
@@ -662,6 +695,9 @@ export const createTimetableSettingsView = ({
     });
     subjectColorInputs.forEach((input) => {
       input.disabled = disable;
+    });
+    subjectColorClearButtons.forEach((button) => {
+      button.disabled = disable;
     });
     lessonInputs.forEach((input) => {
       input.disabled = disable;
