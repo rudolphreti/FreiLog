@@ -960,7 +960,8 @@ body.child-detail-overlay-open {
   overflow: hidden;
 }
 
-.timetable-overlay {
+.timetable-overlay,
+.angebot-settings-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
@@ -973,12 +974,18 @@ body.child-detail-overlay-open {
   align-items: stretch;
 }
 
-.timetable-overlay.is-open {
+.angebot-settings-overlay-open {
+  overflow: hidden;
+}
+
+.timetable-overlay.is-open,
+.angebot-settings-overlay.is-open {
   opacity: 1;
   pointer-events: auto;
 }
 
-.timetable-overlay__panel {
+.timetable-overlay__panel,
+.angebot-settings-overlay__panel {
   position: relative;
   flex: 1;
   width: 100%;
@@ -990,7 +997,8 @@ body.child-detail-overlay-open {
   overflow: hidden;
 }
 
-.timetable-overlay__header {
+.timetable-overlay__header,
+.angebot-settings-overlay__header {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1003,13 +1011,15 @@ body.child-detail-overlay-open {
   gap: 0.75rem;
 }
 
-.timetable-overlay__content {
+.timetable-overlay__content,
+.angebot-settings-overlay__content {
   flex: 1;
   overflow-y: auto;
   padding: 1.25rem;
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
 }
+
 
 .timetable-select {
   min-width: 180px;
@@ -1033,6 +1043,15 @@ body.child-detail-overlay-open {
 .timetable-grid th,
 .timetable-grid td {
   vertical-align: middle;
+}
+
+.timetable-cell-freizeit {
+  cursor: pointer;
+}
+
+.timetable-cell-freizeit:hover {
+  outline: 2px dashed #facc15;
+  outline-offset: -4px;
 }
 
 .timetable-time-header {

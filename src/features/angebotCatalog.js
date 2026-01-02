@@ -552,6 +552,7 @@ export const bindAngebotCatalog = ({
   readOnly = false,
   modules = [],
   moduleAssignments = {},
+  contextAdapter,
 }) => {
   if (!overlay || !catalogOverlay || !createOverlay || !editOverlay) {
     return null;
@@ -573,6 +574,16 @@ export const bindAngebotCatalog = ({
   let longPressTimer = null;
   let suppressClick = false;
   let openButtonRef = openButton || null;
+  const adapter =
+    contextAdapter && typeof contextAdapter === 'object'
+      ? {
+          getEntry: contextAdapter.getEntry || getEntry,
+          persist: contextAdapter.persist || updateEntry,
+        }
+      : {
+          getEntry,
+          persist: updateEntry,
+        };
 
   const getActiveModuleId = () => {
     const active = overlay.dataset.activeModule;
@@ -856,7 +867,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     const targetModule = moduleId || getActiveModuleId();
-    const entry = getEntry(currentDate);
+    const entry = adapter.getEntry(currentDate);
     const hasModules = Array.isArray(currentModules) && currentModules.length > 0;
     if (!hasModules) {
       const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
@@ -866,7 +877,7 @@ export const bindAngebotCatalog = ({
       const nextSelected = [...currentList, normalized];
       addPreset('angebote', normalized);
       upsertAngebotCatalogEntry(normalized);
-      updateEntry(currentDate, { angebote: nextSelected });
+      adapter.persist(currentDate, { angebote: nextSelected });
       currentSelected = nextSelected;
       currentAssignments = {};
       render();
@@ -878,9 +889,17 @@ export const bindAngebotCatalog = ({
     }
 
     const baseAssignments =
-      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
-        ? entry.angebotModules
-        : currentAssignments;
+      currentAssignments && typeof currentAssignments === 'object' && Object.keys(currentAssignments).length
+        ? currentAssignments
+        : entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+          ? entry.angebotModules
+          : {};
+    const currentModuleList = Array.isArray(baseAssignments?.[targetModule])
+      ? baseAssignments[targetModule]
+      : [];
+    if (currentModuleList.some((item) => normalizeAngebotText(item) === normalized)) {
+      return;
+    }
     const nextAssignments = {
       ...baseAssignments,
       [targetModule]: [
@@ -892,7 +911,7 @@ export const bindAngebotCatalog = ({
     };
     addPreset('angebote', normalized);
     upsertAngebotCatalogEntry(normalized);
-    updateEntry(currentDate, { angebotModules: nextAssignments });
+    adapter.persist(currentDate, { angebotModules: nextAssignments });
     setAssignments(nextAssignments);
     render();
   };
@@ -902,12 +921,12 @@ export const bindAngebotCatalog = ({
     if (!normalized) {
       return;
     }
-    const entry = getEntry(currentDate);
+    const entry = adapter.getEntry(currentDate);
     const hasModules = Array.isArray(currentModules) && currentModules.length > 0;
     if (!hasModules) {
       const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
       const updated = currentList.filter((item) => normalizeAngebotText(item) !== normalized);
-      updateEntry(currentDate, { angebote: updated });
+      adapter.persist(currentDate, { angebote: updated });
       currentSelected = updated;
       currentAssignments = {};
       render();
@@ -915,9 +934,11 @@ export const bindAngebotCatalog = ({
     }
 
     const baseAssignments =
-      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
-        ? entry.angebotModules
-        : currentAssignments;
+      currentAssignments && typeof currentAssignments === 'object' && Object.keys(currentAssignments).length
+        ? currentAssignments
+        : entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+          ? entry.angebotModules
+          : {};
     const targetModule = moduleId || getActiveModuleId();
 
     if (!targetModule) {
@@ -927,7 +948,7 @@ export const bindAngebotCatalog = ({
           (item) => normalizeAngebotText(item) !== normalized,
         );
       });
-      updateEntry(currentDate, { angebotModules: stripped });
+        adapter.persist(currentDate, { angebotModules: stripped });
       setAssignments(stripped);
       render();
       return;
@@ -937,7 +958,7 @@ export const bindAngebotCatalog = ({
     updatedAssignments[targetModule] = (updatedAssignments[targetModule] || []).filter(
       (item) => normalizeAngebotText(item) !== normalized,
     );
-    updateEntry(currentDate, { angebotModules: updatedAssignments });
+    adapter.persist(currentDate, { angebotModules: updatedAssignments });
     setAssignments(updatedAssignments);
     render();
   };
@@ -1346,6 +1367,9 @@ export const bindAngebotCatalog = ({
       if (openButtonRef) {
         openButtonRef.disabled = isReadOnly;
       }
+    },
+    open: () => {
+      openOverlay();
     },
   };
 };

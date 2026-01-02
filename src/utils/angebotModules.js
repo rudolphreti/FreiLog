@@ -3,9 +3,11 @@ import { normalizeAngebotText } from './angebotCatalog.js';
 import {
   buildSubjectKey,
   DEFAULT_TIMETABLE_LESSONS,
+  TIMETABLE_DAY_ORDER,
 } from './timetable.js';
 
 const FREIZEIT_KEY = buildSubjectKey('Freizeit');
+const isPlainObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
 
 const DAY_KEY_BY_INDEX = {
   1: 'monday',
@@ -137,6 +139,58 @@ export const getFreizeitModulesForDate = (
     ? timetableLessons
     : DEFAULT_TIMETABLE_LESSONS;
   return buildFreizeitModules({ scheduleDay, lessons });
+};
+
+export const getFreizeitModulesByDay = (
+  timetableSchedule = {},
+  timetableLessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
+  const lessons =
+    Array.isArray(timetableLessons) && timetableLessons.length
+      ? timetableLessons
+      : DEFAULT_TIMETABLE_LESSONS;
+  const schedule =
+    timetableSchedule && typeof timetableSchedule === 'object'
+      ? timetableSchedule
+      : {};
+  const modulesByDay = {};
+
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    modulesByDay[key] = buildFreizeitModules({
+      scheduleDay: Array.isArray(schedule[key]) ? schedule[key] : [],
+      lessons,
+    });
+  });
+
+  return modulesByDay;
+};
+
+export const normalizeFixedAngeboteConfig = (
+  assignments,
+  timetableSchedule = {},
+  timetableLessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
+  const modulesByDay = getFreizeitModulesByDay(timetableSchedule, timetableLessons);
+  const source = isPlainObject(assignments) ? assignments : {};
+  const normalized = {};
+
+  Object.entries(modulesByDay).forEach(([dayKey, modules]) => {
+    const daySource = isPlainObject(source[dayKey]) ? source[dayKey] : {};
+    const dayAssignments = {};
+
+    modules.forEach((module) => {
+      const list = normalizeAngebotListForModules(daySource[module.id]);
+      if (list.length) {
+        dayAssignments[module.id] = list;
+      }
+    });
+
+    if (Object.keys(dayAssignments).length) {
+      normalized[dayKey] = dayAssignments;
+    }
+  });
+
+  return normalized;
 };
 
 export const normalizeModuleAssignments = (modules, assignments, fallbackAngebote = []) => {

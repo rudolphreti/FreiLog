@@ -3,7 +3,11 @@ import {
   saveTimetableSchedule,
   saveTimetableSubjectColors,
   saveTimetableSubjects,
+  getFixedAngeboteForDay,
+  saveFixedAngeboteForDay,
+  getAngebotCatalog,
 } from '../db/dbRepository.js';
+import { getState } from '../state/store.js';
 import { createEl } from '../ui/dom.js';
 import { UI_LABELS } from '../ui/labels.js';
 import {
@@ -16,10 +20,19 @@ import {
   normalizeSubjectName,
   normalizeTimetableSubjectColors,
 } from '../utils/timetable.js';
+import { getFreizeitModulesByDay } from '../utils/angebotModules.js';
+import {
+  buildAngebotOverlay,
+  buildAngebotCatalogOverlay,
+  buildAngebotCreateOverlay,
+  buildAngebotEditOverlay,
+} from '../ui/components.js';
+import { bindAngebotCatalog } from './angebotCatalog.js';
 
 const MAX_SUBJECT_LENGTH = 80;
 const MIN_SUBJECT_INPUT_PX = 100;
 const LESSONS_COUNT = 10;
+const FREIZEIT_KEY = buildSubjectKey('Freizeit');
 
 const cloneLessons = (lessons) =>
   Array.isArray(lessons) ? lessons.map((item, index) => ({ ...item, period: index + 1 })) : [];
@@ -106,7 +119,8 @@ export const createTimetableSettingsView = ({
   subjectColors = {},
   lessons = [],
   schedule = {},
-} = {}) => {
+} = {}, options = {}) => {
+  const { freizeitHint = '' } = options || {};
   let localSubjects = [...subjects];
   let localSubjectColors = normalizeTimetableSubjectColors(
     subjectColors,
@@ -115,6 +129,7 @@ export const createTimetableSettingsView = ({
   );
   let localLessons = cloneLessons(lessons);
   let localSchedule = cloneSchedule(schedule);
+  let freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
   let isOpen = false;
   let isEditing = false;
   let subjectInputs = [];
@@ -132,6 +147,11 @@ export const createTimetableSettingsView = ({
     lessons: null,
     schedule: null,
   };
+  const angebotOverlay = buildAngebotOverlay({ angebotGroups: {} });
+  const angebotCatalogOverlay = buildAngebotCatalogOverlay({ angebotGroups: {}, savedFilters: null });
+  const angebotCreateOverlay = buildAngebotCreateOverlay({ angebotGroups: {} });
+  const angebotEditOverlay = buildAngebotEditOverlay({ angebotGroups: {} });
+  let angebotBinding = null;
 
   const syncSubjectColors = (nextColors = localSubjectColors) => {
     localSubjectColors = normalizeTimetableSubjectColors(
@@ -512,6 +532,7 @@ export const createTimetableSettingsView = ({
         } else {
           localLessons = nextLessons;
           saveTimetableLessons(localLessons);
+          freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
           refreshTimeRow();
           setStatus('lessons', 'Zeit aktualisiert.', 'success');
         }
@@ -626,6 +647,68 @@ export const createTimetableSettingsView = ({
     });
   };
 
+  const findModuleForCell = (dayKey, periodIndex) => {
+    const modules = freizeitModulesByDay[dayKey] || [];
+    return modules.find(
+      (module) => module.startPeriod <= periodIndex + 1 && module.endPeriod >= periodIndex + 1,
+    );
+  };
+
+  const openFixedAngeboteOverlay = ({ dayKey, dayLabel, module }) => {
+    const { modules, assignments, aggregated } = getFixedAngeboteForDay(dayKey);
+    if (!modules.length) {
+      return;
+    }
+    let fixedAssignments = assignments;
+    let fixedAggregated = aggregated;
+    const adapter = {
+      getEntry: () => ({ angebote: fixedAggregated, angebotModules: fixedAssignments }),
+      persist: (_id, patch) => {
+        const nextAssignments = patch.angebotModules || fixedAssignments;
+        const nextAggregated = patch.angebote || fixedAggregated;
+        saveFixedAngeboteForDay(dayKey, {
+          assignments: nextAssignments,
+          angebote: nextAggregated,
+        });
+        fixedAssignments = nextAssignments;
+        fixedAggregated = nextAggregated;
+      },
+    };
+    const targetModuleId = module?.id || modules[0]?.id || '';
+    if (angebotOverlay.refs?.overlayTitle) {
+      const slot = module?.descriptor || module?.timeLabel || '';
+      const labelParts = [dayLabel || '', slot].filter(Boolean);
+      const suffix = labelParts.length ? ` (${labelParts.join(' · ')})` : '';
+      angebotOverlay.refs.overlayTitle.textContent = `Fixe Angebote${suffix}`;
+    }
+    angebotOverlay.element.dataset.activeModule = targetModuleId;
+    const state = getState();
+    const payload = {
+      date: dayKey,
+      selectedAngebote: aggregated,
+      catalog: getAngebotCatalog(),
+      topStats: state.db?.angebotStats || {},
+      angebotGroups: state.db?.observationGroups || {},
+      savedFilters: state.ui?.overlay?.savedAngebotFilters || null,
+      readOnly: false,
+      modules,
+      moduleAssignments: assignments,
+      contextAdapter: adapter,
+    };
+    if (!angebotBinding) {
+      angebotBinding = bindAngebotCatalog({
+        ...payload,
+        overlay: angebotOverlay.element,
+        catalogOverlay: angebotCatalogOverlay.element,
+        createOverlay: angebotCreateOverlay.element,
+        editOverlay: angebotEditOverlay.element,
+      });
+    } else {
+      angebotBinding.update(payload);
+    }
+    angebotBinding?.open();
+  };
+
   const handleCellChange = (dayKey, index, selectEl, summaryEl, visualContainer) => {
     const selected = Array.from(selectEl.selectedOptions).map((option) => option.value);
     const nextSchedule = cloneSchedule(localSchedule);
@@ -635,6 +718,7 @@ export const createTimetableSettingsView = ({
     nextSchedule[dayKey][index] = selected;
     localSchedule = nextSchedule;
     saveTimetableSchedule(localSchedule);
+    freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
     const summaryText = formatSubjectsList(selected);
     selectEl.title = summaryText;
     if (summaryEl) {
@@ -691,6 +775,23 @@ export const createTimetableSettingsView = ({
           children: [select],
         });
         cell.append(visualWrapper, selectWrapper, summary);
+        const moduleForCell = findModuleForCell(key, i);
+        const hasFreizeit = cellValues.some((subject) => buildSubjectKey(subject) === FREIZEIT_KEY);
+        if (moduleForCell && hasFreizeit) {
+          cell.classList.add('timetable-cell-freizeit');
+          cell.addEventListener('click', (event) => {
+            if (event.target instanceof HTMLElement && event.target.closest('select')) {
+              return;
+            }
+            openFixedAngeboteOverlay({
+              dayKey: key,
+              dayLabel: label,
+              module: moduleForCell,
+              lesson: localLessons[i] || {},
+              periodIndex: i,
+            });
+          });
+        }
         row.append(cell);
         selects.push({ selectEl: select, summaryEl: summary, visualWrapper });
         daySummaryRefs.set(i, visualWrapper);
@@ -751,26 +852,31 @@ export const createTimetableSettingsView = ({
     applyEditingState();
   });
 
-  gridBody.append(
-    createEl('div', {
-      className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
-      children: [
-        createEl('div', {
-          className: 'd-flex flex-column',
-          children: [
-            createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
-            createEl('p', {
-              className: 'text-muted small mb-0',
-              text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
-            }),
-          ],
-        }),
-        editToggle,
-      ],
-    }),
+  const gridHeaderRow = createEl('div', {
+    className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
+    children: [
+      createEl('div', {
+        className: 'd-flex flex-column',
+        children: [
+          createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
+          createEl('p', {
+            className: 'text-muted small mb-0',
+            text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
+          }),
+        ],
+      }),
+      editToggle,
+    ],
+  });
+
+  const gridElements = [
+    gridHeaderRow,
+    freizeitHint ? createEl('p', { className: 'text-muted small mb-0', text: freizeitHint }) : null,
     gridTableWrapper,
     status.schedule,
-  );
+  ].filter(Boolean);
+
+  gridBody.append(...gridElements);
 
   subjectsBody.append(
     createEl('h4', { className: 'h5 mb-1', text: 'Fächer' }),
@@ -1035,6 +1141,7 @@ export const createTimetableSettingsView = ({
     );
     localLessons = cloneLessons(nextLessons);
     localSchedule = cloneSchedule(nextSchedule);
+    freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
     refreshSubjectsList();
     refreshLessons();
     refreshTimeRow();
@@ -1058,6 +1165,12 @@ export const createTimetableSettingsView = ({
 
   return {
     element: overlay,
+    overlays: [
+      angebotOverlay.element,
+      angebotCatalogOverlay.element,
+      angebotCreateOverlay.element,
+      angebotEditOverlay.element,
+    ],
     open,
     close,
     update,

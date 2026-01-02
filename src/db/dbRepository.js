@@ -32,8 +32,11 @@ import {
 } from '../utils/timetable.js';
 import {
   flattenModuleAssignments,
+  getFreizeitModulesByDay,
   getFreizeitModulesForDate,
+  getTimetableDayKey,
   mergeModuleAssignments,
+  normalizeFixedAngeboteConfig,
   normalizeModuleAssignments,
   normalizeAngebotListForModules,
 } from '../utils/angebotModules.js';
@@ -548,6 +551,148 @@ export const saveFreeDays = (rows = []) => {
     }
     data.settings.freeDays = normalized;
   });
+};
+
+export const getFixedAngeboteConfig = () => {
+  const { lessons, schedule } = getTimetableData();
+  return normalizeFixedAngeboteConfig(
+    getState().db?.fixedAngebote,
+    schedule,
+    lessons,
+  );
+};
+
+export const getFixedAngeboteForDay = (dayKey) => {
+  const { lessons, schedule } = getTimetableData();
+  const modulesByDay = getFreizeitModulesByDay(schedule, lessons);
+  const modules = modulesByDay[dayKey] || [];
+  const normalizedConfig = normalizeFixedAngeboteConfig(
+    getState().db?.fixedAngebote,
+    schedule,
+    lessons,
+  );
+  const assignments = normalizeModuleAssignments(modules, normalizedConfig[dayKey], []);
+  return {
+    modules,
+    assignments,
+    aggregated: flattenModuleAssignments(assignments),
+  };
+};
+
+export const saveFixedAngeboteConfig = (value) => {
+  updateAppData((data) => {
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
+      data.timetableSubjects,
+      data.timetableLessons,
+    );
+    data.fixedAngebote = normalizeFixedAngeboteConfig(
+      value,
+      data.timetableSchedule,
+      data.timetableLessons,
+    );
+  });
+};
+
+export const saveFixedAngeboteForDay = (dayKey, { assignments, angebote } = {}) => {
+  updateAppData((data) => {
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      data.timetableSubjectColors,
+      data.timetableSubjects,
+    );
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
+      data.timetableSubjects,
+      data.timetableLessons,
+    );
+    const modulesByDay = getFreizeitModulesByDay(data.timetableSchedule, data.timetableLessons);
+    const modules = modulesByDay[dayKey] || [];
+    const normalizedConfig = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
+      data.timetableLessons,
+    );
+
+    if (!modules.length) {
+      delete normalizedConfig[dayKey];
+      data.fixedAngebote = normalizedConfig;
+      return;
+    }
+
+    const baseAssignments = normalizedConfig[dayKey] || {};
+    const normalizedAssignments = normalizeModuleAssignments(
+      modules,
+      assignments || baseAssignments,
+      angebote || flattenModuleAssignments(baseAssignments),
+    );
+
+    if (Object.values(normalizedAssignments).some((list) => list.length)) {
+      normalizedConfig[dayKey] = normalizedAssignments;
+    } else {
+      delete normalizedConfig[dayKey];
+    }
+    data.fixedAngebote = normalizedConfig;
+  });
+};
+
+export const applyFixedAngeboteForDate = (date) => {
+  const ymd = ensureYmd(date, todayYmd());
+  const { lessons: timetableLessons, schedule: timetableSchedule } = getTimetableData();
+  const dayKey = getTimetableDayKey(ymd);
+  const fixedByDay = normalizeFixedAngeboteConfig(
+    getState().db?.fixedAngebote,
+    timetableSchedule,
+    timetableLessons,
+  );
+  const dayAssignments = dayKey ? fixedByDay[dayKey] : null;
+  const modulesForDay = getFreizeitModulesForDate(
+    ymd,
+    timetableSchedule,
+    timetableLessons,
+  );
+
+  if (!dayAssignments || !modulesForDay.length) {
+    return;
+  }
+
+  const entry = getEntry(ymd);
+  const existingAssignments = normalizeModuleAssignments(
+    modulesForDay,
+    entry.angebotModules,
+    entry.angebote,
+  );
+  const mergedAssignments = {};
+
+  modulesForDay.forEach((module) => {
+    const existingList = existingAssignments[module.id] || [];
+    const fixedList = normalizeAngebotListForModules(dayAssignments[module.id]);
+    const mergedList = normalizeAngebotListForModules([...existingList, ...fixedList]);
+    if (mergedList.length) {
+      mergedAssignments[module.id] = mergedList;
+    }
+  });
+
+  const normalizedAssignments = normalizeModuleAssignments(
+    modulesForDay,
+    { ...existingAssignments, ...mergedAssignments },
+    entry.angebote,
+  );
+
+  updateEntry(ymd, { angebotModules: normalizedAssignments });
 };
 
 export const getEntry = (date) => {
@@ -1238,6 +1383,11 @@ export const saveTimetableSubjects = (subjects) => {
       normalizedSubjects,
       data.timetableLessons,
     );
+    data.fixedAngebote = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
+      data.timetableLessons,
+    );
   });
 };
 
@@ -1256,6 +1406,11 @@ export const saveTimetableLessons = (lessons) => {
       data.timetableSchedule,
       data.timetableSubjects,
       normalizedLessons,
+    );
+    data.fixedAngebote = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
+      data.timetableLessons,
     );
   });
 };
@@ -1278,6 +1433,11 @@ export const saveTimetableSchedule = (schedule) => {
       data.timetableSubjects,
       data.timetableLessons,
     );
+    data.fixedAngebote = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
+      data.timetableLessons,
+    );
   });
 };
 
@@ -1297,6 +1457,11 @@ export const saveTimetableSubjectColors = (subjectColors) => {
     data.timetableSchedule = normalizeTimetableSchedule(
       data.timetableSchedule,
       data.timetableSubjects,
+      data.timetableLessons,
+    );
+    data.fixedAngebote = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
       data.timetableLessons,
     );
   });

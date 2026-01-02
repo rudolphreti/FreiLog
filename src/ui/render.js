@@ -27,6 +27,7 @@ import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+import { UI_LABELS } from './labels.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -109,7 +110,6 @@ let angebotCatalogView = null;
 let angebotCatalogBinding = null;
 let angebotCreateOverlay = null;
 let angebotEditOverlay = null;
-
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
   if (closeButton) {
@@ -329,6 +329,7 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
+      ...(timetableSettingsView.overlays || []),
       angebotOverlayView.element,
       angebotCatalogView.element,
       angebotCreateOverlay.element,

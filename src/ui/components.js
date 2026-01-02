@@ -548,6 +548,7 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
     element: overlay,
     refs: {
       overlayPanel,
+      overlayTitle,
       modulesNav,
       modulesContent,
       modulesEmpty,
