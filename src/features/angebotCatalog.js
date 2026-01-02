@@ -894,6 +894,12 @@ export const bindAngebotCatalog = ({
         : entry && entry.angebotModules && typeof entry.angebotModules === 'object'
           ? entry.angebotModules
           : {};
+    const currentModuleList = Array.isArray(baseAssignments?.[targetModule])
+      ? baseAssignments[targetModule]
+      : [];
+    if (currentModuleList.some((item) => normalizeAngebotText(item) === normalized)) {
+      return;
+    }
     const nextAssignments = {
       ...baseAssignments,
       [targetModule]: [
@@ -905,7 +911,7 @@ export const bindAngebotCatalog = ({
     };
     addPreset('angebote', normalized);
     upsertAngebotCatalogEntry(normalized);
-      adapter.persist(currentDate, { angebotModules: nextAssignments });
+    adapter.persist(currentDate, { angebotModules: nextAssignments });
     setAssignments(nextAssignments);
     render();
   };
