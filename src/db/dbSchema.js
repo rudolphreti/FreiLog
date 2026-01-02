@@ -32,9 +32,11 @@ import {
   mergeModuleAssignments,
   normalizeModuleAssignments,
   normalizeAngebotListForModules,
+  getFreizeitModulesByDay,
+  normalizeFixedAngeboteConfig,
 } from '../utils/angebotModules.js';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -722,6 +724,7 @@ export const createEmptyAppData = () => ({
   ),
   timetableLessons: cloneTimetableLessons(DEFAULT_TIMETABLE_LESSONS),
   timetableSchedule: cloneTimetableSchedule(DEFAULT_TIMETABLE_SCHEDULE),
+  fixedAngebote: {},
   days: {},
   angebotStats: {},
   observationStats: {},
@@ -793,6 +796,10 @@ export const normalizeAppData = (source, fallback = {}) => {
     timetableSubjects,
     timetableLessons,
   );
+  const freizeitModulesByDay = getFreizeitModulesByDay(
+    timetableSchedule,
+    timetableLessons,
+  );
 
   const observationCatalog = normalizeObservationCatalog(
     Array.isArray(base.observationCatalog)
@@ -826,6 +833,18 @@ export const normalizeAppData = (source, fallback = {}) => {
     timetableSchedule,
     timetableLessons,
   );
+  const fixedAngebote = {
+    ...normalizeFixedAngeboteConfig(
+      fallbackData.fixedAngebote,
+      timetableSchedule,
+      timetableLessons,
+    ),
+    ...normalizeFixedAngeboteConfig(
+      base.fixedAngebote,
+      timetableSchedule,
+      timetableLessons,
+    ),
+  };
 
   const uiSource = base.ui || fallbackData.ui || null;
 
@@ -842,6 +861,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     timetableSubjectColors,
     timetableLessons,
     timetableSchedule,
+    fixedAngebote,
     days,
     angebotStats: buildAngebotStats(days),
     observationStats: buildObservationStats(days),

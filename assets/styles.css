@@ -960,7 +960,8 @@ body.child-detail-overlay-open {
   overflow: hidden;
 }
 
-.timetable-overlay {
+.timetable-overlay,
+.angebot-settings-overlay {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
@@ -973,12 +974,18 @@ body.child-detail-overlay-open {
   align-items: stretch;
 }
 
-.timetable-overlay.is-open {
+.angebot-settings-overlay-open {
+  overflow: hidden;
+}
+
+.timetable-overlay.is-open,
+.angebot-settings-overlay.is-open {
   opacity: 1;
   pointer-events: auto;
 }
 
-.timetable-overlay__panel {
+.timetable-overlay__panel,
+.angebot-settings-overlay__panel {
   position: relative;
   flex: 1;
   width: 100%;
@@ -990,7 +997,8 @@ body.child-detail-overlay-open {
   overflow: hidden;
 }
 
-.timetable-overlay__header {
+.timetable-overlay__header,
+.angebot-settings-overlay__header {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1003,12 +1011,42 @@ body.child-detail-overlay-open {
   gap: 0.75rem;
 }
 
-.timetable-overlay__content {
+.timetable-overlay__content,
+.angebot-settings-overlay__content {
   flex: 1;
   overflow-y: auto;
   padding: 1.25rem;
   padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
+}
+
+.angebot-settings__schedule tbody tr:last-child th,
+.angebot-settings__schedule tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.angebot-settings__schedule th {
+  min-width: 72px;
+}
+
+.angebot-settings__freizeit-row {
+  background: #fff7e6;
+}
+
+.angebot-settings__module {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.angebot-settings__pill {
+  font-size: 0.85rem;
+  padding: 0.35rem 0.6rem;
+}
+
+.angebot-settings__subject {
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .timetable-select {

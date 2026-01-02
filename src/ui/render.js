@@ -23,10 +23,12 @@ import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
 import { createTimetableSettingsView } from '../features/timetableSettings.js';
+import { createAngebotSettingsView } from '../features/angebotSettings.js';
 import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+import { UI_LABELS } from './labels.js';
 
 const createFallbackEntry = (date) => ({
   date,
@@ -109,6 +111,9 @@ let angebotCatalogView = null;
 let angebotCatalogBinding = null;
 let angebotCreateOverlay = null;
 let angebotEditOverlay = null;
+let angebotSettingsView = null;
+
+const ANGEBOT_SETTINGS_TITLE = UI_LABELS.angebotSettings;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -184,6 +189,7 @@ export const renderApp = (root, state) => {
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
   const timetableSubjectColors = db.timetableSubjectColors || {};
+  const fixedAngebote = db.fixedAngebote || {};
   const savedAngebotFilters = state?.ui?.overlay?.savedAngebotFilters;
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
@@ -298,6 +304,25 @@ export const renderApp = (root, state) => {
     });
   }
 
+  if (!angebotSettingsView) {
+    angebotSettingsView = createAngebotSettingsView({
+      title: ANGEBOT_SETTINGS_TITLE,
+      timetableLessons,
+      timetableSchedule,
+      fixedAssignments: fixedAngebote,
+      angebotPresets: angebotePresets,
+      selectedDate,
+    });
+  } else {
+    angebotSettingsView.update({
+      timetableLessons,
+      timetableSchedule,
+      fixedAssignments: fixedAngebote,
+      angebotPresets: angebotePresets,
+      selectedDate,
+    });
+  }
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -311,6 +336,7 @@ export const renderApp = (root, state) => {
       showExport: hasData,
       showDummy: !hasData,
       showWeekly: hasData,
+      angebotSettingsTitle: ANGEBOT_SETTINGS_TITLE,
     },
   );
 
@@ -329,6 +355,7 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
+      angebotSettingsView.element,
       angebotOverlayView.element,
       angebotCatalogView.element,
       angebotCreateOverlay.element,
@@ -378,6 +405,12 @@ export const renderApp = (root, state) => {
       settingsActions.timetableButton.addEventListener('click', () => {
         closeDrawer();
         timetableSettingsView.open();
+      });
+    }
+    if (angebotSettingsView && settingsActions?.angebotSettingsButton) {
+      settingsActions.angebotSettingsButton.addEventListener('click', () => {
+        closeDrawer();
+        angebotSettingsView.open();
       });
     }
     angebotBinding = bindAngebot({
@@ -511,6 +544,12 @@ export const renderApp = (root, state) => {
     settingsActions.timetableButton.addEventListener('click', () => {
       closeDrawer();
       timetableSettingsView.open();
+    });
+  }
+  if (angebotSettingsView && settingsActions?.angebotSettingsButton) {
+    settingsActions.angebotSettingsButton.addEventListener('click', () => {
+      closeDrawer();
+      angebotSettingsView.open();
     });
   }
 
