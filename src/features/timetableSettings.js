@@ -214,7 +214,9 @@ export const createTimetableSettingsView = ({
     }
   };
 
-  const subjectsList = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const subjectsList = createEl('div', {
+    className: 'd-flex flex-wrap align-items-stretch gap-2 timetable-subject-list-inline',
+  });
   const subjectInput = createEl('input', {
     className: 'form-control timetable-subject-name-input',
     attrs: { type: 'text', placeholder: 'Neues Fach hinzufügen' },
