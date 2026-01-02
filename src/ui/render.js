@@ -189,7 +189,6 @@ export const renderApp = (root, state) => {
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
   const timetableSubjectColors = db.timetableSubjectColors || {};
-  const fixedAngebote = db.fixedAngebote || {};
   const savedAngebotFilters = state?.ui?.overlay?.savedAngebotFilters;
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
@@ -306,20 +305,25 @@ export const renderApp = (root, state) => {
 
   if (!angebotSettingsView) {
     angebotSettingsView = createAngebotSettingsView({
-      title: ANGEBOT_SETTINGS_TITLE,
       timetableLessons,
       timetableSchedule,
-      fixedAssignments: fixedAngebote,
-      angebotPresets: angebotePresets,
-      selectedDate,
+      timetableSubjects,
+      timetableSubjectColors,
+      angebotGroups,
+      catalog: angebotCatalog,
+      topStats: angebotStats,
+      savedAngebotFilters,
     });
   } else {
     angebotSettingsView.update({
       timetableLessons,
       timetableSchedule,
-      fixedAssignments: fixedAngebote,
-      angebotPresets: angebotePresets,
-      selectedDate,
+      timetableSubjects,
+      timetableSubjectColors,
+      angebotGroups,
+      catalog: angebotCatalog,
+      topStats: angebotStats,
+      savedAngebotFilters,
     });
   }
 
@@ -356,6 +360,7 @@ export const renderApp = (root, state) => {
       freeDaysSettingsView.element,
       timetableSettingsView.element,
       angebotSettingsView.element,
+      ...(angebotSettingsView.overlays || []),
       angebotOverlayView.element,
       angebotCatalogView.element,
       angebotCreateOverlay.element,

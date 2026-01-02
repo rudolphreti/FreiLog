@@ -562,6 +562,23 @@ export const getFixedAngeboteConfig = () => {
   );
 };
 
+export const getFixedAngeboteForDay = (dayKey) => {
+  const { lessons, schedule } = getTimetableData();
+  const modulesByDay = getFreizeitModulesByDay(schedule, lessons);
+  const modules = modulesByDay[dayKey] || [];
+  const normalizedConfig = normalizeFixedAngeboteConfig(
+    getState().db?.fixedAngebote,
+    schedule,
+    lessons,
+  );
+  const assignments = normalizeModuleAssignments(modules, normalizedConfig[dayKey], []);
+  return {
+    modules,
+    assignments,
+    aggregated: flattenModuleAssignments(assignments),
+  };
+};
+
 export const saveFixedAngeboteConfig = (value) => {
   updateAppData((data) => {
     data.timetableSubjects = normalizeTimetableSubjects(
@@ -581,6 +598,54 @@ export const saveFixedAngeboteConfig = (value) => {
       data.timetableSchedule,
       data.timetableLessons,
     );
+  });
+};
+
+export const saveFixedAngeboteForDay = (dayKey, { assignments, angebote } = {}) => {
+  updateAppData((data) => {
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      data.timetableSubjectColors,
+      data.timetableSubjects,
+    );
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
+      data.timetableSubjects,
+      data.timetableLessons,
+    );
+    const modulesByDay = getFreizeitModulesByDay(data.timetableSchedule, data.timetableLessons);
+    const modules = modulesByDay[dayKey] || [];
+    const normalizedConfig = normalizeFixedAngeboteConfig(
+      data.fixedAngebote,
+      data.timetableSchedule,
+      data.timetableLessons,
+    );
+
+    if (!modules.length) {
+      delete normalizedConfig[dayKey];
+      data.fixedAngebote = normalizedConfig;
+      return;
+    }
+
+    const baseAssignments = normalizedConfig[dayKey] || {};
+    const normalizedAssignments = normalizeModuleAssignments(
+      modules,
+      assignments || baseAssignments,
+      angebote || flattenModuleAssignments(baseAssignments),
+    );
+
+    if (Object.values(normalizedAssignments).some((list) => list.length)) {
+      normalizedConfig[dayKey] = normalizedAssignments;
+    } else {
+      delete normalizedConfig[dayKey];
+    }
+    data.fixedAngebote = normalizedConfig;
   });
 };
 

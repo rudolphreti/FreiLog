@@ -1073,6 +1073,15 @@ body.child-detail-overlay-open {
   vertical-align: middle;
 }
 
+.timetable-cell-freizeit {
+  cursor: pointer;
+}
+
+.timetable-cell-freizeit:hover {
+  outline: 2px dashed #facc15;
+  outline-offset: -4px;
+}
+
 .timetable-time-header {
   font-size: 0.9rem;
   color: #0f172a;

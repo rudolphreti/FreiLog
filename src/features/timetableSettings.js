@@ -16,10 +16,12 @@ import {
   normalizeSubjectName,
   normalizeTimetableSubjectColors,
 } from '../utils/timetable.js';
+import { getFreizeitModulesByDay } from '../utils/angebotModules.js';
 
 const MAX_SUBJECT_LENGTH = 80;
 const MIN_SUBJECT_INPUT_PX = 100;
 const LESSONS_COUNT = 10;
+const FREIZEIT_KEY = buildSubjectKey('Freizeit');
 
 const cloneLessons = (lessons) =>
   Array.isArray(lessons) ? lessons.map((item, index) => ({ ...item, period: index + 1 })) : [];
@@ -106,7 +108,8 @@ export const createTimetableSettingsView = ({
   subjectColors = {},
   lessons = [],
   schedule = {},
-} = {}) => {
+} = {}, options = {}) => {
+  const { freizeitHint = '', onFreizeitClick = null } = options || {};
   let localSubjects = [...subjects];
   let localSubjectColors = normalizeTimetableSubjectColors(
     subjectColors,
@@ -115,6 +118,7 @@ export const createTimetableSettingsView = ({
   );
   let localLessons = cloneLessons(lessons);
   let localSchedule = cloneSchedule(schedule);
+  let freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
   let isOpen = false;
   let isEditing = false;
   let subjectInputs = [];
@@ -512,6 +516,7 @@ export const createTimetableSettingsView = ({
         } else {
           localLessons = nextLessons;
           saveTimetableLessons(localLessons);
+          freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
           refreshTimeRow();
           setStatus('lessons', 'Zeit aktualisiert.', 'success');
         }
@@ -626,6 +631,13 @@ export const createTimetableSettingsView = ({
     });
   };
 
+  const findModuleForCell = (dayKey, periodIndex) => {
+    const modules = freizeitModulesByDay[dayKey] || [];
+    return modules.find(
+      (module) => module.startPeriod <= periodIndex + 1 && module.endPeriod >= periodIndex + 1,
+    );
+  };
+
   const handleCellChange = (dayKey, index, selectEl, summaryEl, visualContainer) => {
     const selected = Array.from(selectEl.selectedOptions).map((option) => option.value);
     const nextSchedule = cloneSchedule(localSchedule);
@@ -635,6 +647,7 @@ export const createTimetableSettingsView = ({
     nextSchedule[dayKey][index] = selected;
     localSchedule = nextSchedule;
     saveTimetableSchedule(localSchedule);
+    freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
     const summaryText = formatSubjectsList(selected);
     selectEl.title = summaryText;
     if (summaryEl) {
@@ -691,6 +704,23 @@ export const createTimetableSettingsView = ({
           children: [select],
         });
         cell.append(visualWrapper, selectWrapper, summary);
+        const moduleForCell = findModuleForCell(key, i);
+        const hasFreizeit = cellValues.some((subject) => buildSubjectKey(subject) === FREIZEIT_KEY);
+        if (onFreizeitClick && moduleForCell && hasFreizeit) {
+          cell.classList.add('timetable-cell-freizeit');
+          cell.addEventListener('click', (event) => {
+            if (event.target instanceof HTMLElement && event.target.closest('select')) {
+              return;
+            }
+            onFreizeitClick({
+              dayKey: key,
+              dayLabel: label,
+              module: moduleForCell,
+              lesson: localLessons[i] || {},
+              periodIndex: i,
+            });
+          });
+        }
         row.append(cell);
         selects.push({ selectEl: select, summaryEl: summary, visualWrapper });
         daySummaryRefs.set(i, visualWrapper);
@@ -751,26 +781,31 @@ export const createTimetableSettingsView = ({
     applyEditingState();
   });
 
-  gridBody.append(
-    createEl('div', {
-      className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
-      children: [
-        createEl('div', {
-          className: 'd-flex flex-column',
-          children: [
-            createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
-            createEl('p', {
-              className: 'text-muted small mb-0',
-              text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
-            }),
-          ],
-        }),
-        editToggle,
-      ],
-    }),
+  const gridHeaderRow = createEl('div', {
+    className: 'd-flex align-items-center justify-content-between flex-wrap gap-2',
+    children: [
+      createEl('div', {
+        className: 'd-flex flex-column',
+        children: [
+          createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
+          createEl('p', {
+            className: 'text-muted small mb-0',
+            text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
+          }),
+        ],
+      }),
+      editToggle,
+    ],
+  });
+
+  const gridElements = [
+    gridHeaderRow,
+    freizeitHint ? createEl('p', { className: 'text-muted small mb-0', text: freizeitHint }) : null,
     gridTableWrapper,
     status.schedule,
-  );
+  ].filter(Boolean);
+
+  gridBody.append(...gridElements);
 
   subjectsBody.append(
     createEl('h4', { className: 'h5 mb-1', text: 'Fächer' }),
@@ -1035,6 +1070,7 @@ export const createTimetableSettingsView = ({
     );
     localLessons = cloneLessons(nextLessons);
     localSchedule = cloneSchedule(nextSchedule);
+    freizeitModulesByDay = getFreizeitModulesByDay(localSchedule, localLessons);
     refreshSubjectsList();
     refreshLessons();
     refreshTimeRow();
