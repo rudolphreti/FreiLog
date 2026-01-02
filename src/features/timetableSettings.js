@@ -18,6 +18,7 @@ import {
 } from '../utils/timetable.js';
 
 const MAX_SUBJECT_LENGTH = 80;
+const MIN_SUBJECT_INPUT_PX = 100;
 const LESSONS_COUNT = 10;
 
 const cloneLessons = (lessons) =>
@@ -153,6 +154,14 @@ export const createTimetableSettingsView = ({
     return { color, displayColor, textColor, hasColor: Boolean(color) };
   };
 
+  const autosizeSubjectInput = (inputEl) => {
+    if (!inputEl) return;
+    const valueLength = (inputEl.value || '').length;
+    const desiredCh = Math.max(valueLength + 1, 1);
+    inputEl.style.width = `${desiredCh}ch`;
+    inputEl.style.minWidth = `${MIN_SUBJECT_INPUT_PX}px`;
+  };
+
   const overlay = createEl('div', {
     className: 'timetable-overlay',
     attrs: { 'aria-hidden': 'true' },
@@ -207,7 +216,7 @@ export const createTimetableSettingsView = ({
 
   const subjectsList = createEl('div', { className: 'd-flex flex-column gap-2' });
   const subjectInput = createEl('input', {
-    className: 'form-control',
+    className: 'form-control timetable-subject-name-input',
     attrs: { type: 'text', placeholder: 'Neues Fach hinzufügen' },
   });
   const addSubjectButton = createEl('button', {
@@ -284,25 +293,30 @@ export const createTimetableSettingsView = ({
 
     if (!originalKey) {
       inputEl.value = '';
+      autosizeSubjectInput(inputEl);
       return;
     }
     if (!nextKey) {
       inputEl.value = originalSubject;
+      autosizeSubjectInput(inputEl);
       setStatus('subjects', 'Bitte einen Fachnamen eingeben.', 'error');
       return;
     }
     if (nextValue.length > MAX_SUBJECT_LENGTH) {
       inputEl.value = originalSubject;
+      autosizeSubjectInput(inputEl);
       setStatus('subjects', `Maximale Länge: ${MAX_SUBJECT_LENGTH} Zeichen.`, 'error');
       return;
     }
     if (hasSubjectKey(localSubjects, nextKey, originalKey)) {
       inputEl.value = originalSubject;
+      autosizeSubjectInput(inputEl);
       setStatus('subjects', 'Fach ist bereits vorhanden.', 'error');
       return;
     }
     if (normalizeSubjectName(originalSubject) === nextValue) {
       inputEl.value = originalSubject;
+      autosizeSubjectInput(inputEl);
       return;
     }
 
@@ -332,6 +346,7 @@ export const createTimetableSettingsView = ({
     refreshGridOptions();
     setStatus('subjects', 'Fach umbenannt.', 'success');
     setStatus('schedule', 'Stundenplan aktualisiert.', 'success');
+    autosizeSubjectInput(inputEl);
   };
 
   const refreshSubjectsList = () => {
@@ -372,13 +387,14 @@ export const createTimetableSettingsView = ({
       clearColorButton.classList.toggle('d-none', !hasColor);
 
       const input = createEl('input', {
-        className: 'form-control flex-grow-1',
+        className: 'form-control timetable-subject-name-input',
         attrs: {
           type: 'text',
           value: subject,
           'aria-label': `Fach ${subject}`,
         },
       });
+      autosizeSubjectInput(input);
 
       const colorChangeHandler = () => handleSubjectColorChange(subject, colorInput, clearColorButton);
       colorInput.addEventListener('input', () => {});
@@ -395,8 +411,10 @@ export const createTimetableSettingsView = ({
         }
         if (event.key === 'Escape') {
           input.value = subject;
+          autosizeSubjectInput(input);
         }
       });
+      input.addEventListener('input', () => autosizeSubjectInput(input));
 
       subjectInputs.push(input);
       subjectColorInputs.push(colorInput);
@@ -435,6 +453,7 @@ export const createTimetableSettingsView = ({
     refreshSubjectsList();
     refreshGridOptions();
     subjectInput.value = '';
+    autosizeSubjectInput(subjectInput);
     setStatus('subjects', 'Fach hinzugefügt.', 'success');
   };
 
@@ -445,6 +464,8 @@ export const createTimetableSettingsView = ({
       handleAddSubject();
     }
   });
+  subjectInput.addEventListener('input', () => autosizeSubjectInput(subjectInput));
+  autosizeSubjectInput(subjectInput);
 
   const lessonsTable = createEl('table', {
     className: 'table table-sm align-middle mb-0 timetable-lessons',

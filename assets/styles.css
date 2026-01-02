@@ -1049,6 +1049,12 @@ body.child-detail-overlay-open {
   flex-shrink: 0;
 }
 
+.timetable-subject-name-input {
+  width: auto;
+  min-width: 100px;
+  flex: 0 1 auto;
+}
+
 .timetable-color-clear {
   flex-shrink: 0;
   display: inline-flex;
