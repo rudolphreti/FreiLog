@@ -381,12 +381,6 @@ export const renderApp = (root, state) => {
         timetableSettingsView.open();
       });
     }
-    if (angebotSettingsView && settingsActions?.angebotSettingsButton) {
-      settingsActions.angebotSettingsButton.addEventListener('click', () => {
-        closeDrawer();
-        angebotSettingsView.open();
-      });
-    }
     angebotBinding = bindAngebot({
       selectedList: angebotSection.refs.selectedList,
       date: selectedDate,
@@ -518,12 +512,6 @@ export const renderApp = (root, state) => {
     settingsActions.timetableButton.addEventListener('click', () => {
       closeDrawer();
       timetableSettingsView.open();
-    });
-  }
-  if (angebotSettingsView && settingsActions?.angebotSettingsButton) {
-    settingsActions.angebotSettingsButton.addEventListener('click', () => {
-      closeDrawer();
-      angebotSettingsView.open();
     });
   }
 
