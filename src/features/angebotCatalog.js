@@ -889,9 +889,11 @@ export const bindAngebotCatalog = ({
     }
 
     const baseAssignments =
-      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
-        ? entry.angebotModules
-        : currentAssignments;
+      currentAssignments && typeof currentAssignments === 'object' && Object.keys(currentAssignments).length
+        ? currentAssignments
+        : entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+          ? entry.angebotModules
+          : {};
     const nextAssignments = {
       ...baseAssignments,
       [targetModule]: [
@@ -926,9 +928,11 @@ export const bindAngebotCatalog = ({
     }
 
     const baseAssignments =
-      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
-        ? entry.angebotModules
-        : currentAssignments;
+      currentAssignments && typeof currentAssignments === 'object' && Object.keys(currentAssignments).length
+        ? currentAssignments
+        : entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+          ? entry.angebotModules
+          : {};
     const targetModule = moduleId || getActiveModuleId();
 
     if (!targetModule) {
