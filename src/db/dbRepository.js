@@ -30,6 +30,13 @@ import {
   normalizeTimetableSubjectColors,
   TIMETABLE_DAY_ORDER,
 } from '../utils/timetable.js';
+import {
+  flattenModuleAssignments,
+  getFreizeitModulesForDate,
+  mergeModuleAssignments,
+  normalizeModuleAssignments,
+  normalizeAngebotListForModules,
+} from '../utils/angebotModules.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -176,6 +183,7 @@ const buildDefaultObservations = (childrenList) => {
 const createDefaultDay = (date, childrenList = []) => ({
   date,
   angebote: [],
+  angebotModules: {},
   observations: buildDefaultObservations(childrenList),
   absentChildIds: [],
   notes: '',
@@ -329,6 +337,27 @@ const normalizeTimetableSchedule = (
 
 const normalizeTimetableSubjectColorsDraft = (value, subjects) =>
   normalizeTimetableSubjectColors(value, subjects, DEFAULT_TIMETABLE_SUBJECT_COLORS);
+
+const getTimetableData = () => {
+  const state = getState();
+  const subjects = normalizeTimetableSubjects(
+    state.db?.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+  );
+  const lessons = normalizeTimetableLessons(
+    state.db?.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+    DEFAULT_TIMETABLE_LESSONS,
+  );
+  const subjectColors = normalizeTimetableSubjectColorsDraft(
+    state.db?.timetableSubjectColors,
+    subjects,
+  );
+  const schedule = normalizeTimetableSchedule(
+    state.db?.timetableSchedule || DEFAULT_TIMETABLE_SCHEDULE,
+    subjects,
+    lessons,
+  );
+  return { subjects, lessons, schedule, subjectColors };
+};
 
 const applyChildMappingToEntry = (entry, renameMap, allowedSet) => {
   if (!entry || typeof entry !== 'object') {
@@ -545,17 +574,95 @@ export const updateEntry = (date, patch) => {
   const childrenList = getChildrenList();
   const childrenSet = new Set(childrenList);
   const freeDays = getFreeDays();
+  const { lessons: timetableLessons, schedule: timetableSchedule } = getTimetableData();
 
   updateAppData((data) => {
     ensureDaysContainer(data);
     const existing =
       data.days[ymd] || createDefaultDay(ymd, childrenList);
     const merged = { ...existing, ...payload };
-    merged.angebote = ensureUniqueSortedStrings(
-      Array.isArray(merged.angebote)
-        ? merged.angebote.map((item) => normalizeAngebotText(item)).filter(Boolean)
-        : [],
+
+    const modulesForDay = getFreizeitModulesForDate(
+      ymd,
+      timetableSchedule,
+      timetableLessons,
     );
+    const normalizedExistingModules = modulesForDay.length
+      ? normalizeModuleAssignments(modulesForDay, existing.angebotModules, existing.angebote)
+      : {};
+    const normalizeByAggregated = (desiredList) => {
+      const desired = normalizeAngebotListForModules(desiredList);
+      if (!modulesForDay.length) {
+        return {
+          assignments: {},
+          aggregated: desired,
+        };
+      }
+      const desiredSet = new Set(desired);
+      const trimmed = {};
+      modulesForDay.forEach((module, index) => {
+        const currentList = normalizedExistingModules[module.id] || [];
+        const nextList = currentList.filter((angebot) => {
+          if (desiredSet.has(angebot)) {
+            desiredSet.delete(angebot);
+            return true;
+          }
+          return false;
+        });
+        trimmed[module.id] = nextList;
+        if (!nextList.length && !desired.length) {
+          trimmed[module.id] = [];
+        }
+        if (index === 0 && desiredSet.size) {
+          trimmed[module.id] = normalizeAngebotListForModules([
+            ...nextList,
+            ...Array.from(desiredSet),
+          ]);
+          desiredSet.clear();
+        }
+      });
+      const normalizedAssignments = normalizeModuleAssignments(
+        modulesForDay,
+        trimmed,
+        Array.from(desiredSet),
+      );
+      return {
+        assignments: normalizedAssignments,
+        aggregated: flattenModuleAssignments(normalizedAssignments),
+      };
+    };
+
+    if (payload.angebotModules && typeof payload.angebotModules === 'object') {
+      const mergedAssignments = mergeModuleAssignments(
+        normalizedExistingModules,
+        payload.angebotModules,
+      );
+      const normalizedAssignments = normalizeModuleAssignments(
+        modulesForDay,
+        mergedAssignments,
+        payload.angebote,
+      );
+      merged.angebotModules = normalizedAssignments;
+      merged.angebote = modulesForDay.length
+        ? flattenModuleAssignments(normalizedAssignments)
+        : normalizeAngebotListForModules(payload.angebote || existing.angebote);
+    } else if (payload.angebote) {
+      const { assignments, aggregated } = normalizeByAggregated(payload.angebote);
+      merged.angebotModules = assignments;
+      merged.angebote = aggregated;
+    } else if (modulesForDay.length) {
+      const normalizedAssignments = normalizeModuleAssignments(
+        modulesForDay,
+        normalizedExistingModules,
+        existing.angebote,
+      );
+      merged.angebotModules = normalizedAssignments;
+      merged.angebote = flattenModuleAssignments(normalizedAssignments);
+    } else {
+      merged.angebotModules = {};
+      merged.angebote = normalizeAngebotListForModules(existing.angebote);
+    }
+
     if (payload.observations) {
       merged.observations = mergeObservations(
         existing.observations,
@@ -1093,10 +1200,15 @@ export const importJson = (obj) => {
       return;
     }
 
+    const { lessons: timetableLessons, schedule: timetableSchedule } = getTimetableData();
     const sanitizedDay =
-      sanitizeDaysByDate({ [payload.date]: payload.entry }, childrenList, freeDays)[
-        payload.date
-      ] || createDefaultDay(payload.date, childrenList);
+      sanitizeDaysByDate(
+        { [payload.date]: payload.entry },
+        childrenList,
+        freeDays,
+        timetableSchedule,
+        timetableLessons,
+      )[payload.date] || createDefaultDay(payload.date, childrenList);
 
     updateEntry(payload.date, sanitizedDay);
     applied = true;
@@ -1107,21 +1219,7 @@ export const importJson = (obj) => {
   }
 };
 
-export const getTimetable = () => {
-  const state = getState();
-  const subjects = normalizeTimetableSubjects(state.db?.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS);
-  const lessons = normalizeTimetableLessons(state.db?.timetableLessons || DEFAULT_TIMETABLE_LESSONS);
-  const subjectColors = normalizeTimetableSubjectColorsDraft(
-    state.db?.timetableSubjectColors,
-    subjects,
-  );
-  const schedule = normalizeTimetableSchedule(
-    state.db?.timetableSchedule || DEFAULT_TIMETABLE_SCHEDULE,
-    subjects,
-    lessons,
-  );
-  return { subjects, lessons, schedule, subjectColors };
-};
+export const getTimetable = () => getTimetableData();
 
 export const saveTimetableSubjects = (subjects) => {
   updateAppData((data) => {

@@ -23,10 +23,15 @@ import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
 import { createTimetableSettingsView } from '../features/timetableSettings.js';
+import {
+  getFreizeitModulesForDate,
+  normalizeModuleAssignments,
+} from '../utils/angebotModules.js';
 
 const createFallbackEntry = (date) => ({
   date,
   angebote: [],
+  angebotModules: {},
   observations: {},
   absentChildIds: [],
   notes: '',
@@ -175,7 +180,6 @@ export const renderApp = (root, state) => {
   const angebotGroups = Object.fromEntries(
     Object.entries(observationGroups || {}).filter(([code]) => code !== 'SCHWARZ'),
   );
-  const timetableSubjects = db.timetableSubjects || [];
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
   const timetableSubjectColors = db.timetableSubjectColors || {};
@@ -190,6 +194,16 @@ export const renderApp = (root, state) => {
 
   const header = buildHeader({ selectedDate, showInitialActions: !hasData, freeDayInfo });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
+  const freizeitModules = getFreizeitModulesForDate(
+    selectedDate,
+    timetableSchedule,
+    timetableLessons,
+  );
+  const angebotModules = normalizeModuleAssignments(
+    freizeitModules,
+    entry.angebotModules,
+    selectedAngebote,
+  );
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
     selectedAngebote,
@@ -232,6 +246,8 @@ export const renderApp = (root, state) => {
       observationCatalog,
       observationGroups,
       freeDays,
+      timetableSchedule,
+      timetableLessons,
     });
   } else {
     weeklyTableViewBinding.update({
@@ -240,6 +256,8 @@ export const renderApp = (root, state) => {
       observationCatalog,
       observationGroups,
       freeDays,
+      timetableSchedule,
+      timetableLessons,
     });
   }
 
@@ -375,6 +393,8 @@ export const renderApp = (root, state) => {
       date: selectedDate,
       angebotGroups,
       selectedAngebote,
+      modules: freizeitModules,
+      moduleAssignments: angebotModules,
       catalog: angebotCatalog,
       topStats: angebotStats,
       savedFilters: savedAngebotFilters,
@@ -438,6 +458,8 @@ export const renderApp = (root, state) => {
     angebotCatalogBinding.update({
       date: selectedDate,
       selectedAngebote,
+      modules: freizeitModules,
+      moduleAssignments: angebotModules,
       catalog: angebotCatalog,
       topStats: angebotStats,
       angebotGroups,

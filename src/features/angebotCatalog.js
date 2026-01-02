@@ -15,6 +15,7 @@ import {
 } from '../utils/angebotCatalog.js';
 import { debounce } from '../utils/debounce.js';
 import { focusTextInput } from '../utils/focus.js';
+import { flattenModuleAssignments, normalizeModuleAssignments } from '../utils/angebotModules.js';
 
 const LONG_PRESS_MS = 600;
 
@@ -102,38 +103,134 @@ const buildGroupDots = (groups, angebotGroups) => {
   return wrapper;
 };
 
-const renderTodayList = ({ container, items, groupMap, angebotGroups, readOnly }) => {
-  if (!container) {
+const renderModuleTabs = ({
+  overlay,
+  modules,
+  assignments,
+  groupMap,
+  angebotGroups,
+  readOnly,
+  fallbackOffers = [],
+}) => {
+  const nav = overlay.querySelector('[data-role="angebot-modules-nav"]');
+  const content = overlay.querySelector('[data-role="angebot-modules-content"]');
+  const emptyState = overlay.querySelector('[data-role="angebot-modules-empty"]');
+  const safeModules = Array.isArray(modules) ? modules : [];
+  const assignmentMap = assignments && typeof assignments === 'object' ? assignments : {};
+  const activeFromDataset = overlay.dataset.activeModule;
+  const hasActive = safeModules.some((module) => module.id === activeFromDataset);
+  const activeModuleId = hasActive
+    ? activeFromDataset
+    : safeModules[0]?.id || '';
+
+  if (overlay && activeModuleId) {
+    overlay.dataset.activeModule = activeModuleId;
+  }
+
+  if (!nav || !content) {
     return;
   }
-  container.replaceChildren();
-  const offers = Array.isArray(items) ? items : [];
-  if (!offers.length) {
-    container.appendChild(
-      document.createTextNode('Noch keine Angebote für heute erfasst.'),
-    );
-    return;
+
+  nav.replaceChildren();
+  content.replaceChildren();
+
+  if (emptyState) {
+    emptyState.classList.toggle('d-none', Boolean(safeModules.length));
+    emptyState.classList.toggle('is-hidden', Boolean(safeModules.length));
   }
-  offers.forEach((label) => {
-    const pill = document.createElement('span');
-    pill.className =
-      'badge rounded-pill text-bg-primary d-inline-flex align-items-center badge-pill';
-    const dots = buildGroupDots(groupMap.get(normalizeAngebotKey(label)) || [], angebotGroups);
-    const text = document.createElement('span');
-    text.textContent = label;
-    const removeButton = document.createElement('button');
-    removeButton.className = 'btn btn-link btn-sm text-white p-0 ms-2';
-    removeButton.type = 'button';
-    removeButton.dataset.role = 'angebot-today-remove';
-    removeButton.dataset.value = label;
-    removeButton.textContent = '✕';
-    removeButton.ariaLabel = `${label} entfernen`;
-    removeButton.disabled = readOnly;
-    pill.append(dots, text);
-    if (!readOnly) {
-      pill.append(removeButton);
+
+  if (!safeModules.length) {
+    const offers = Array.isArray(fallbackOffers) ? fallbackOffers : [];
+    if (offers.length) {
+      const list = document.createElement('div');
+      list.className = 'd-flex flex-wrap gap-2';
+      offers.forEach((label) => {
+        const pill = document.createElement('span');
+        pill.className =
+          'badge rounded-pill text-bg-primary d-inline-flex align-items-center badge-pill';
+        const dots = buildGroupDots(
+          groupMap.get(normalizeAngebotKey(label)) || [],
+          angebotGroups,
+        );
+        const text = document.createElement('span');
+        text.textContent = label;
+        const removeButton = document.createElement('button');
+        removeButton.className = 'btn btn-link btn-sm text-white p-0 ms-2';
+        removeButton.type = 'button';
+        removeButton.dataset.role = 'angebot-today-remove';
+        removeButton.dataset.value = label;
+        removeButton.textContent = '✕';
+        removeButton.ariaLabel = `${label} entfernen`;
+        removeButton.disabled = readOnly;
+        pill.append(dots, text);
+        if (!readOnly) {
+          pill.append(removeButton);
+        }
+        list.appendChild(pill);
+      });
+      content.append(list);
     }
-    container.appendChild(pill);
+    return;
+  }
+
+  safeModules.forEach((module, index) => {
+    const moduleId = module.id || `module-${index}`;
+    const isActive = moduleId === activeModuleId || (!activeModuleId && index === 0);
+    const navItem = document.createElement('li');
+    navItem.className = 'nav-item';
+    const navButton = document.createElement('button');
+    navButton.type = 'button';
+    navButton.className = `nav-link${isActive ? ' active' : ''}`;
+    navButton.dataset.role = 'angebot-module-tab';
+    navButton.dataset.moduleId = moduleId;
+    navButton.textContent = module.tabLabel || module.descriptor || `Modul ${index + 1}`;
+    navItem.appendChild(navButton);
+    nav.appendChild(navItem);
+
+    const pane = document.createElement('div');
+    pane.className = `tab-pane fade${isActive ? ' show active' : ''}`;
+    pane.dataset.moduleId = moduleId;
+    const list = document.createElement('div');
+    list.className = 'd-flex flex-wrap gap-2';
+    list.dataset.role = 'angebot-module-list';
+    list.dataset.moduleId = moduleId;
+
+    const offers = assignmentMap[moduleId] || [];
+    if (!offers.length) {
+      const empty = document.createElement('p');
+      empty.className = 'text-muted small mb-0';
+      empty.textContent = 'Noch keine Angebote für dieses Modul erfasst.';
+      list.appendChild(empty);
+    } else {
+      offers.forEach((label) => {
+        const pill = document.createElement('span');
+        pill.className =
+          'badge rounded-pill text-bg-primary d-inline-flex align-items-center badge-pill';
+        const dots = buildGroupDots(
+          groupMap.get(normalizeAngebotKey(label)) || [],
+          angebotGroups,
+        );
+        const text = document.createElement('span');
+        text.textContent = label;
+        const removeButton = document.createElement('button');
+        removeButton.className = 'btn btn-link btn-sm text-white p-0 ms-2';
+        removeButton.type = 'button';
+        removeButton.dataset.role = 'angebot-today-remove';
+        removeButton.dataset.value = label;
+        removeButton.dataset.moduleId = moduleId;
+        removeButton.textContent = '✕';
+        removeButton.ariaLabel = `${label} entfernen`;
+        removeButton.disabled = readOnly;
+        pill.append(dots, text);
+        if (!readOnly) {
+          pill.append(removeButton);
+        }
+        list.appendChild(pill);
+      });
+    }
+
+    pane.appendChild(list);
+    content.appendChild(pane);
   });
 };
 
@@ -453,6 +550,8 @@ export const bindAngebotCatalog = ({
   topStats,
   savedFilters,
   readOnly = false,
+  modules = [],
+  moduleAssignments = {},
 }) => {
   if (!overlay || !catalogOverlay || !createOverlay || !editOverlay) {
     return null;
@@ -462,11 +561,52 @@ export const bindAngebotCatalog = ({
   let currentCatalog = normalizeCatalog(catalog);
   let currentTopStats = topStats || {};
   let currentSelected = Array.isArray(selectedAngebote) ? selectedAngebote : [];
+  let currentModules = Array.isArray(modules) ? modules : [];
+  let currentAssignments = normalizeModuleAssignments(
+    currentModules,
+    moduleAssignments,
+    currentSelected,
+  );
+  currentSelected = flattenModuleAssignments(currentAssignments, currentSelected);
   let isReadOnly = Boolean(readOnly);
   let editingOffer = null;
   let longPressTimer = null;
   let suppressClick = false;
   let openButtonRef = openButton || null;
+
+  const getActiveModuleId = () => {
+    const active = overlay.dataset.activeModule;
+    if (currentModules.some((module) => module.id === active)) {
+      return active;
+    }
+    return currentModules[0]?.id || '';
+  };
+
+  const setAssignments = (assignments, aggregatedFallback = currentSelected) => {
+    currentAssignments = normalizeModuleAssignments(
+      currentModules,
+      assignments,
+      aggregatedFallback,
+    );
+    currentSelected = flattenModuleAssignments(currentAssignments, aggregatedFallback);
+  };
+
+  const findModuleForOffer = (label) => {
+    const targetKey = normalizeAngebotKey(label);
+    if (!targetKey) {
+      return '';
+    }
+    for (const module of currentModules) {
+      const list = currentAssignments[module.id] || [];
+      const hasOffer = list.some(
+        (item) => normalizeAngebotKey(item) === targetKey,
+      );
+      if (hasOffer) {
+        return module.id;
+      }
+    }
+    return '';
+  };
 
   const closeDrawerIfOpen = () => {
     const drawerEl = document.getElementById('mainDrawer');
@@ -504,25 +644,27 @@ export const bindAngebotCatalog = ({
     }
   };
 
-  const getSelectedKeys = () =>
-    new Set(
-      (Array.isArray(currentSelected) ? currentSelected : []).map((item) =>
-        normalizeAngebotKey(item),
-      ),
-    );
+  const getSelectedKeys = () => {
+    const selectedList = flattenModuleAssignments(currentAssignments, currentSelected);
+    return new Set(selectedList.map((item) => normalizeAngebotKey(item)).filter(Boolean));
+  };
 
   const render = () => {
     const groupMap = getGroupMap();
     const filters = getFilterState(catalogOverlay);
-    const selectedKeys = getSelectedKeys();
-    const todayList = overlay.querySelector('[data-role="angebot-today-list"]');
+    const selectedList = flattenModuleAssignments(currentAssignments, currentSelected);
+    const selectedKeys = new Set(
+      selectedList.map((item) => normalizeAngebotKey(item)).filter(Boolean),
+    );
     const topList = overlay.querySelector('[data-role="angebot-top-list"]');
-    renderTodayList({
-      container: todayList,
-      items: currentSelected,
+    renderModuleTabs({
+      overlay,
+      modules: currentModules,
+      assignments: currentAssignments,
       groupMap,
       angebotGroups,
       readOnly: isReadOnly,
+      fallbackOffers: selectedList,
     });
     renderTopList({
       container: topList,
@@ -708,34 +850,95 @@ export const bindAngebotCatalog = ({
     editOverlay.setAttribute('aria-hidden', 'true');
   };
 
-  const addOfferForDate = (label) => {
+  const addOfferForDate = (label, moduleId = '') => {
     const normalized = normalizeAngebotText(label);
     if (!normalized) {
       return;
     }
+    const targetModule = moduleId || getActiveModuleId();
     const entry = getEntry(currentDate);
-    const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
-    if (currentList.includes(normalized)) {
+    const hasModules = Array.isArray(currentModules) && currentModules.length > 0;
+    if (!hasModules) {
+      const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
+      if (currentList.includes(normalized)) {
+        return;
+      }
+      const nextSelected = [...currentList, normalized];
+      addPreset('angebote', normalized);
+      upsertAngebotCatalogEntry(normalized);
+      updateEntry(currentDate, { angebote: nextSelected });
+      currentSelected = nextSelected;
+      currentAssignments = {};
+      render();
       return;
     }
-    const nextSelected = [...currentList, normalized];
+
+    if (!targetModule) {
+      return;
+    }
+
+    const baseAssignments =
+      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+        ? entry.angebotModules
+        : currentAssignments;
+    const nextAssignments = {
+      ...baseAssignments,
+      [targetModule]: [
+        ...(Array.isArray(baseAssignments?.[targetModule])
+          ? baseAssignments[targetModule]
+          : []),
+        normalized,
+      ],
+    };
     addPreset('angebote', normalized);
     upsertAngebotCatalogEntry(normalized);
-    updateEntry(currentDate, { angebote: nextSelected });
-    currentSelected = nextSelected;
+    updateEntry(currentDate, { angebotModules: nextAssignments });
+    setAssignments(nextAssignments);
     render();
   };
 
-  const removeOfferForDate = (label) => {
+  const removeOfferForDate = (label, moduleId = '') => {
     const normalized = normalizeAngebotText(label);
     if (!normalized) {
       return;
     }
     const entry = getEntry(currentDate);
-    const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
-    const updated = currentList.filter((item) => normalizeAngebotText(item) !== normalized);
-    updateEntry(currentDate, { angebote: updated });
-    currentSelected = updated;
+    const hasModules = Array.isArray(currentModules) && currentModules.length > 0;
+    if (!hasModules) {
+      const currentList = Array.isArray(entry.angebote) ? entry.angebote : [];
+      const updated = currentList.filter((item) => normalizeAngebotText(item) !== normalized);
+      updateEntry(currentDate, { angebote: updated });
+      currentSelected = updated;
+      currentAssignments = {};
+      render();
+      return;
+    }
+
+    const baseAssignments =
+      entry && entry.angebotModules && typeof entry.angebotModules === 'object'
+        ? entry.angebotModules
+        : currentAssignments;
+    const targetModule = moduleId || getActiveModuleId();
+
+    if (!targetModule) {
+      const stripped = {};
+      currentModules.forEach((module) => {
+        stripped[module.id] = (baseAssignments[module.id] || []).filter(
+          (item) => normalizeAngebotText(item) !== normalized,
+        );
+      });
+      updateEntry(currentDate, { angebotModules: stripped });
+      setAssignments(stripped);
+      render();
+      return;
+    }
+
+    const updatedAssignments = { ...baseAssignments };
+    updatedAssignments[targetModule] = (updatedAssignments[targetModule] || []).filter(
+      (item) => normalizeAngebotText(item) !== normalized,
+    );
+    updateEntry(currentDate, { angebotModules: updatedAssignments });
+    setAssignments(updatedAssignments);
     render();
   };
 
@@ -759,6 +962,12 @@ export const bindAngebotCatalog = ({
     ) {
       setFilterState(catalogOverlay, { settingsOpen: false });
       syncGroupUi(catalogOverlay, angebotGroups);
+    }
+    const moduleTab = target.closest('[data-role="angebot-module-tab"]');
+    if (moduleTab) {
+      overlay.dataset.activeModule = moduleTab.dataset.moduleId || '';
+      render();
+      return;
     }
     if (target === overlay || target.closest('[data-role="angebot-close"]')) {
       closeOverlay();
@@ -868,7 +1077,8 @@ export const bindAngebotCatalog = ({
       }
       const value = topButton.dataset.value;
       if (value) {
-        addOfferForDate(value);
+        const moduleId = getActiveModuleId();
+        addOfferForDate(value, moduleId);
       }
       return;
     }
@@ -879,7 +1089,11 @@ export const bindAngebotCatalog = ({
       }
       const value = todayRemove.dataset.value;
       if (value) {
-        removeOfferForDate(value);
+        const moduleId =
+          todayRemove.dataset.moduleId ||
+          findModuleForOffer(value) ||
+          getActiveModuleId();
+        removeOfferForDate(value, moduleId);
       }
       return;
     }
@@ -893,10 +1107,12 @@ export const bindAngebotCatalog = ({
         const selectedKeys = getSelectedKeys();
         const key = normalizeAngebotKey(value);
         if (selectedKeys.has(key)) {
-          removeOfferForDate(value);
+          const moduleId = findModuleForOffer(value) || getActiveModuleId();
+          removeOfferForDate(value, moduleId);
           catalogButton.classList.remove('is-selected');
         } else {
-          addOfferForDate(value);
+          const moduleId = getActiveModuleId();
+          addOfferForDate(value, moduleId);
           catalogButton.classList.add('is-selected');
         }
       }
@@ -982,7 +1198,7 @@ export const bindAngebotCatalog = ({
     const groups = getCreateGroups();
     const resolved = upsertAngebotCatalogEntry(normalized, groups);
     if (resolved) {
-      addOfferForDate(resolved);
+      addOfferForDate(resolved, getActiveModuleId());
     }
     closeCreateOverlay();
   };
@@ -1097,11 +1313,19 @@ export const bindAngebotCatalog = ({
       savedFilters: nextSavedFilters,
       readOnly: nextReadOnly = false,
       openButton: nextOpenButton,
+      modules: nextModules = currentModules,
+      moduleAssignments: nextModuleAssignments = currentAssignments,
     }) => {
       currentDate = nextDate || currentDate;
       currentCatalog = normalizeCatalog(nextCatalog || currentCatalog);
       currentTopStats = nextStats || {};
-      currentSelected = Array.isArray(nextSelected) ? nextSelected : [];
+      currentModules = Array.isArray(nextModules) ? nextModules : [];
+      setAssignments(nextModuleAssignments, nextSelected || currentSelected);
+      if (!currentModules.length) {
+        overlay.dataset.activeModule = '';
+      } else if (!currentModules.some((module) => module.id === overlay.dataset.activeModule)) {
+        overlay.dataset.activeModule = currentModules[0].id;
+      }
       isReadOnly = Boolean(nextReadOnly);
       angebotGroups = nextGroups || angebotGroups;
       if (nextSavedFilters) {

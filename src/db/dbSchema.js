@@ -26,8 +26,15 @@ import {
   normalizeTimetableSubjectColors,
   TIMETABLE_DAY_ORDER,
 } from '../utils/timetable.js';
+import {
+  flattenModuleAssignments,
+  getFreizeitModulesForDate,
+  mergeModuleAssignments,
+  normalizeModuleAssignments,
+  normalizeAngebotListForModules,
+} from '../utils/angebotModules.js';
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -297,7 +304,14 @@ const normalizeObservationEntries = (value, childrenSet) => {
   return result;
 };
 
-const normalizeDayEntry = (entry, date, childrenSet, freeDays) => {
+const normalizeDayEntry = (
+  entry,
+  date,
+  childrenSet,
+  freeDays,
+  timetableSchedule = DEFAULT_TIMETABLE_SCHEDULE,
+  timetableLessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
   const source = isPlainObject(entry) ? entry : {};
   const legacyAngebot =
     typeof source.angebot === 'string' ? source.angebot.trim() : '';
@@ -309,7 +323,7 @@ const normalizeDayEntry = (entry, date, childrenSet, freeDays) => {
   if (legacyAngebot && !angebotList.includes(legacyAngebot)) {
     angebotList.push(legacyAngebot);
   }
-  const angebote = ensureUniqueSortedStrings(
+  const angebote = normalizeAngebotListForModules(
     angebotList.map((item) => normalizeAngebotText(item)).filter(Boolean),
   );
   const absentChildren = ensureUniqueStrings(
@@ -337,16 +351,35 @@ const normalizeDayEntry = (entry, date, childrenSet, freeDays) => {
     });
   }
 
+  const freizeitModules = getFreizeitModulesForDate(
+    date,
+    timetableSchedule,
+    timetableLessons,
+  );
+  const angebotModules = freizeitModules.length
+    ? normalizeModuleAssignments(freizeitModules, source.angebotModules, angebote)
+    : {};
+  const normalizedAngebote = freizeitModules.length
+    ? flattenModuleAssignments(angebotModules)
+    : angebote;
+
   return {
     date,
-    angebote,
+    angebote: normalizedAngebote,
+    angebotModules,
     observations: filteredObservations,
     absentChildIds: filteredAbsent,
     notes,
   };
 };
 
-export const sanitizeDaysByDate = (days, childrenList, freeDays = DEFAULT_FREE_DAYS) => {
+export const sanitizeDaysByDate = (
+  days,
+  childrenList,
+  freeDays = DEFAULT_FREE_DAYS,
+  timetableSchedule = DEFAULT_TIMETABLE_SCHEDULE,
+  timetableLessons = DEFAULT_TIMETABLE_LESSONS,
+) => {
   if (!isPlainObject(days)) {
     return {};
   }
@@ -360,7 +393,14 @@ export const sanitizeDaysByDate = (days, childrenList, freeDays = DEFAULT_FREE_D
     if (!isValidYmd(date)) {
       return;
     }
-    result[date] = normalizeDayEntry(days[date], date, childrenSet, freeDays);
+    result[date] = normalizeDayEntry(
+      days[date],
+      date,
+      childrenSet,
+      freeDays,
+      timetableSchedule,
+      timetableLessons,
+    );
   });
 
   return result;
@@ -779,7 +819,13 @@ export const normalizeAppData = (source, fallback = {}) => {
 
   const daysSource =
     base.days || base.records?.entriesByDate || fallbackData.days || {};
-  const days = sanitizeDaysByDate(daysSource, children, freeDays);
+  const days = sanitizeDaysByDate(
+    daysSource,
+    children,
+    freeDays,
+    timetableSchedule,
+    timetableLessons,
+  );
 
   const uiSource = base.ui || fallbackData.ui || null;
 

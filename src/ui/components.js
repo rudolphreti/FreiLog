@@ -472,13 +472,22 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
     className: 'observation-section__title mb-0',
     text: UI_LABELS.angebotToday,
   });
-  const todayList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
-    dataset: { role: 'angebot-today-list' },
+  const modulesNav = createEl('ul', {
+    className: 'nav nav-tabs angebot-modules-nav',
+    dataset: { role: 'angebot-modules-nav' },
+  });
+  const modulesContent = createEl('div', {
+    className: 'tab-content angebot-modules-content',
+    dataset: { role: 'angebot-modules-content' },
+  });
+  const modulesEmpty = createEl('p', {
+    className: 'text-muted small mb-0',
+    dataset: { role: 'angebot-modules-empty' },
+    text: 'Keine Freizeit-Module für heute.',
   });
   const todaySection = createEl('div', {
     className: 'observation-section',
-    children: [todayTitle, todayList],
+    children: [todayTitle, modulesNav, modulesContent, modulesEmpty],
   });
 
   const addTitle = createEl('p', {
@@ -539,7 +548,9 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
     element: overlay,
     refs: {
       overlayPanel,
-      todayList,
+      modulesNav,
+      modulesContent,
+      modulesEmpty,
       topList,
       catalogButton,
       createButton,

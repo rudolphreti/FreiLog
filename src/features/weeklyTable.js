@@ -11,6 +11,11 @@ import {
 import { setSelectedDate } from '../state/store.js';
 import { getFreeDayInfo } from '../utils/freeDays.js';
 import { UI_LABELS } from '../ui/labels.js';
+import {
+  flattenModuleAssignments,
+  getFreizeitModulesForDate,
+  normalizeModuleAssignments,
+} from '../utils/angebotModules.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -49,7 +54,7 @@ const normalizeObservationEntry = (value) => {
   return [];
 };
 
-const normalizeDayEntry = (days, dateKey) => {
+const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) => {
   const entry = days?.[dateKey] && typeof days[dateKey] === 'object' ? days[dateKey] : {};
   const angebote = normalizeValueList(entry.angebote);
   const observations = typeof entry.observations === 'object' ? entry.observations : {};
@@ -70,8 +75,22 @@ const normalizeDayEntry = (days, dateKey) => {
     return acc;
   }, {});
 
+  const freizeitModules = getFreizeitModulesForDate(
+    dateKey,
+    timetableSchedule,
+    timetableLessons,
+  );
+  const angebotModules = freizeitModules.length
+    ? normalizeModuleAssignments(freizeitModules, entry.angebotModules, angebote)
+    : {};
+  const normalizedAngebote = freizeitModules.length
+    ? flattenModuleAssignments(angebotModules)
+    : angebote;
+
   return {
-    angebote,
+    angebote: normalizedAngebote,
+    angebotModules,
+    freizeitModules,
     observations: normalizedObs,
     absentChildren: [...new Set(absentChildren)],
   };
@@ -111,6 +130,36 @@ const buildPillList = (values) => {
     );
   });
   return list;
+};
+
+const buildModuleOfferList = (modules, assignments, extras = []) => {
+  const container = createEl('div', { className: 'weekly-table__module-list' });
+  const safeModules = Array.isArray(modules) ? modules : [];
+  const safeAssignments =
+    assignments && typeof assignments === 'object' ? assignments : {};
+
+  if (!safeModules.length) {
+    container.append(
+      buildPillList(flattenModuleAssignments(safeAssignments, extras)),
+    );
+    return container;
+  }
+
+  safeModules.forEach((module) => {
+    const moduleWrapper = createEl('div', { className: 'weekly-table__module' });
+    const label =
+      module.descriptor || module.tabLabel || module.periodLabel || 'Freizeit';
+    moduleWrapper.append(
+      createEl('div', {
+        className: 'text-muted small weekly-table__module-label',
+        text: label,
+      }),
+      buildPillList(safeAssignments[module.id] || []),
+    );
+    container.append(moduleWrapper);
+  });
+
+  return container;
 };
 
 const buildObservationCatalogGroupMap = (catalog) => {
@@ -274,6 +323,8 @@ const buildWeeklyTable = ({
   onEditCell,
   isEditMode,
   freeDays,
+  timetableSchedule,
+  timetableLessons,
 }) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
@@ -317,7 +368,10 @@ const buildWeeklyTable = ({
   const dayEntryByDateKey = new Map();
   const getDayEntry = (dateKey) => {
     if (!dayEntryByDateKey.has(dateKey)) {
-      dayEntryByDateKey.set(dateKey, normalizeDayEntry(days, dateKey));
+      dayEntryByDateKey.set(
+        dateKey,
+        normalizeDayEntry(days, dateKey, timetableSchedule, timetableLessons),
+      );
     }
     return dayEntryByDateKey.get(dateKey);
   };
@@ -329,7 +383,11 @@ const buildWeeklyTable = ({
         className: freeInfo ? 'weekly-table__cell--free-day' : '',
         children: [
           buildCellContent({
-            content: buildPillList(dayEntry.angebote),
+            content: buildModuleOfferList(
+              dayEntry.freizeitModules,
+              dayEntry.angebotModules,
+              dayEntry.angebote,
+            ),
             dateKey: item.dateKey,
             displayDate: item.displayDate,
             isEditMode,
@@ -409,6 +467,8 @@ export const createWeeklyTableView = ({
   observationCatalog = [],
   observationGroups = {},
   freeDays = [],
+  timetableSchedule = {},
+  timetableLessons = [],
 } = {}) => {
   let schoolYears = getSchoolWeeks(days);
   let selectedYear = schoolYears.length ? schoolYears[schoolYears.length - 1].label : null;
@@ -418,6 +478,8 @@ export const createWeeklyTableView = ({
   let currentObservationCatalog = Array.isArray(observationCatalog) ? [...observationCatalog] : [];
   let currentObservationGroups = observationGroups || {};
   let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
+  let currentTimetableSchedule = timetableSchedule || {};
+  let currentTimetableLessons = Array.isArray(timetableLessons) ? [...timetableLessons] : [];
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
   let isEditMode = false;
   const getGroupsForLabel = (label) =>
@@ -602,6 +664,8 @@ export const createWeeklyTableView = ({
       },
       isEditMode,
       freeDays: currentFreeDays,
+      timetableSchedule: currentTimetableSchedule,
+      timetableLessons: currentTimetableLessons,
     });
     tableContainer.append(table);
   };
@@ -663,6 +727,8 @@ export const createWeeklyTableView = ({
     observationCatalog: nextObservationCatalog = [],
     observationGroups: nextObservationGroups = {},
     freeDays: nextFreeDays = [],
+    timetableSchedule: nextTimetableSchedule = {},
+    timetableLessons: nextTimetableLessons = [],
   } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
@@ -671,6 +737,8 @@ export const createWeeklyTableView = ({
       : [];
     currentObservationGroups = nextObservationGroups || {};
     currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
+    currentTimetableSchedule = nextTimetableSchedule || {};
+    currentTimetableLessons = Array.isArray(nextTimetableLessons) ? [...nextTimetableLessons] : [];
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     schoolYears = getSchoolWeeks(currentDays);
     if (!schoolYears.length) {
