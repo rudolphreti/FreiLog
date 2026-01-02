@@ -180,6 +180,7 @@ export const renderApp = (root, state) => {
   const angebotGroups = Object.fromEntries(
     Object.entries(observationGroups || {}).filter(([code]) => code !== 'SCHWARZ'),
   );
+  const timetableSubjects = db.timetableSubjects || [];
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
   const timetableSubjectColors = db.timetableSubjectColors || {};
