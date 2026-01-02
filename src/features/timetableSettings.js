@@ -1,11 +1,21 @@
 import {
   saveTimetableLessons,
   saveTimetableSchedule,
+  saveTimetableSubjectColors,
   saveTimetableSubjects,
 } from '../db/dbRepository.js';
 import { createEl } from '../ui/dom.js';
 import { UI_LABELS } from '../ui/labels.js';
-import { TIMETABLE_DAY_ORDER, formatSubjectsList } from '../utils/timetable.js';
+import {
+  DEFAULT_TIMETABLE_SUBJECT_COLORS,
+  TIMETABLE_DAY_ORDER,
+  buildSubjectKey,
+  formatSubjectsList,
+  getAccessibleTextColor,
+  getSubjectColor,
+  normalizeSubjectName,
+  normalizeTimetableSubjectColors,
+} from '../utils/timetable.js';
 
 const MAX_SUBJECT_LENGTH = 80;
 const LESSONS_COUNT = 10;
@@ -21,10 +31,6 @@ const cloneSchedule = (schedule) => {
   });
   return cloned;
 };
-
-const normalizeSubjectName = (value) => (typeof value === 'string' ? value.trim() : '');
-
-const buildSubjectKey = (value) => normalizeSubjectName(value).toLocaleLowerCase('de');
 
 const hasSubjectKey = (subjects, key, excludeKey = '') =>
   Array.isArray(subjects)
@@ -94,13 +100,24 @@ const buildSubjectOption = (subject, isMissing = false) =>
     text: isMissing ? `${subject} (entfernt)` : subject,
   });
 
-export const createTimetableSettingsView = ({ subjects = [], lessons = [], schedule = {} } = {}) => {
+export const createTimetableSettingsView = ({
+  subjects = [],
+  subjectColors = {},
+  lessons = [],
+  schedule = {},
+} = {}) => {
   let localSubjects = [...subjects];
+  let localSubjectColors = normalizeTimetableSubjectColors(
+    subjectColors,
+    localSubjects,
+    DEFAULT_TIMETABLE_SUBJECT_COLORS,
+  );
   let localLessons = cloneLessons(lessons);
   let localSchedule = cloneSchedule(schedule);
   let isOpen = false;
   let isEditing = false;
   let subjectInputs = [];
+  let subjectColorInputs = [];
   let lessonInputs = [];
   let deleteSubjectName = '';
   let deleteSubjectFeedbackMessage = '';
@@ -112,6 +129,24 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     subjects: null,
     lessons: null,
     schedule: null,
+  };
+
+  const syncSubjectColors = (nextColors = localSubjectColors) => {
+    localSubjectColors = normalizeTimetableSubjectColors(
+      nextColors,
+      localSubjects,
+      DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    );
+    saveTimetableSubjectColors(localSubjectColors);
+  };
+
+  const getColorForSubject = (subject) =>
+    getSubjectColor(subject, localSubjectColors, DEFAULT_TIMETABLE_SUBJECT_COLORS);
+
+  const buildColorStyle = (subject) => {
+    const color = getColorForSubject(subject);
+    const textColor = getAccessibleTextColor(color);
+    return { color, textColor };
   };
 
   const overlay = createEl('div', {
@@ -199,6 +234,32 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     renderDeleteSubjectFeedback();
   };
 
+  const handleSubjectColorChange = (subject, inputEl, labelEl) => {
+    const key = buildSubjectKey(subject);
+    if (!key) {
+      return;
+    }
+    const nextColor = typeof inputEl?.value === 'string' ? inputEl.value.trim() : '';
+    if (!/^#([0-9a-fA-F]{6})$/.test(nextColor)) {
+      const fallback = getColorForSubject(subject);
+      if (inputEl) {
+        inputEl.value = fallback;
+      }
+      if (labelEl) {
+        labelEl.textContent = fallback.toUpperCase();
+      }
+      setStatus('subjects', 'Bitte eine gültige Farbe (#RRGGBB) wählen.', 'error');
+      return;
+    }
+    const updatedColors = { ...localSubjectColors, [key]: nextColor };
+    syncSubjectColors(updatedColors);
+    refreshGridOptions();
+    if (labelEl) {
+      labelEl.textContent = nextColor.toUpperCase();
+    }
+    setStatus('subjects', 'Farbe aktualisiert.', 'success');
+  };
+
   const handleRenameSubject = (originalSubject, inputEl) => {
     const originalKey = buildSubjectKey(originalSubject);
     const nextValue = normalizeSubjectName(inputEl.value);
@@ -233,10 +294,22 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
       nextValue,
     ].sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }));
     const updatedSchedule = renameSubjectInSchedule(localSchedule, originalSubject, nextValue);
+    const updatedColors = { ...localSubjectColors };
+    const existingColor = updatedColors[originalKey];
+    if (existingColor) {
+      updatedColors[nextKey] = existingColor;
+    }
+    delete updatedColors[originalKey];
 
     localSubjects = updatedSubjects;
+    localSubjectColors = normalizeTimetableSubjectColors(
+      updatedColors,
+      localSubjects,
+      DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    );
     localSchedule = updatedSchedule;
     saveTimetableSubjects(localSubjects);
+    saveTimetableSubjectColors(localSubjectColors);
     saveTimetableSchedule(localSchedule);
     refreshSubjectsList();
     refreshGridOptions();
@@ -246,6 +319,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
 
   const refreshSubjectsList = () => {
     subjectInputs = [];
+    subjectColorInputs = [];
     subjectsList.replaceChildren();
     if (!localSubjects.length) {
       subjectsList.append(
@@ -256,15 +330,37 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     }
 
     localSubjects.forEach((subject) => {
-      const subjectRow = createEl('div', { className: 'd-flex flex-column gap-1' });
+      const subjectRow = createEl('div', {
+        className: 'timetable-subject-row d-flex flex-wrap gap-2 align-items-center',
+      });
+      const { color } = buildColorStyle(subject);
+      const colorInput = createEl('input', {
+        className: 'form-control form-control-color timetable-color-input',
+        attrs: {
+          type: 'color',
+          value: color,
+          'aria-label': `Farbe für ${subject}`,
+        },
+      });
+      const colorLabel = createEl('span', {
+        className: 'small text-muted timetable-color-value',
+        text: color.toUpperCase(),
+      });
+
       const input = createEl('input', {
-        className: 'form-control',
+        className: 'form-control flex-grow-1',
         attrs: {
           type: 'text',
           value: subject,
           'aria-label': `Fach ${subject}`,
         },
       });
+
+      const colorChangeHandler = () => handleSubjectColorChange(subject, colorInput, colorLabel);
+      colorInput.addEventListener('input', () => {
+        colorLabel.textContent = colorInput.value.toUpperCase();
+      });
+      colorInput.addEventListener('change', colorChangeHandler);
 
       input.addEventListener('blur', () => handleRenameSubject(subject, input));
       input.addEventListener('keydown', (event) => {
@@ -278,7 +374,8 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
       });
 
       subjectInputs.push(input);
-      subjectRow.append(input);
+      subjectColorInputs.push(colorInput);
+      subjectRow.append(colorInput, colorLabel, input);
       subjectsList.append(subjectRow);
     });
     applyEditingState();
@@ -302,7 +399,13 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     localSubjects = [...localSubjects, value].sort((a, b) =>
       a.localeCompare(b, 'de', { sensitivity: 'base' }),
     );
+    localSubjectColors = normalizeTimetableSubjectColors(
+      localSubjectColors,
+      localSubjects,
+      DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    );
     saveTimetableSubjects(localSubjects);
+    saveTimetableSubjectColors(localSubjectColors);
     refreshSubjectsList();
     refreshGridOptions();
     subjectInput.value = '';
@@ -392,47 +495,33 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
   const selectRefs = new Map();
   const summaryRefs = new Map();
 
-  const getSubjectColorClass = (subject) => {
-    const lower = subject.toLocaleLowerCase('de');
-    if (lower.startsWith('rel.')) {
-      return 'timetable-badge--purple';
-    }
-    if (lower === 'freizeit') {
-      return 'timetable-badge--green';
-    }
-    if (lower === 'mittagsessen') {
-      return 'timetable-badge--red';
-    }
-    if (lower === 'lernzeit') {
-      return 'timetable-badge--blue';
-    }
-    if (lower === 'bus') {
-      return 'timetable-badge--sky';
-    }
-    if (lower === 'ted') {
-      return 'timetable-badge--yellow';
-    }
-    if (lower === 'spätdienst' || lower === 'sd' || lower === 'spatdienst') {
-      return 'timetable-badge--darkred';
-    }
-    return 'timetable-badge--neutral';
-  };
-
-  const buildBadgeList = (subjectsForCell) => {
-    const list = createEl('div', { className: 'd-flex flex-wrap gap-1 timetable-badge-list' });
+  const buildColorSegments = (subjectsForCell) => {
+    const wrapper = createEl('div', { className: 'timetable-cell-visual' });
     if (!subjectsForCell.length) {
-      list.append(createEl('span', { className: 'text-muted small', text: '—' }));
-      return list;
+      wrapper.append(
+        createEl('div', {
+          className: 'timetable-cell-visual__segment timetable-cell-visual__segment--empty',
+          text: '—',
+        }),
+      );
+      return wrapper;
     }
     subjectsForCell.forEach((subject) => {
-      list.append(
-        createEl('span', {
-          className: `timetable-badge ${getSubjectColorClass(subject)}`,
-          text: subject,
+      const { color, textColor } = buildColorStyle(subject);
+      wrapper.append(
+        createEl('div', {
+          className: 'timetable-cell-visual__segment',
+          attrs: {
+            style: `--segment-color:${color};--segment-text:${textColor};`,
+            title: subject,
+          },
+          children: [
+            createEl('span', { className: 'timetable-cell-visual__label', text: subject }),
+          ],
         }),
       );
     });
-    return list;
+    return wrapper;
   };
 
   const refreshTimeRow = () => {
@@ -482,13 +571,13 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     summaryRefs.forEach((dayMap, dayKey) => {
       const daySchedule = localSchedule[dayKey] || [];
       dayMap.forEach((summaryNode, periodIndex) => {
-        const badges = buildBadgeList(daySchedule[periodIndex] || []);
-        summaryNode.replaceChildren(...badges.children);
+        const preview = buildColorSegments(daySchedule[periodIndex] || []);
+        summaryNode.replaceChildren(...preview.children);
       });
     });
   };
 
-  const handleCellChange = (dayKey, index, selectEl, summaryEl, summaryContainer) => {
+  const handleCellChange = (dayKey, index, selectEl, summaryEl, visualContainer) => {
     const selected = Array.from(selectEl.selectedOptions).map((option) => option.value);
     const nextSchedule = cloneSchedule(localSchedule);
     if (!nextSchedule[dayKey]) {
@@ -502,8 +591,9 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     if (summaryEl) {
       summaryEl.textContent = summaryText || '—';
     }
-    if (summaryContainer) {
-      summaryContainer.replaceChildren(...buildBadgeList(selected).children);
+    if (visualContainer) {
+      const preview = buildColorSegments(selected);
+      visualContainer.replaceChildren(...preview.children);
     }
     setStatus('schedule', 'Stundenplan aktualisiert.', 'success');
   };
@@ -538,18 +628,23 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
           className: 'form-text small text-muted mt-1 timetable-cell-summary',
           text: summaryText || '—',
         });
-        const badgeSummary = buildBadgeList(cellValues);
-        const badgeWrapper = createEl('div', {
-          className: 'timetable-cell-badges',
-          children: badgeSummary.children,
+        const colorPreview = buildColorSegments(cellValues);
+        const visualWrapper = createEl('div', {
+          className: 'timetable-cell-visual-wrapper',
+          children: [colorPreview],
         });
         select.title = summaryText;
-        select.addEventListener('change', () => handleCellChange(key, i, select, summary, badgeWrapper));
-        const selectWrapper = createEl('div', { className: 'timetable-select-wrapper', children: [select] });
-        cell.append(selectWrapper, badgeWrapper, summary);
+        select.addEventListener('change', () =>
+          handleCellChange(key, i, select, summary, visualWrapper),
+        );
+        const selectWrapper = createEl('div', {
+          className: 'timetable-select-wrapper mt-2',
+          children: [select],
+        });
+        cell.append(visualWrapper, selectWrapper, summary);
         row.append(cell);
-        selects.push({ selectEl: select, summaryEl: summary, badgeWrapper });
-        daySummaryRefs.set(i, badgeWrapper);
+        selects.push({ selectEl: select, summaryEl: summary, visualWrapper });
+        daySummaryRefs.set(i, visualWrapper);
       }
       selectRefs.set(key, selects);
       summaryRefs.set(key, daySummaryRefs);
@@ -565,18 +660,21 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     subjectInputs.forEach((input) => {
       input.disabled = disable;
     });
+    subjectColorInputs.forEach((input) => {
+      input.disabled = disable;
+    });
     lessonInputs.forEach((input) => {
       input.disabled = disable;
     });
     selectRefs.forEach((rows) => {
-      rows.forEach(({ selectEl, summaryEl, badgeWrapper }) => {
+      rows.forEach(({ selectEl, summaryEl, visualWrapper }) => {
         selectEl.closest('.timetable-select-wrapper').classList.toggle('d-none', disable);
         selectEl.disabled = disable;
         if (summaryEl) {
           summaryEl.classList.toggle('d-none', !disable);
         }
-        if (badgeWrapper) {
-          badgeWrapper.classList.toggle('timetable-cell-badges--inactive', !disable);
+        if (visualWrapper) {
+          visualWrapper.classList.toggle('timetable-cell-visual--inactive', !disable);
         }
       });
     });
@@ -611,7 +709,7 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
             createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
             createEl('p', {
               className: 'text-muted small mb-0',
-              text: 'In den Bearbeitungsmodus wechseln, um Stunden anzupassen. Mehrfachauswahl kombiniert Fächer.',
+              text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
             }),
           ],
         }),
@@ -627,6 +725,10 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     createEl('p', {
       className: 'text-muted small mb-0',
       text: 'Verwalte die Liste verfügbarer Fächer. Die Liste ist alphabetisch sortiert.',
+    }),
+    createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Jedes Fach kann eine eigene Farbe bekommen; diese wird in der Wochenübersicht angezeigt.',
     }),
     subjectFormRow,
     subjectsList,
@@ -768,9 +870,17 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
     );
     const targetLabel =
       localSubjects.find((subject) => buildSubjectKey(subject) === normalizedTarget) || '';
+    const updatedColors = { ...localSubjectColors };
+    delete updatedColors[normalizedTarget];
     localSubjects = remainingSubjects;
+    localSubjectColors = normalizeTimetableSubjectColors(
+      updatedColors,
+      localSubjects,
+      DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    );
     localSchedule = removeSubjectFromSchedule(localSchedule, normalizedTarget);
     saveTimetableSubjects(localSubjects);
+    saveTimetableSubjectColors(localSubjectColors);
     saveTimetableSchedule(localSchedule);
     refreshSubjectsList();
     refreshGridOptions();
@@ -861,10 +971,16 @@ export const createTimetableSettingsView = ({ subjects = [], lessons = [], sched
 
   const update = ({
     subjects: nextSubjects = [],
+    subjectColors: nextSubjectColors = {},
     lessons: nextLessons = [],
     schedule: nextSchedule = {},
   } = {}) => {
     localSubjects = [...nextSubjects];
+    localSubjectColors = normalizeTimetableSubjectColors(
+      nextSubjectColors,
+      localSubjects,
+      DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    );
     localLessons = cloneLessons(nextLessons);
     localSchedule = cloneSchedule(nextSchedule);
     refreshSubjectsList();

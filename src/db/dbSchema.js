@@ -21,11 +21,13 @@ import {
 import {
   DEFAULT_TIMETABLE_LESSONS,
   DEFAULT_TIMETABLE_SCHEDULE,
+  DEFAULT_TIMETABLE_SUBJECT_COLORS,
   DEFAULT_TIMETABLE_SUBJECTS,
+  normalizeTimetableSubjectColors,
   TIMETABLE_DAY_ORDER,
 } from '../utils/timetable.js';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 const DEFAULT_CLASS_PROFILE = {
   name: '',
@@ -674,6 +676,10 @@ export const createEmptyAppData = () => ({
   observationCatalog: [],
   observationGroups: { ...DEFAULT_OBSERVATION_GROUPS },
   timetableSubjects: [...DEFAULT_TIMETABLE_SUBJECTS],
+  timetableSubjectColors: normalizeTimetableSubjectColors(
+    DEFAULT_TIMETABLE_SUBJECT_COLORS,
+    DEFAULT_TIMETABLE_SUBJECTS,
+  ),
   timetableLessons: cloneTimetableLessons(DEFAULT_TIMETABLE_LESSONS),
   timetableSchedule: cloneTimetableSchedule(DEFAULT_TIMETABLE_SCHEDULE),
   days: {},
@@ -737,6 +743,11 @@ export const normalizeAppData = (source, fallback = {}) => {
     base.timetableLessons,
     fallbackData.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
   );
+  const timetableSubjectColors = normalizeTimetableSubjectColors(
+    base.timetableSubjectColors,
+    timetableSubjects,
+    fallbackData.timetableSubjectColors || DEFAULT_TIMETABLE_SUBJECT_COLORS,
+  );
   const timetableSchedule = normalizeTimetableSchedule(
     base.timetableSchedule,
     timetableSubjects,
@@ -782,6 +793,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     observationCatalog,
     observationGroups,
     timetableSubjects,
+    timetableSubjectColors,
     timetableLessons,
     timetableSchedule,
     days,

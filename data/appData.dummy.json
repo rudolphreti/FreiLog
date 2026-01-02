@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "children": [
     "Aylin",
     "Ben",
@@ -87,6 +87,9 @@
     "SU",
     "TeD"
   ],
+  "timetableSubjectColors": {
+    "Freizeit": "#FACC15"
+  },
   "timetableLessons": [
     { "period": 1, "start": "08:00", "end": "08:50" },
     { "period": 2, "start": "08:55", "end": "09:45" },

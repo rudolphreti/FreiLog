@@ -1032,82 +1032,82 @@ body.child-detail-overlay-open {
   font-size: 0.9rem;
 }
 
+.timetable-subject-row {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  background: #ffffff;
+}
+
+.timetable-color-input {
+  width: 3rem;
+  min-width: 3rem;
+  padding: 0.2rem;
+}
+
+.timetable-color-value {
+  font-family: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New',
+    monospace;
+  letter-spacing: 0.02em;
+}
+
+.timetable-select-wrapper {
+  width: 100%;
+}
+
 .timetable-select-wrapper.d-none {
   display: none !important;
 }
 
-.timetable-cell-badges {
+.timetable-cell-visual-wrapper {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8fafc;
+}
+
+.timetable-cell-visual {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-top: 0.25rem;
+  min-height: 42px;
+  width: 100%;
 }
 
-.timetable-cell-badges--inactive {
-  opacity: 0.35;
-}
-
-.timetable-badge {
-  display: inline-flex;
+.timetable-cell-visual__segment {
+  flex: 1;
+  display: flex;
   align-items: center;
-  padding: 0.25rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  border: 1px solid transparent;
-  color: #0f172a;
-  background: #e2e8f0;
+  justify-content: center;
+  padding: 0.5rem;
+  gap: 0.35rem;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--segment-text, #0f172a);
+  background: var(--segment-color, #e2e8f0);
+  border-left: 1px solid rgba(255, 255, 255, 0.55);
+  word-break: break-word;
 }
 
-.timetable-badge--neutral {
-  background: #e2e8f0;
-  border-color: #cbd5e1;
-  color: #0f172a;
+.timetable-cell-visual__segment:first-child {
+  border-left: none;
 }
 
-.timetable-badge--green {
-  background: #ecfdf3;
-  border-color: #86efac;
-  color: #166534;
+.timetable-cell-visual__segment--empty {
+  color: #94a3b8;
+  font-weight: 500;
 }
 
-.timetable-badge--red {
-  background: #fef2f2;
-  border-color: #fecdd3;
-  color: #991b1b;
+.timetable-cell-visual--inactive {
+  opacity: 0.45;
 }
 
-.timetable-badge--blue {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-  color: #1d4ed8;
+.timetable-cell-visual__label {
+  line-height: 1.2;
 }
 
-.timetable-badge--sky {
-  background: #e0f2fe;
-  border-color: #bae6fd;
-  color: #075985;
-}
-
-.timetable-badge--purple {
-  background: #f3e8ff;
-  border-color: #e9d5ff;
-  color: #6b21a8;
-}
-
-.timetable-badge--yellow {
-  background: #fefce8;
-  border-color: #fef08a;
-  color: #854d0e;
-}
-
-.timetable-badge--darkred {
-  background: #fef2f2;
-  border-color: #fca5a5;
-  color: #7f1d1d;
-}
-
-.timetable-badge-list .text-muted {
-  margin: 0.1rem 0;
+.timetable-cell-summary {
+  min-height: 1.2rem;
 }
 
 .timetable-overlay-open {

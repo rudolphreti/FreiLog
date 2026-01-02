@@ -25,7 +25,9 @@ import { isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
 import {
   DEFAULT_TIMETABLE_LESSONS,
   DEFAULT_TIMETABLE_SCHEDULE,
+  DEFAULT_TIMETABLE_SUBJECT_COLORS,
   DEFAULT_TIMETABLE_SUBJECTS,
+  normalizeTimetableSubjectColors,
   TIMETABLE_DAY_ORDER,
 } from '../utils/timetable.js';
 
@@ -324,6 +326,9 @@ const normalizeTimetableSchedule = (
 
   return normalizedSchedule;
 };
+
+const normalizeTimetableSubjectColorsDraft = (value, subjects) =>
+  normalizeTimetableSubjectColors(value, subjects, DEFAULT_TIMETABLE_SUBJECT_COLORS);
 
 const applyChildMappingToEntry = (entry, renameMap, allowedSet) => {
   if (!entry || typeof entry !== 'object') {
@@ -1106,18 +1111,26 @@ export const getTimetable = () => {
   const state = getState();
   const subjects = normalizeTimetableSubjects(state.db?.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS);
   const lessons = normalizeTimetableLessons(state.db?.timetableLessons || DEFAULT_TIMETABLE_LESSONS);
+  const subjectColors = normalizeTimetableSubjectColorsDraft(
+    state.db?.timetableSubjectColors,
+    subjects,
+  );
   const schedule = normalizeTimetableSchedule(
     state.db?.timetableSchedule || DEFAULT_TIMETABLE_SCHEDULE,
     subjects,
     lessons,
   );
-  return { subjects, lessons, schedule };
+  return { subjects, lessons, schedule, subjectColors };
 };
 
 export const saveTimetableSubjects = (subjects) => {
   updateAppData((data) => {
     const normalizedSubjects = normalizeTimetableSubjects(subjects);
     data.timetableSubjects = normalizedSubjects;
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      data.timetableSubjectColors,
+      normalizedSubjects,
+    );
     data.timetableLessons = normalizeTimetableLessons(
       data.timetableLessons,
       DEFAULT_TIMETABLE_LESSONS,
@@ -1137,6 +1150,10 @@ export const saveTimetableLessons = (lessons) => {
     data.timetableSubjects = normalizeTimetableSubjects(
       data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
     );
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      data.timetableSubjectColors,
+      data.timetableSubjects,
+    );
     data.timetableSchedule = normalizeTimetableSchedule(
       data.timetableSchedule,
       data.timetableSubjects,
@@ -1150,12 +1167,37 @@ export const saveTimetableSchedule = (schedule) => {
     data.timetableSubjects = normalizeTimetableSubjects(
       data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
     );
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      data.timetableSubjectColors,
+      data.timetableSubjects,
+    );
     data.timetableLessons = normalizeTimetableLessons(
       data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
       DEFAULT_TIMETABLE_LESSONS,
     );
     data.timetableSchedule = normalizeTimetableSchedule(
       schedule,
+      data.timetableSubjects,
+      data.timetableLessons,
+    );
+  });
+};
+
+export const saveTimetableSubjectColors = (subjectColors) => {
+  updateAppData((data) => {
+    data.timetableSubjects = normalizeTimetableSubjects(
+      data.timetableSubjects || DEFAULT_TIMETABLE_SUBJECTS,
+    );
+    data.timetableSubjectColors = normalizeTimetableSubjectColorsDraft(
+      subjectColors,
+      data.timetableSubjects,
+    );
+    data.timetableLessons = normalizeTimetableLessons(
+      data.timetableLessons || DEFAULT_TIMETABLE_LESSONS,
+      DEFAULT_TIMETABLE_LESSONS,
+    );
+    data.timetableSchedule = normalizeTimetableSchedule(
+      data.timetableSchedule,
       data.timetableSubjects,
       data.timetableLessons,
     );

@@ -178,6 +178,7 @@ export const renderApp = (root, state) => {
   const timetableSubjects = db.timetableSubjects || [];
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
+  const timetableSubjectColors = db.timetableSubjectColors || {};
   const savedAngebotFilters = state?.ui?.overlay?.savedAngebotFilters;
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
@@ -267,12 +268,14 @@ export const renderApp = (root, state) => {
       subjects: timetableSubjects,
       lessons: timetableLessons,
       schedule: timetableSchedule,
+      subjectColors: timetableSubjectColors,
     });
   } else {
     timetableSettingsView.update({
       subjects: timetableSubjects,
       lessons: timetableLessons,
       schedule: timetableSchedule,
+      subjectColors: timetableSubjectColors,
     });
   }
 

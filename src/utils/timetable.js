@@ -6,6 +6,40 @@ export const TIMETABLE_DAY_ORDER = [
   { key: 'friday', label: 'Freitag' },
 ];
 
+export const normalizeSubjectName = (value) => (typeof value === 'string' ? value.trim() : '');
+
+export const buildSubjectKey = (value) => normalizeSubjectName(value).toLocaleLowerCase('de');
+
+const SUBJECT_COLOR_PALETTE = [
+  '#3b82f6',
+  '#f97316',
+  '#22c55e',
+  '#8b5cf6',
+  '#ec4899',
+  '#0ea5e9',
+  '#a855f7',
+  '#ef4444',
+  '#14b8a6',
+  '#94a3b8',
+];
+
+const isPlainObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+const isValidHexColor = (value) => typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value.trim());
+
+const pickPaletteColor = (key) => {
+  if (!key) {
+    return SUBJECT_COLOR_PALETTE[0];
+  }
+  const normalized = key.toString();
+  let hash = 0;
+  for (let i = 0; i < normalized.length; i += 1) {
+    hash = (hash << 5) - hash + normalized.charCodeAt(i);
+    hash |= 0;
+  }
+  const index = Math.abs(hash) % SUBJECT_COLOR_PALETTE.length;
+  return SUBJECT_COLOR_PALETTE[index];
+};
+
 const DEFAULT_SUBJECTS = [
   'Bewegung und Sport',
   'BuS',
@@ -29,6 +63,70 @@ const DEFAULT_SUBJECTS = [
 export const DEFAULT_TIMETABLE_SUBJECTS = [...DEFAULT_SUBJECTS].sort((a, b) =>
   a.localeCompare(b, 'de', { sensitivity: 'base' }),
 );
+
+export const DEFAULT_TIMETABLE_SUBJECT_COLORS = {
+  [buildSubjectKey('Freizeit')]: '#facc15',
+  [buildSubjectKey('Mittagsessen')]: '#fb923c',
+  [buildSubjectKey('Lernzeit')]: '#3b82f6',
+  [buildSubjectKey('Bus')]: '#0ea5e9',
+  [buildSubjectKey('TeD')]: '#f59e0b',
+  [buildSubjectKey('Spätdienst')]: '#ef4444',
+  [buildSubjectKey('Bewegung und Sport')]: '#22c55e',
+  [buildSubjectKey('KuG')]: '#8b5cf6',
+  [buildSubjectKey('Deutsch')]: '#6366f1',
+  [buildSubjectKey('Mathe')]: '#14b8a6',
+  [buildSubjectKey('Rel. Isl.')]: '#a855f7',
+  [buildSubjectKey('Rel. Ort.')]: '#a855f7',
+  [buildSubjectKey('Rel. RK')]: '#a855f7',
+  [buildSubjectKey('SU')]: '#0ea5e9',
+  [buildSubjectKey('Sachunterricht')]: '#0ea5e9',
+  [buildSubjectKey('Musik')]: '#ec4899',
+  [buildSubjectKey('IFÖ')]: '#10b981',
+  [buildSubjectKey('BuS')]: '#14b8a6',
+};
+
+export const getSubjectColor = (
+  subject,
+  colorMap = {},
+  fallbackColors = DEFAULT_TIMETABLE_SUBJECT_COLORS,
+) => {
+  const key = buildSubjectKey(subject);
+  if (!key) {
+    return SUBJECT_COLOR_PALETTE[0];
+  }
+  const source = isPlainObject(colorMap) ? colorMap : {};
+  const exactMatch = typeof source[key] === 'string' ? source[key] : source[subject];
+  if (isValidHexColor(exactMatch)) {
+    return exactMatch;
+  }
+  if (fallbackColors && isValidHexColor(fallbackColors[key])) {
+    return fallbackColors[key];
+  }
+  return pickPaletteColor(key);
+};
+
+export const normalizeTimetableSubjectColors = (
+  colorMap,
+  subjects = [],
+  fallbackColors = DEFAULT_TIMETABLE_SUBJECT_COLORS,
+) => {
+  const source = isPlainObject(colorMap) ? colorMap : {};
+  const result = {};
+  const subjectList = Array.isArray(subjects) ? subjects : [];
+  subjectList.forEach((subject) => {
+    const key = buildSubjectKey(subject);
+    if (!key) {
+      return;
+    }
+    const provided = source[key] || source[subject];
+    const normalized =
+      isValidHexColor(provided) && provided
+        ? provided
+        : getSubjectColor(subject, source, fallbackColors);
+    result[key] = normalized;
+  });
+  return result;
+};
 
 export const DEFAULT_TIMETABLE_LESSONS = [
   { period: 1, start: '08:00', end: '08:50' },
@@ -111,4 +209,15 @@ export const formatSubjectsList = (subjects) => {
     return '';
   }
   return subjects.join(' + ');
+};
+
+export const getAccessibleTextColor = (hexColor) => {
+  const color = isValidHexColor(hexColor) ? hexColor : '#000000';
+  const stripped = color.replace('#', '');
+  const bigint = parseInt(stripped, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? '#0f172a' : '#ffffff';
 };
