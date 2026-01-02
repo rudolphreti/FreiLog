@@ -197,7 +197,6 @@ export const buildDrawerContent = ({
   showExport = false,
   showDummy = true,
   showWeekly = false,
-  angebotSettingsTitle = UI_LABELS.angebotSettings,
 }) => {
   const accordionId = 'drawerAccordion';
   const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
@@ -261,10 +260,7 @@ export const buildDrawerContent = ({
   const timetableButton = actionButton(UI_LABELS.timetable, '🗓️', {
     'data-role': 'timetable-settings',
   });
-  const angebotSettingsButton = actionButton(`${angebotSettingsTitle}...`, '📦', {
-    'data-role': 'angebot-settings',
-  });
-  settingsContent.append(classButton, freeDaysButton, timetableButton, angebotSettingsButton);
+  settingsContent.append(classButton, freeDaysButton, timetableButton);
 
   const settingsSectionItem = buildAccordionItem({
     id: 'einstellungen',
@@ -294,7 +290,6 @@ export const buildDrawerContent = ({
         classButton,
         freeDaysButton,
         timetableButton,
-        angebotSettingsButton,
       },
       sections: {
         actions: actionsSectionItem,

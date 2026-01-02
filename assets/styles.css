@@ -1020,34 +1020,6 @@ body.child-detail-overlay-open {
   -webkit-overflow-scrolling: touch;
 }
 
-.angebot-settings__schedule tbody tr:last-child th,
-.angebot-settings__schedule tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.angebot-settings__schedule th {
-  min-width: 72px;
-}
-
-.angebot-settings__freizeit-row {
-  background: #fff7e6;
-}
-
-.angebot-settings__module {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
-}
-
-.angebot-settings__pill {
-  font-size: 0.85rem;
-  padding: 0.35rem 0.6rem;
-}
-
-.angebot-settings__subject {
-  font-weight: 600;
-  color: #0f172a;
-}
 
 .timetable-select {
   min-width: 180px;

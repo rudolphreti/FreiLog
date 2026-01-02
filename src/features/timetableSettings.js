@@ -3,7 +3,11 @@ import {
   saveTimetableSchedule,
   saveTimetableSubjectColors,
   saveTimetableSubjects,
+  getFixedAngeboteForDay,
+  saveFixedAngeboteForDay,
+  getAngebotCatalog,
 } from '../db/dbRepository.js';
+import { getState } from '../state/store.js';
 import { createEl } from '../ui/dom.js';
 import { UI_LABELS } from '../ui/labels.js';
 import {
@@ -17,6 +21,13 @@ import {
   normalizeTimetableSubjectColors,
 } from '../utils/timetable.js';
 import { getFreizeitModulesByDay } from '../utils/angebotModules.js';
+import {
+  buildAngebotOverlay,
+  buildAngebotCatalogOverlay,
+  buildAngebotCreateOverlay,
+  buildAngebotEditOverlay,
+} from '../ui/components.js';
+import { bindAngebotCatalog } from './angebotCatalog.js';
 
 const MAX_SUBJECT_LENGTH = 80;
 const MIN_SUBJECT_INPUT_PX = 100;
@@ -109,7 +120,7 @@ export const createTimetableSettingsView = ({
   lessons = [],
   schedule = {},
 } = {}, options = {}) => {
-  const { freizeitHint = '', onFreizeitClick = null } = options || {};
+  const { freizeitHint = '' } = options || {};
   let localSubjects = [...subjects];
   let localSubjectColors = normalizeTimetableSubjectColors(
     subjectColors,
@@ -136,6 +147,11 @@ export const createTimetableSettingsView = ({
     lessons: null,
     schedule: null,
   };
+  const angebotOverlay = buildAngebotOverlay({ angebotGroups: {} });
+  const angebotCatalogOverlay = buildAngebotCatalogOverlay({ angebotGroups: {}, savedFilters: null });
+  const angebotCreateOverlay = buildAngebotCreateOverlay({ angebotGroups: {} });
+  const angebotEditOverlay = buildAngebotEditOverlay({ angebotGroups: {} });
+  let angebotBinding = null;
 
   const syncSubjectColors = (nextColors = localSubjectColors) => {
     localSubjectColors = normalizeTimetableSubjectColors(
@@ -638,6 +654,61 @@ export const createTimetableSettingsView = ({
     );
   };
 
+  const openFixedAngeboteOverlay = ({ dayKey, dayLabel, module }) => {
+    const { modules, assignments, aggregated } = getFixedAngeboteForDay(dayKey);
+    if (!modules.length) {
+      return;
+    }
+    let fixedAssignments = assignments;
+    let fixedAggregated = aggregated;
+    const adapter = {
+      getEntry: () => ({ angebote: fixedAggregated, angebotModules: fixedAssignments }),
+      persist: (_id, patch) => {
+        const nextAssignments = patch.angebotModules || fixedAssignments;
+        const nextAggregated = patch.angebote || fixedAggregated;
+        saveFixedAngeboteForDay(dayKey, {
+          assignments: nextAssignments,
+          angebote: nextAggregated,
+        });
+        fixedAssignments = nextAssignments;
+        fixedAggregated = nextAggregated;
+      },
+    };
+    const targetModuleId = module?.id || modules[0]?.id || '';
+    if (angebotOverlay.refs?.overlayTitle) {
+      const slot = module?.descriptor || module?.timeLabel || '';
+      const labelParts = [dayLabel || '', slot].filter(Boolean);
+      const suffix = labelParts.length ? ` (${labelParts.join(' · ')})` : '';
+      angebotOverlay.refs.overlayTitle.textContent = `Fixe Angebote${suffix}`;
+    }
+    angebotOverlay.element.dataset.activeModule = targetModuleId;
+    const state = getState();
+    const payload = {
+      date: dayKey,
+      selectedAngebote: aggregated,
+      catalog: getAngebotCatalog(),
+      topStats: state.db?.angebotStats || {},
+      angebotGroups: state.db?.observationGroups || {},
+      savedFilters: state.ui?.overlay?.savedAngebotFilters || null,
+      readOnly: false,
+      modules,
+      moduleAssignments: assignments,
+      contextAdapter: adapter,
+    };
+    if (!angebotBinding) {
+      angebotBinding = bindAngebotCatalog({
+        ...payload,
+        overlay: angebotOverlay.element,
+        catalogOverlay: angebotCatalogOverlay.element,
+        createOverlay: angebotCreateOverlay.element,
+        editOverlay: angebotEditOverlay.element,
+      });
+    } else {
+      angebotBinding.update(payload);
+    }
+    angebotBinding?.open();
+  };
+
   const handleCellChange = (dayKey, index, selectEl, summaryEl, visualContainer) => {
     const selected = Array.from(selectEl.selectedOptions).map((option) => option.value);
     const nextSchedule = cloneSchedule(localSchedule);
@@ -706,13 +777,13 @@ export const createTimetableSettingsView = ({
         cell.append(visualWrapper, selectWrapper, summary);
         const moduleForCell = findModuleForCell(key, i);
         const hasFreizeit = cellValues.some((subject) => buildSubjectKey(subject) === FREIZEIT_KEY);
-        if (onFreizeitClick && moduleForCell && hasFreizeit) {
+        if (moduleForCell && hasFreizeit) {
           cell.classList.add('timetable-cell-freizeit');
           cell.addEventListener('click', (event) => {
             if (event.target instanceof HTMLElement && event.target.closest('select')) {
               return;
             }
-            onFreizeitClick({
+            openFixedAngeboteOverlay({
               dayKey: key,
               dayLabel: label,
               module: moduleForCell,
@@ -1094,6 +1165,12 @@ export const createTimetableSettingsView = ({
 
   return {
     element: overlay,
+    overlays: [
+      angebotOverlay.element,
+      angebotCatalogOverlay.element,
+      angebotCreateOverlay.element,
+      angebotEditOverlay.element,
+    ],
     open,
     close,
     update,

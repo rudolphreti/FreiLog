@@ -23,7 +23,6 @@ import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
 import { createTimetableSettingsView } from '../features/timetableSettings.js';
-import { createAngebotSettingsView } from '../features/angebotSettings.js';
 import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
@@ -111,10 +110,6 @@ let angebotCatalogView = null;
 let angebotCatalogBinding = null;
 let angebotCreateOverlay = null;
 let angebotEditOverlay = null;
-let angebotSettingsView = null;
-
-const ANGEBOT_SETTINGS_TITLE = UI_LABELS.angebotSettings;
-
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
   if (closeButton) {
@@ -303,30 +298,6 @@ export const renderApp = (root, state) => {
     });
   }
 
-  if (!angebotSettingsView) {
-    angebotSettingsView = createAngebotSettingsView({
-      timetableLessons,
-      timetableSchedule,
-      timetableSubjects,
-      timetableSubjectColors,
-      angebotGroups,
-      catalog: angebotCatalog,
-      topStats: angebotStats,
-      savedAngebotFilters,
-    });
-  } else {
-    angebotSettingsView.update({
-      timetableLessons,
-      timetableSchedule,
-      timetableSubjects,
-      timetableSubjectColors,
-      angebotGroups,
-      catalog: angebotCatalog,
-      topStats: angebotStats,
-      savedAngebotFilters,
-    });
-  }
-
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -340,7 +311,6 @@ export const renderApp = (root, state) => {
       showExport: hasData,
       showDummy: !hasData,
       showWeekly: hasData,
-      angebotSettingsTitle: ANGEBOT_SETTINGS_TITLE,
     },
   );
 
@@ -359,8 +329,7 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
-      angebotSettingsView.element,
-      ...(angebotSettingsView.overlays || []),
+      ...(timetableSettingsView.overlays || []),
       angebotOverlayView.element,
       angebotCatalogView.element,
       angebotCreateOverlay.element,
