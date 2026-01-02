@@ -238,7 +238,7 @@ export const createTimetableSettingsView = ({
     renderDeleteSubjectFeedback();
   };
 
-  const handleSubjectColorChange = (subject, inputEl, labelEl) => {
+  const handleSubjectColorChange = (subject, inputEl, clearButton) => {
     const key = buildSubjectKey(subject);
     if (!key) {
       return;
@@ -250,22 +250,18 @@ export const createTimetableSettingsView = ({
       if (inputEl) {
         inputEl.value = safeColor;
       }
-      if (labelEl) {
-        labelEl.textContent = fallback ? safeColor.toUpperCase() : 'Keine Farbe';
-      }
+      clearButton?.classList.toggle('d-none', !fallback);
       setStatus('subjects', 'Bitte eine gültige Farbe (#RRGGBB) wählen.', 'error');
       return;
     }
     const updatedColors = { ...localSubjectColors, [key]: nextColor };
     syncSubjectColors(updatedColors);
     refreshGridOptions();
-    if (labelEl) {
-      labelEl.textContent = nextColor.toUpperCase();
-    }
+    clearButton?.classList.remove('d-none');
     setStatus('subjects', 'Farbe aktualisiert.', 'success');
   };
 
-  const handleClearSubjectColor = (subject, inputEl, labelEl) => {
+  const handleClearSubjectColor = (subject, inputEl, clearButton) => {
     const key = buildSubjectKey(subject);
     if (!key) {
       return;
@@ -276,9 +272,7 @@ export const createTimetableSettingsView = ({
     if (inputEl) {
       inputEl.value = NEUTRAL_COLOR;
     }
-    if (labelEl) {
-      labelEl.textContent = 'Keine Farbe';
-    }
+    clearButton?.classList.add('d-none');
     refreshGridOptions();
     setStatus('subjects', 'Farbe entfernt.', 'success');
   };
@@ -366,15 +360,16 @@ export const createTimetableSettingsView = ({
           'aria-label': `Farbe für ${subject}`,
         },
       });
-      const colorLabel = createEl('span', {
-        className: 'small text-muted timetable-color-value',
-        text: hasColor ? displayColor.toUpperCase() : 'Keine Farbe',
-      });
       const clearColorButton = createEl('button', {
         className: 'btn btn-outline-secondary btn-sm timetable-color-clear',
-        attrs: { type: 'button' },
-        text: 'Farbe entfernen',
+        attrs: {
+          type: 'button',
+          title: 'Farbe entfernen',
+          'aria-label': `Farbe für ${subject} entfernen`,
+        },
+        children: [createEl('span', { text: '🗑️', attrs: { 'aria-hidden': 'true' } })],
       });
+      clearColorButton.classList.toggle('d-none', !hasColor);
 
       const input = createEl('input', {
         className: 'form-control flex-grow-1',
@@ -385,13 +380,11 @@ export const createTimetableSettingsView = ({
         },
       });
 
-      const colorChangeHandler = () => handleSubjectColorChange(subject, colorInput, colorLabel);
-      colorInput.addEventListener('input', () => {
-        colorLabel.textContent = colorInput.value.toUpperCase();
-      });
+      const colorChangeHandler = () => handleSubjectColorChange(subject, colorInput, clearColorButton);
+      colorInput.addEventListener('input', () => {});
       colorInput.addEventListener('change', colorChangeHandler);
       clearColorButton.addEventListener('click', () =>
-        handleClearSubjectColor(subject, colorInput, colorLabel),
+        handleClearSubjectColor(subject, colorInput, clearColorButton),
       );
 
       input.addEventListener('blur', () => handleRenameSubject(subject, input));
@@ -408,7 +401,7 @@ export const createTimetableSettingsView = ({
       subjectInputs.push(input);
       subjectColorInputs.push(colorInput);
       subjectColorClearButtons.push(clearColorButton);
-      subjectRow.append(colorInput, colorLabel, clearColorButton, input);
+      subjectRow.append(input, colorInput, clearColorButton);
       subjectsList.append(subjectRow);
     });
     applyEditingState();
