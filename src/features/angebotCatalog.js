@@ -881,14 +881,19 @@ export const bindAngebotCatalog = ({
       entry && entry.angebotModules && typeof entry.angebotModules === 'object'
         ? entry.angebotModules
         : currentAssignments;
+    const existingModuleOffers = Array.isArray(baseAssignments?.[targetModule])
+      ? baseAssignments[targetModule]
+      : [];
+    const normalizedKey = normalizeAngebotKey(normalized);
+    const alreadyExists = existingModuleOffers.some(
+      (item) => normalizeAngebotKey(item) === normalizedKey,
+    );
+    if (alreadyExists) {
+      return;
+    }
     const nextAssignments = {
       ...baseAssignments,
-      [targetModule]: [
-        ...(Array.isArray(baseAssignments?.[targetModule])
-          ? baseAssignments[targetModule]
-          : []),
-        normalized,
-      ],
+      [targetModule]: [...existingModuleOffers, normalized],
     };
     addPreset('angebote', normalized);
     upsertAngebotCatalogEntry(normalized);
