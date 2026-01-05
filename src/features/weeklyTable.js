@@ -146,15 +146,20 @@ const buildModuleOfferList = (modules, assignments, extras = []) => {
   }
 
   safeModules.forEach((module) => {
+    const moduleOffers = Array.isArray(safeAssignments[module.id]) ? safeAssignments[module.id] : [];
+    // Skip modules without offers
+    if (moduleOffers.length === 0) {
+      return;
+    }
+
     const moduleWrapper = createEl('div', { className: 'weekly-table__module' });
-    const label =
-      module.descriptor || module.tabLabel || module.periodLabel || 'Freizeit';
+    const label = module.periodLabel || module.descriptor || module.tabLabel || 'Freizeit';
     moduleWrapper.append(
       createEl('div', {
         className: 'text-muted small weekly-table__module-label',
         text: label,
       }),
-      buildPillList(safeAssignments[module.id] || []),
+      buildPillList(moduleOffers),
     );
     container.append(moduleWrapper);
   });

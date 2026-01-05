@@ -11,7 +11,7 @@ import {
   normalizeObservationGroups,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
-import { ANGEBOT_GROUP_CODES } from '../utils/angebotCatalog.js';
+import { ANGEBOT_GROUP_CODES, normalizeAngebotKey } from '../utils/angebotCatalog.js';
 import { todayYmd } from '../utils/date.js';
 import { UI_LABELS } from './labels.js';
 
@@ -390,8 +390,12 @@ export const buildAngebotSection = ({
   selectedAngebote,
   newValue,
   readOnly = false,
+  freizeitModules = [],
+  angebotModules = {},
 }) => {
   const activeAngebote = Array.isArray(selectedAngebote) ? selectedAngebote : [];
+  const safeModules = Array.isArray(freizeitModules) ? freizeitModules : [];
+  const safeAssignments = angebotModules && typeof angebotModules === 'object' ? angebotModules : {};
 
   const openButton = createEl('button', {
     className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2',
@@ -407,24 +411,63 @@ export const buildAngebotSection = ({
     className: 'text-muted small mb-1',
     text: 'Heute ausgewählt',
   });
-  const selectedList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
+
+  const modulesContainer = createEl('div', {
+    className: 'd-flex flex-column gap-3',
     dataset: { role: 'angebot-list' },
   });
-  activeAngebote.forEach((angebot) => {
-    selectedList.appendChild(
-      buildPill({
+
+  // If there are modules, display offers grouped by module
+  if (safeModules.length > 0) {
+    safeModules.forEach((module) => {
+      const moduleOffers = Array.isArray(safeAssignments[module.id]) ? safeAssignments[module.id] : [];
+      if (moduleOffers.length === 0) {
+        return;
+      }
+
+      // Module header
+      const moduleHeader = createEl('div', {
+        className: 'd-flex flex-column gap-2',
+      });
+      const moduleTitle = createEl('p', {
+        className: 'text-muted small mb-0 fw-semibold',
+        text: module.periodLabel || module.descriptor || `Modul ${module.index || ''}`,
+      });
+      moduleHeader.appendChild(moduleTitle);
+
+      // Offers for this module
+      const moduleOffersList = createEl('div', {
+        className: 'd-flex flex-wrap gap-2',
+      });
+      moduleOffers.forEach((angebot) => {
+        const pill = buildPill({
+          label: angebot,
+          removeLabel: `${angebot} entfernen`,
+          removeRole: 'angebot-remove',
+          value: angebot,
+        });
+        pill.dataset.moduleId = module.id;
+        moduleOffersList.appendChild(pill);
+      });
+      moduleHeader.appendChild(moduleOffersList);
+      modulesContainer.appendChild(moduleHeader);
+    });
+  } else {
+    // Fallback: if no modules, display all offers in a flat list
+    activeAngebote.forEach((angebot) => {
+      const pill = buildPill({
         label: angebot,
         removeLabel: `${angebot} entfernen`,
         removeRole: 'angebot-remove',
         value: angebot,
-      }),
-    );
-  });
+      });
+      modulesContainer.appendChild(pill);
+    });
+  }
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [openButton, infoTitle, selectedList],
+    children: [openButton, infoTitle, modulesContainer],
   });
 
   if (readOnly) {
@@ -434,7 +477,7 @@ export const buildAngebotSection = ({
   return {
     element: content,
     refs: {
-      selectedList,
+      selectedList: modulesContainer,
       openButton,
     },
   };

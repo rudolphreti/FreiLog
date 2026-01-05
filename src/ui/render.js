@@ -210,6 +210,8 @@ export const renderApp = (root, state) => {
     selectedAngebote,
     newValue: preservedUi.angebotInputValue,
     readOnly: isReadOnlyDay,
+    freizeitModules,
+    angebotModules,
   });
   const observationsSection = appShell?.observationsView
     ? appShell.observationsView

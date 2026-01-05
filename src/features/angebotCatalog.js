@@ -649,6 +649,17 @@ export const bindAngebotCatalog = ({
     return new Set(selectedList.map((item) => normalizeAngebotKey(item)).filter(Boolean));
   };
 
+  const getSelectedKeysForActiveModule = () => {
+    const activeModuleId = getActiveModuleId();
+    if (!activeModuleId) {
+      return new Set();
+    }
+    const moduleOffers = Array.isArray(currentAssignments[activeModuleId])
+      ? currentAssignments[activeModuleId]
+      : [];
+    return new Set(moduleOffers.map((item) => normalizeAngebotKey(item)).filter(Boolean));
+  };
+
   const render = () => {
     const groupMap = getGroupMap();
     const filters = getFilterState(catalogOverlay);
@@ -656,6 +667,7 @@ export const bindAngebotCatalog = ({
     const selectedKeys = new Set(
       selectedList.map((item) => normalizeAngebotKey(item)).filter(Boolean),
     );
+    const activeModuleSelectedKeys = getSelectedKeysForActiveModule();
     const topList = overlay.querySelector('[data-role="angebot-top-list"]');
     renderModuleTabs({
       overlay,
@@ -671,7 +683,7 @@ export const bindAngebotCatalog = ({
       stats: currentTopStats,
       groupMap,
       angebotGroups,
-      selectedSet: selectedKeys,
+      selectedSet: activeModuleSelectedKeys,
     });
     const catalogList = catalogOverlay.querySelector('[data-role="angebot-catalog-list"]');
     renderCatalogList({
@@ -679,7 +691,7 @@ export const bindAngebotCatalog = ({
       catalog: currentCatalog,
       groupMap,
       angebotGroups,
-      selectedSet: selectedKeys,
+      selectedSet: activeModuleSelectedKeys,
       filters,
     });
     renderLetterButtons(catalogOverlay, currentCatalog);
@@ -1109,15 +1121,14 @@ export const bindAngebotCatalog = ({
       }
       const value = catalogButton.dataset.value;
       if (value) {
-        const selectedKeys = getSelectedKeys();
+        const activeModuleSelectedKeys = getSelectedKeysForActiveModule();
         const key = normalizeAngebotKey(value);
-        if (selectedKeys.has(key)) {
-          const moduleId = findModuleForOffer(value) || getActiveModuleId();
-          removeOfferForDate(value, moduleId);
+        const activeModuleId = getActiveModuleId();
+        if (activeModuleSelectedKeys.has(key)) {
+          removeOfferForDate(value, activeModuleId);
           catalogButton.classList.remove('is-selected');
         } else {
-          const moduleId = getActiveModuleId();
-          addOfferForDate(value, moduleId);
+          addOfferForDate(value, activeModuleId);
           catalogButton.classList.add('is-selected');
         }
       }
@@ -1195,8 +1206,8 @@ export const bindAngebotCatalog = ({
     if (!normalized) {
       return;
     }
-    const selectedKeys = getSelectedKeys();
-    if (selectedKeys.has(normalizeAngebotKey(normalized))) {
+    const activeModuleSelectedKeys = getSelectedKeysForActiveModule();
+    if (activeModuleSelectedKeys.has(normalizeAngebotKey(normalized))) {
       closeCreateOverlay();
       return;
     }
