@@ -11,6 +11,6 @@ Code (developer-facing):
 - User-visible errors: German.
 - Developer logs: English ok, avoid noisy spam.
 
-i18n rule:
+Internationalization rule:
 - No hard-coded German strings inside business logic.
 - Define UI strings in a dedicated module and import them.
