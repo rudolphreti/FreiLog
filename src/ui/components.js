@@ -14,6 +14,7 @@ import {
 import { ANGEBOT_GROUP_CODES, normalizeAngebotKey } from '../utils/angebotCatalog.js';
 import { todayYmd } from '../utils/date.js';
 import { UI_LABELS } from './labels.js';
+import { getBreadcrumbs } from '../utils/breadcrumbs.js';
 
 export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
   const header = createEl('header', {
@@ -300,6 +301,82 @@ export const buildDrawerContent = ({
   };
 };
 
+/**
+ * Build Bootstrap breadcrumbs component
+ * @returns {HTMLElement} Breadcrumbs nav element
+ */
+const buildBreadcrumbs = () => {
+  const breadcrumbs = getBreadcrumbs();
+  const nav = createEl('nav', {
+    attrs: { 'aria-label': 'breadcrumb' },
+    className: 'overlay-breadcrumbs',
+  });
+  const ol = createEl('ol', {
+    className: 'breadcrumb breadcrumb-sm mb-0',
+  });
+
+  if (breadcrumbs.length === 0) {
+    nav.style.display = 'none';
+    return nav;
+  }
+
+  breadcrumbs.forEach((crumb, index) => {
+    const isLast = index === breadcrumbs.length - 1;
+    const li = createEl('li', {
+      className: `breadcrumb-item${isLast ? ' active' : ''}`,
+      attrs: isLast ? { 'aria-current': 'page' } : {},
+    });
+    const text = createEl('span', {
+      className: 'text-truncate d-inline-block',
+      style: 'max-width: 120px;',
+      text: crumb.label,
+    });
+    li.appendChild(text);
+    ol.appendChild(li);
+  });
+
+  nav.appendChild(ol);
+  return nav;
+};
+
+/**
+ * Update breadcrumbs in all visible overlays
+ */
+export const updateBreadcrumbsInOverlays = () => {
+  const breadcrumbElements = document.querySelectorAll('[data-role="overlay-breadcrumbs"]');
+  const breadcrumbs = getBreadcrumbs();
+  
+  breadcrumbElements.forEach((nav) => {
+    const ol = nav.querySelector('ol');
+    if (!ol) {
+      return;
+    }
+    
+    ol.replaceChildren();
+    
+    if (breadcrumbs.length === 0) {
+      nav.style.display = 'none';
+      return;
+    }
+    
+    nav.style.display = '';
+    breadcrumbs.forEach((crumb, index) => {
+      const isLast = index === breadcrumbs.length - 1;
+      const li = createEl('li', {
+        className: `breadcrumb-item${isLast ? ' active' : ''}`,
+        attrs: isLast ? { 'aria-current': 'page' } : {},
+      });
+      const text = createEl('span', {
+        className: 'text-truncate d-inline-block',
+        style: 'max-width: 120px;',
+        text: crumb.label,
+      });
+      li.appendChild(text);
+      ol.appendChild(li);
+    });
+  });
+};
+
 const buildPill = ({ label, removeLabel, removeRole, value }) => {
   const labelSpan = createEl('span', { text: label });
   const removeButton = createEl('button', {
@@ -496,16 +573,22 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
   const overlayHeader = createEl('div', {
     className: 'observation-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const overlayTitle = createEl('h3', {
     className: 'h5 mb-0',
     text: UI_LABELS.angebotToday,
   });
+  headerLeft.append(breadcrumbs, overlayTitle);
   const closeButton = createEl('button', {
     className: 'btn-close observation-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'angebot-close' },
   });
-  overlayHeader.append(overlayTitle, closeButton);
+  overlayHeader.append(headerLeft, closeButton);
 
   const overlayContent = createEl('div', {
     className: 'observation-overlay__content',
@@ -633,16 +716,22 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: UI_LABELS.angebotCatalog,
   });
+  headerLeft.append(breadcrumbs, title);
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'angebot-catalog-close' },
   });
-  header.append(title, closeButton);
+  header.append(headerLeft, closeButton);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
@@ -857,16 +946,22 @@ export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
   const header = createEl('div', {
     className: 'observation-create-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: UI_LABELS.angebotCreate,
   });
+  headerLeft.append(breadcrumbs, title);
   const closeButton = createEl('button', {
     className: 'btn-close observation-create-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'angebot-create-close' },
   });
-  header.append(title, closeButton);
+  header.append(headerLeft, closeButton);
 
   const inputLabel = createEl('label', {
     className: 'form-label text-muted small mb-0',
@@ -987,16 +1082,22 @@ export const buildAngebotEditOverlay = ({ angebotGroups }) => {
   const header = createEl('div', {
     className: 'observation-edit-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Angebot bearbeiten',
   });
+  headerLeft.append(breadcrumbs, title);
   const closeButton = createEl('button', {
     className: 'btn-close observation-edit-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'angebot-edit-close' },
   });
-  header.append(title, closeButton);
+  header.append(headerLeft, closeButton);
 
   const input = createEl('input', {
     className: 'form-control',
@@ -1313,16 +1414,22 @@ const buildObservationTemplatesOverlay = ({
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: UI_LABELS.observationCatalog,
   });
+  headerLeft.append(breadcrumbs, title);
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'observation-template-close' },
   });
-  header.append(title, closeButton);
+  header.append(headerLeft, closeButton);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
@@ -1824,10 +1931,16 @@ const buildObservationEditOverlay = ({ observationGroups }) => {
   const header = createEl('div', {
     className: 'observation-edit-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Beobachtung bearbeiten',
   });
+  headerLeft.append(breadcrumbs, title);
   const headerActions = createEl('div', {
     className: 'd-flex flex-wrap gap-2',
     children: [
@@ -1845,7 +1958,7 @@ const buildObservationEditOverlay = ({ observationGroups }) => {
       }),
     ],
   });
-  header.append(title, headerActions);
+  header.append(headerLeft, headerActions);
 
   const inputLabel = createEl('label', {
     className: 'form-label text-muted small mb-0',
@@ -1914,16 +2027,22 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
   const header = createEl('div', {
     className: 'observation-create-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const title = createEl('h3', {
     className: 'h5 mb-0',
     text: UI_LABELS.observationCreate,
   });
+  headerLeft.append(breadcrumbs, title);
   const closeButton = createEl('button', {
     className: 'btn-close observation-create-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'observation-create-close' },
   });
-  header.append(title, closeButton);
+  header.append(headerLeft, closeButton);
 
   const inputLabel = createEl('label', {
     className: 'form-label text-muted small mb-0',
@@ -2095,17 +2214,23 @@ export const buildObservationsSection = ({
   const overlayHeader = createEl('div', {
     className: 'observation-overlay__header',
   });
+  const headerLeft = createEl('div', {
+    className: 'd-flex align-items-center gap-2 flex-grow-1',
+  });
+  const breadcrumbs = buildBreadcrumbs();
+  breadcrumbs.dataset.role = 'overlay-breadcrumbs';
   const overlayTitle = createEl('h3', {
     className: 'h5 mb-0',
     text: 'Kind',
     dataset: { role: 'observation-child-title' },
   });
+  headerLeft.append(breadcrumbs, overlayTitle);
   const closeButton = createEl('button', {
     className: 'btn-close observation-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'observation-close' },
   });
-  overlayHeader.append(overlayTitle, closeButton);
+  overlayHeader.append(headerLeft, closeButton);
 
   const overlayContent = createEl('div', {
     className: 'observation-overlay__content',

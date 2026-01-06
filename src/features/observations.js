@@ -12,6 +12,9 @@ import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 import { setSavedObservationFilters } from '../state/store.js';
 import { formatDisplayDate } from '../utils/schoolWeeks.js';
 import { focusTextInput } from '../utils/focus.js';
+import { pushBreadcrumb, popBreadcrumb } from '../utils/breadcrumbs.js';
+import { updateBreadcrumbsInOverlays } from '../ui/components.js';
+import { UI_LABELS } from '../ui/labels.js';
 
 const normalizeObservationInput = (value) => {
   if (typeof value !== 'string') {
@@ -771,6 +774,8 @@ export const bindObservations = ({
       return false;
     }
     activeChild = child;
+    pushBreadcrumb(child, 'observation');
+    updateBreadcrumbsInOverlays();
     isOverlayOpen = true;
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
@@ -792,6 +797,8 @@ export const bindObservations = ({
     }
     closeTemplateOverlay();
     closeCreateOverlay();
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     isOverlayOpen = false;
     activeChild = null;
     overlay.classList.remove('is-open');
@@ -807,6 +814,8 @@ export const bindObservations = ({
       return;
     }
     activeChild = child;
+    pushBreadcrumb(UI_LABELS.observationCatalog, 'templates');
+    updateBreadcrumbsInOverlays();
     isTemplateOverlayOpen = true;
     templatesOverlay.dataset.isOpen = 'true';
     templatesOverlay.classList.add('is-open');
@@ -827,6 +836,8 @@ export const bindObservations = ({
       return;
     }
     closeEditOverlay();
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     isTemplateOverlayOpen = false;
     templatesOverlay.dataset.isOpen = 'false';
     setTemplateSettingsOpen(templatesOverlay, false);
@@ -914,6 +925,8 @@ export const bindObservations = ({
       return;
     }
     activeChild = child;
+    pushBreadcrumb(UI_LABELS.observationCreate, 'create');
+    updateBreadcrumbsInOverlays();
     isCreateOverlayOpen = true;
     createOverlay.classList.add('is-open');
     createOverlay.setAttribute('aria-hidden', 'false');
@@ -928,6 +941,8 @@ export const bindObservations = ({
     if (!isCreateOverlayOpen) {
       return;
     }
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     isCreateOverlayOpen = false;
     createOverlay.classList.remove('is-open');
     createOverlay.setAttribute('aria-hidden', 'true');
@@ -962,6 +977,8 @@ export const bindObservations = ({
       return;
     }
     editingObservation = { text };
+    pushBreadcrumb('Beobachtung bearbeiten', 'edit');
+    updateBreadcrumbsInOverlays();
     isEditOverlayOpen = true;
     editOverlay.classList.add('is-open');
     editOverlay.setAttribute('aria-hidden', 'false');
@@ -979,6 +996,8 @@ export const bindObservations = ({
     if (!isEditOverlayOpen) {
       return;
     }
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     isEditOverlayOpen = false;
     editingObservation = null;
     editOverlay.classList.remove('is-open');

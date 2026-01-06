@@ -1260,6 +1260,25 @@ body.child-detail-overlay-open {
   gap: 0.75rem;
 }
 
+.overlay-breadcrumbs {
+  flex-shrink: 0;
+}
+
+.overlay-breadcrumbs .breadcrumb {
+  margin-bottom: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.overlay-breadcrumbs .breadcrumb-item {
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.overlay-breadcrumbs .breadcrumb-item.active {
+  color: #6c757d;
+}
+
 .observation-templates-overlay__content {
   flex: 1;
   overflow-y: auto;

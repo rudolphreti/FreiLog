@@ -16,6 +16,9 @@ import {
 import { debounce } from '../utils/debounce.js';
 import { focusTextInput } from '../utils/focus.js';
 import { flattenModuleAssignments, normalizeModuleAssignments } from '../utils/angebotModules.js';
+import { pushBreadcrumb, popBreadcrumb, clearBreadcrumbs } from '../utils/breadcrumbs.js';
+import { updateBreadcrumbsInOverlays } from '../ui/components.js';
+import { UI_LABELS } from '../ui/labels.js';
 
 const LONG_PRESS_MS = 600;
 
@@ -714,6 +717,8 @@ export const bindAngebotCatalog = ({
   };
 
   const closeOverlay = () => {
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('observation-overlay-open');
@@ -740,12 +745,16 @@ export const bindAngebotCatalog = ({
       return;
     }
     closeDrawerIfOpen();
+    pushBreadcrumb(UI_LABELS.angebotCatalog, 'catalog');
+    updateBreadcrumbsInOverlays();
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
     render();
     focusCatalogSearchInput();
   };
   const closeCatalogOverlay = () => {
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     catalogOverlay.classList.remove('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'true');
   };
@@ -806,6 +815,8 @@ export const bindAngebotCatalog = ({
       return;
     }
     closeCatalogOverlay();
+    pushBreadcrumb(UI_LABELS.angebotCreate, 'create');
+    updateBreadcrumbsInOverlays();
     createOverlay.classList.add('is-open');
     createOverlay.setAttribute('aria-hidden', 'false');
     setCreateGroups([]);
@@ -818,6 +829,8 @@ export const bindAngebotCatalog = ({
   };
 
   const closeCreateOverlay = () => {
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     createOverlay.classList.remove('is-open');
     createOverlay.setAttribute('aria-hidden', 'true');
   };
@@ -845,6 +858,8 @@ export const bindAngebotCatalog = ({
       return;
     }
     editingOffer = { text };
+    pushBreadcrumb('Angebot bearbeiten', 'edit');
+    updateBreadcrumbsInOverlays();
     editOverlay.classList.add('is-open');
     editOverlay.setAttribute('aria-hidden', 'false');
     setEditGroups(groups || []);
@@ -857,6 +872,8 @@ export const bindAngebotCatalog = ({
   };
 
   const closeEditOverlay = () => {
+    popBreadcrumb();
+    updateBreadcrumbsInOverlays();
     editingOffer = null;
     editOverlay.classList.remove('is-open');
     editOverlay.setAttribute('aria-hidden', 'true');
