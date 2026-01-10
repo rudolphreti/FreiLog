@@ -1593,6 +1593,11 @@ export const bindAngebotCatalog = ({
       closeEditOverlay();
       return;
     }
+    const cancelButton = target.closest('[data-role="angebot-edit-cancel"]');
+    if (cancelButton) {
+      closeEditOverlay();
+      return;
+    }
     const groupButton = target.closest('[data-role="angebot-edit-group"]');
     if (groupButton) {
       const value = groupButton.dataset.value;

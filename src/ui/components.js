@@ -1185,12 +1185,29 @@ export const buildAngebotEditOverlay = ({ angebotGroups }) => {
     className: 'h5 mb-0',
     text: 'Angebot bearbeiten',
   });
+  const headerActions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    children: [
+      createEl('button', {
+        className: 'btn btn-primary',
+        text: 'Speichern',
+        attrs: { type: 'submit' },
+        dataset: { role: 'angebot-edit-save' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-edit-cancel' },
+      }),
+    ],
+  });
   const closeButton = createEl('button', {
     className: 'btn-close observation-edit-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
     dataset: { role: 'angebot-edit-close' },
   });
-  header.append(title, closeButton);
+  header.append(title, headerActions, closeButton);
 
   const input = createEl('input', {
     className: 'form-control',
