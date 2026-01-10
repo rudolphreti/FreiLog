@@ -352,7 +352,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     accordionId,
   });
 
-  const cautionContent = createEl('div', {
+  const entlassungContent = createEl('div', {
     className: 'd-flex flex-column gap-2',
   });
 
@@ -509,7 +509,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       }),
     ],
   });
-  cautionContent.append(entlassungCard, deleteChildCard);
+  entlassungContent.append(entlassungCard);
+  const cautionContent = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    children: [deleteChildCard],
+  });
 
   const deleteChildConfirmDialog = createEl('div', {
     className: 'class-settings-confirm d-none',
@@ -632,7 +636,19 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     accordionId,
   });
 
-  accordion.append(generalItem.element, childrenItem.element, cautionItem.element);
+  const entlassungItem = buildAccordionItem({
+    id: 'class-entlassung',
+    title: 'Entlassung',
+    content: entlassungContent,
+    accordionId,
+  });
+
+  accordion.append(
+    generalItem.element,
+    childrenItem.element,
+    entlassungItem.element,
+    cautionItem.element,
+  );
   content.append(intro, accordion);
   panel.append(header, content);
   overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog);
@@ -920,10 +936,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
           const assignedElsewhere =
             assignedMap.has(child) && assignedMap.get(child) !== index;
+          if (assignedElsewhere && !isSelected) {
+            return;
+          }
           const childButton = createEl('button', {
-            className: `btn btn-sm ${
-              isSelected ? 'btn-primary' : 'btn-outline-secondary'
-            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
             attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
             text: child,
           });
@@ -932,14 +949,16 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setRegularError(key, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
-            if (assignedElsewhere && !isSelected) {
-              setRegularError(key, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
-              return;
-            }
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
+              daySlots.forEach((otherSlot, otherIndex) => {
+                if (otherIndex === index || !Array.isArray(otherSlot?.children)) {
+                  return;
+                }
+                otherSlot.children = otherSlot.children.filter((name) => name !== child);
+              });
               slot.children = [...nextChildren, child];
             }
             entlassungState.regular[key] = daySlots;
@@ -1096,10 +1115,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
           const assignedElsewhere =
             assignedMap.has(child) && assignedMap.get(child) !== index;
+          if (assignedElsewhere && !isSelected) {
+            return;
+          }
           const childButton = createEl('button', {
-            className: `btn btn-sm ${
-              isSelected ? 'btn-primary' : 'btn-outline-secondary'
-            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
             attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
             text: child,
           });
@@ -1108,14 +1128,16 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setSpecialError(dateValue, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
-            if (assignedElsewhere && !isSelected) {
-              setSpecialError(dateValue, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
-              return;
-            }
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
+              entrySlots.forEach((otherSlot, otherIndex) => {
+                if (otherIndex === index || !Array.isArray(otherSlot?.children)) {
+                  return;
+                }
+                otherSlot.children = otherSlot.children.filter((name) => name !== child);
+              });
               slot.children = [...nextChildren, child];
             }
             entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
