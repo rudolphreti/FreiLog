@@ -976,6 +976,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   const renderEntlassung = () => {
+    const previousScrollTop = content.scrollTop;
+    const previousScrollLeft = content.scrollLeft;
     const childrenList = getAvailableChildren();
     entlassungState = ensureEntlassungStructure(entlassungState);
 
@@ -1359,6 +1361,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       });
 
       entlassungSpecialContainer.append(entrySection);
+    });
+
+    window.requestAnimationFrame(() => {
+      content.scrollTop = previousScrollTop;
+      content.scrollLeft = previousScrollLeft;
     });
   };
 
