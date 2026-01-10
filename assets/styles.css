@@ -1278,6 +1278,17 @@ body.child-detail-overlay-open {
   background: #f5f7fb;
 }
 
+.observation-catalog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 2010;
+}
+
+.observation-catalog-overlay .observation-templates-overlay__panel {
+  background: #f5f7fb;
+}
+
 .observation-templates-overlay__header {
   position: sticky;
   top: 0;
