@@ -10,14 +10,19 @@ import {
   buildAngebotCatalogOverlay,
   buildAngebotCreateOverlay,
   buildAngebotEditOverlay,
+  buildMainTabsSection,
+  buildEntlassungSection,
   buildObservationsSection,
 } from './components.js';
+import { normalizeEntlassung } from '../db/dbSchema.js';
+import { getTimetableDayKey } from '../utils/angebotModules.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
 import { bindAngebotCatalog } from '../features/angebotCatalog.js';
 import { bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
+import { bindEntlassungControl, getEntlassungStatus } from '../features/entlassungControl.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
 import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
@@ -96,6 +101,46 @@ const getSortedChildren = (children) =>
 const getAbsentChildren = (entry) =>
   Array.isArray(entry.absentChildIds) ? entry.absentChildIds : [];
 
+const sortEntlassungSlots = (slots) => {
+  slots.sort((a, b) => {
+    const timeA = typeof a?.time === 'string' ? a.time : '';
+    const timeB = typeof b?.time === 'string' ? b.time : '';
+    if (!timeA && !timeB) {
+      return 0;
+    }
+    if (!timeA) {
+      return 1;
+    }
+    if (!timeB) {
+      return -1;
+    }
+    return timeA.localeCompare(timeB);
+  });
+};
+
+const getEntlassungForDate = (entlassung, selectedDate, children) => {
+  const normalized = normalizeEntlassung(entlassung, children);
+  const specialEntry = normalized.special.find((entry) => entry?.date === selectedDate);
+  if (specialEntry) {
+    const slots = Array.isArray(specialEntry?.times) ? [...specialEntry.times] : [];
+    sortEntlassungSlots(slots);
+    return {
+      label: 'Sonderentlassung',
+      slots,
+    };
+  }
+
+  const dayKey = getTimetableDayKey(selectedDate);
+  const slots = dayKey && Array.isArray(normalized.regular?.[dayKey])
+    ? [...normalized.regular[dayKey]]
+    : [];
+  sortEntlassungSlots(slots);
+  return {
+    label: 'Ordentliche Entlassung',
+    slots,
+  };
+};
+
 let drawerShell = null;
 let appShell = null;
 let observationsBinding = null;
@@ -104,6 +149,7 @@ let classSettingsView = null;
 let freeDaysSettingsView = null;
 let angebotBinding = null;
 let timetableSettingsView = null;
+let entlassungBinding = null;
 let angebotOverlayView = null;
 let angebotCatalogView = null;
 let angebotCatalogBinding = null;
@@ -213,6 +259,12 @@ export const renderApp = (root, state) => {
     freizeitModules,
     angebotModules,
   });
+  const entlassungInfo = getEntlassungForDate(
+    classProfile?.entlassung,
+    selectedDate,
+    sortedChildren,
+  );
+  const entlassungStatus = getEntlassungStatus(selectedDate);
   const observationsSection = appShell?.observationsView
     ? appShell.observationsView
     : buildObservationsSection({
@@ -227,6 +279,16 @@ export const renderApp = (root, state) => {
         readOnly: isReadOnlyDay,
         freeDayInfo,
     });
+  const entlassungSection = appShell?.entlassungView
+    ? appShell.entlassungView
+    : buildEntlassungSection({
+        entlassungLabel: entlassungInfo.label,
+        slots: entlassungInfo.slots,
+        absentChildren,
+        statusSet: entlassungStatus,
+        readOnly: isReadOnlyDay,
+        freeDayInfo,
+      });
   if (!angebotOverlayView) {
     angebotOverlayView = buildAngebotOverlay({ angebotGroups });
   }
@@ -322,7 +384,11 @@ export const renderApp = (root, state) => {
     container.className = 'app';
     const contentWrap = document.createElement('div');
     contentWrap.className = 'container d-flex flex-column gap-3';
-    contentWrap.append(header.element, observationsSection.element);
+    const mainTabs = buildMainTabsSection({
+      observationsSection: observationsSection.element,
+      entlassungSection: entlassungSection.element,
+    });
+    contentWrap.append(header.element, mainTabs.element);
 
     container.append(
       contentWrap,
@@ -418,6 +484,10 @@ export const renderApp = (root, state) => {
       savedFilters: savedObsFilters,
       readOnly: isReadOnlyDay,
     });
+    entlassungBinding = bindEntlassungControl({
+      container: entlassungSection.element,
+      selectedDate,
+    });
 
     bindDrawerSections(drawerContentRefs?.sections);
 
@@ -427,6 +497,8 @@ export const renderApp = (root, state) => {
       headerEl: header.element,
       angebotEl: angebotSection.element,
       observationsView: observationsSection,
+      entlassungView: entlassungSection,
+      mainTabsEl: mainTabs.element,
     };
     return;
   }
@@ -435,7 +507,7 @@ export const renderApp = (root, state) => {
   appShell.headerEl = header.element;
   bindDateEntry(header.refs.dateInput);
 
-  appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.observationsView.element);
+  appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
 
   appShell.observationsView.update({
     nextChildren: sortedChildren,
@@ -449,12 +521,25 @@ export const renderApp = (root, state) => {
     readOnly: isReadOnlyDay,
     freeDayInfo,
   });
+  if (appShell.entlassungView?.update) {
+    appShell.entlassungView.update({
+      nextLabel: entlassungInfo.label,
+      nextSlots: entlassungInfo.slots,
+      nextAbsentChildren: absentChildren,
+      nextStatusSet: entlassungStatus,
+      nextReadOnly: isReadOnlyDay,
+      nextFreeDayInfo: freeDayInfo,
+    });
+  }
 
   if (observationsBinding?.updateDate) {
     observationsBinding.updateDate(selectedDate);
   }
   if (observationsBinding?.updateReadOnly) {
     observationsBinding.updateReadOnly(isReadOnlyDay);
+  }
+  if (entlassungBinding?.updateDate) {
+    entlassungBinding.updateDate(selectedDate);
   }
 
   if (angebotCatalogBinding) {

@@ -2031,6 +2031,304 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
   };
 };
 
+const buildEntlassungInfoRow = ({ label, content }) =>
+  createEl('div', {
+    className: 'd-flex flex-wrap align-items-center gap-2 entlassung-info-row',
+    children: [
+      createEl('span', { className: 'text-muted small', text: label }),
+      content,
+    ],
+  });
+
+const buildEntlassungBadge = (text, className = 'badge text-bg-light text-secondary') =>
+  createEl('span', { className, text });
+
+const buildEntlassungChildButton = ({
+  child,
+  isEntlassen,
+  isAbsent,
+  readOnly,
+}) => {
+  const statusBadge = isEntlassen
+    ? createEl('span', {
+        className: 'badge text-bg-light text-secondary entlassung-badge',
+        dataset: { role: 'entlassung-badge' },
+        text: 'Entlassen',
+      })
+    : null;
+  const absentBadge = isAbsent
+    ? createEl('span', {
+        className: 'badge text-bg-light text-secondary entlassung-absent-badge',
+        text: 'Abwesend',
+      })
+    : null;
+  return createEl('button', {
+    className:
+      `btn btn-sm rounded-pill d-inline-flex align-items-center gap-2 entlassung-child-button ${
+        isEntlassen ? 'btn-secondary' : 'btn-outline-secondary'
+      }`,
+    attrs: { type: 'button', disabled: readOnly || isAbsent ? 'true' : null },
+    dataset: {
+      role: 'entlassung-child',
+      child,
+      entlassen: isEntlassen ? 'true' : 'false',
+      absent: isAbsent ? 'true' : 'false',
+    },
+    children: [
+      createEl('span', { className: 'fw-semibold', text: child }),
+      statusBadge,
+      absentBadge,
+    ].filter(Boolean),
+  });
+};
+
+const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly }) => {
+  if (!slots.length) {
+    return [
+      createEl('p', {
+        className: 'text-muted small mb-0',
+        text: 'Keine Entlassungszeiten hinterlegt.',
+      }),
+    ];
+  }
+
+  return slots.map((slot) => {
+    const timeLabel = slot?.time || 'Ohne Uhrzeit';
+    const children = Array.isArray(slot?.children) ? slot.children : [];
+    const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+
+    if (children.length) {
+      children.forEach((child) => {
+        const isAbsent = absentSet.has(child);
+        const isEntlassen = statusSet.has(child) && !isAbsent;
+        childList.appendChild(
+          buildEntlassungChildButton({
+            child,
+            isEntlassen,
+            isAbsent,
+            readOnly,
+          }),
+        );
+      });
+    } else {
+      childList.appendChild(
+        createEl('span', {
+          className: 'text-muted small',
+          text: 'Noch keine Kinder zugeordnet.',
+        }),
+      );
+    }
+
+    return createEl('div', {
+      className: 'border rounded-3 p-2 d-flex flex-column gap-2 entlassung-slot',
+      children: [
+        createEl('div', {
+          className: 'd-flex align-items-center gap-2',
+          children: [
+            createEl('span', { className: 'text-muted small', text: 'Uhrzeit' }),
+            buildEntlassungBadge(timeLabel),
+          ],
+        }),
+        childList,
+      ],
+    });
+  });
+};
+
+export const buildMainTabsSection = ({ observationsSection, entlassungSection }) => {
+  const tabsId = 'main-tabs';
+  const observationsTabId = 'main-observations-tab';
+  const entlassungTabId = 'main-entlassung-tab';
+  const observationsPaneId = 'main-observations-pane';
+  const entlassungPaneId = 'main-entlassung-pane';
+
+  const tabList = createEl('ul', {
+    className: 'nav nav-tabs',
+    attrs: { id: tabsId, role: 'tablist' },
+    children: [
+      createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [
+          createEl('button', {
+            className: 'nav-link active',
+            attrs: {
+              id: observationsTabId,
+              type: 'button',
+              role: 'tab',
+              'data-bs-toggle': 'tab',
+              'data-bs-target': `#${observationsPaneId}`,
+              'aria-controls': observationsPaneId,
+              'aria-selected': 'true',
+            },
+            text: 'Beobachtungen und Abwesenheit',
+          }),
+        ],
+      }),
+      createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [
+          createEl('button', {
+            className: 'nav-link',
+            attrs: {
+              id: entlassungTabId,
+              type: 'button',
+              role: 'tab',
+              'data-bs-toggle': 'tab',
+              'data-bs-target': `#${entlassungPaneId}`,
+              'aria-controls': entlassungPaneId,
+              'aria-selected': 'false',
+            },
+            text: 'Entlassung',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const tabContent = createEl('div', {
+    className: 'tab-content',
+    children: [
+      createEl('div', {
+        className: 'tab-pane fade show active pt-3',
+        attrs: {
+          id: observationsPaneId,
+          role: 'tabpanel',
+          'aria-labelledby': observationsTabId,
+        },
+        children: [observationsSection],
+      }),
+      createEl('div', {
+        className: 'tab-pane fade pt-3',
+        attrs: {
+          id: entlassungPaneId,
+          role: 'tabpanel',
+          'aria-labelledby': entlassungTabId,
+        },
+        children: [entlassungSection],
+      }),
+    ],
+  });
+
+  return {
+    element: createEl('div', {
+      className: 'd-flex flex-column gap-2',
+      children: [tabList, tabContent],
+    }),
+  };
+};
+
+export const buildEntlassungSection = ({
+  entlassungLabel,
+  slots,
+  absentChildren,
+  statusSet,
+  readOnly = false,
+  freeDayInfo = null,
+}) => {
+  const section = createEl('section', {
+    className: 'card shadow-sm border-0 entlassung-panel',
+    dataset: { readonly: readOnly ? 'true' : 'false' },
+  });
+  const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
+  const header = createEl('div', {
+    className: 'd-flex flex-column gap-1',
+    children: [
+      createEl('div', { className: 'h6 mb-0', text: 'Entlassung' }),
+      createEl('p', {
+        className: 'small text-muted mb-0',
+        text: 'Tägliche Kontrolle basierend auf den Entlassungszeiten aus „Meine Klasse“.',
+      }),
+    ],
+  });
+  const meta = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const slotsWrapper = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const notice = createEl('div', { className: 'alert mb-0', hidden: true });
+
+  body.append(header, meta, notice, slotsWrapper);
+  section.appendChild(body);
+
+  const update = ({
+    nextLabel,
+    nextSlots,
+    nextAbsentChildren,
+    nextStatusSet,
+    nextReadOnly = false,
+    nextFreeDayInfo = null,
+  }) => {
+    section.dataset.readonly = nextReadOnly ? 'true' : 'false';
+    const safeSlots = Array.isArray(nextSlots) ? nextSlots : [];
+    const absentSet = new Set(nextAbsentChildren || []);
+    const status = nextStatusSet instanceof Set ? nextStatusSet : new Set();
+
+    const dayLabel = nextFreeDayInfo?.label || 'Schulfrei';
+    const dayBadge = nextReadOnly
+      ? buildEntlassungBadge(dayLabel, 'badge text-bg-success')
+      : buildEntlassungBadge('Schultag', 'badge text-bg-primary');
+
+    const typeBadge = buildEntlassungBadge(
+      nextLabel || 'Ordentliche Entlassung',
+      nextLabel === 'Sonderentlassung' ? 'badge text-bg-warning' : 'badge text-bg-secondary',
+    );
+
+    const absentContent = Array.from(absentSet).length
+      ? createEl('div', {
+          className: 'd-flex flex-wrap gap-2',
+          children: Array.from(absentSet)
+            .sort((a, b) => a.localeCompare(b, 'de'))
+            .map((child) => buildEntlassungBadge(child)),
+        })
+      : createEl('span', { className: 'text-muted small', text: 'Keine Abwesenheiten' });
+
+    meta.replaceChildren(
+      buildEntlassungInfoRow({
+        label: 'Entlassungstyp',
+        content: typeBadge,
+      }),
+      buildEntlassungInfoRow({
+        label: 'Tag',
+        content: dayBadge,
+      }),
+      buildEntlassungInfoRow({
+        label: 'Abwesend',
+        content: absentContent,
+      }),
+    );
+
+    if (nextReadOnly) {
+      notice.hidden = false;
+      notice.className = 'alert alert-success mb-0';
+      notice.textContent = `Keine Kontrolle möglich – ${dayLabel}`;
+    } else {
+      notice.hidden = true;
+    }
+
+    slotsWrapper.replaceChildren(
+      ...buildEntlassungSlots({
+        slots: safeSlots,
+        absentSet,
+        statusSet: status,
+        readOnly: nextReadOnly,
+      }),
+    );
+  };
+
+  update({
+    nextLabel: entlassungLabel,
+    nextSlots: slots,
+    nextAbsentChildren: absentChildren,
+    nextStatusSet: statusSet,
+    nextReadOnly: readOnly,
+    nextFreeDayInfo: freeDayInfo,
+  });
+
+  return {
+    element: section,
+    update,
+  };
+};
+
 export const buildObservationsSection = ({
   children,
   observations,
