@@ -564,6 +564,69 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   );
   deleteChildConfirmDialog.append(deleteChildConfirmPanel);
 
+  const entlassungConfirmDialog = createEl('div', {
+    className: 'class-settings-confirm d-none',
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'entlassung-confirm-title',
+      'aria-describedby': 'entlassung-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const entlassungConfirmPanel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const entlassungConfirmTitle = createEl('h4', {
+    className: 'h6 mb-2 text-danger',
+    attrs: { id: 'entlassung-confirm-title' },
+    text: 'Vorsicht',
+  });
+  const entlassungConfirmMessage = createEl('p', {
+    className: 'mb-2',
+    attrs: { id: 'entlassung-confirm-message' },
+    text: 'Möchtest du diese Entlassungszeit wirklich löschen?',
+  });
+  const entlassungConfirmLabel = createEl('p', {
+    className: 'fw-semibold mb-2 text-danger',
+  });
+  const entlassungConfirmInput = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      placeholder: 'ja',
+      'aria-label': 'Bestätigung',
+    },
+  });
+  const entlassungConfirmFeedback = createEl('div', {
+    className: 'text-danger small d-none',
+    text: 'Bitte "ja" eingeben, um zu bestätigen.',
+  });
+  const entlassungConfirmActions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+  });
+  const entlassungConfirmSubmit = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    text: 'Bestätigen',
+  });
+  const entlassungConfirmCancel = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    text: 'Abbrechen',
+  });
+  entlassungConfirmActions.append(entlassungConfirmSubmit, entlassungConfirmCancel);
+  entlassungConfirmPanel.append(
+    entlassungConfirmTitle,
+    entlassungConfirmMessage,
+    entlassungConfirmLabel,
+    entlassungConfirmInput,
+    entlassungConfirmFeedback,
+    entlassungConfirmActions,
+  );
+  entlassungConfirmDialog.append(entlassungConfirmPanel);
+
   const childDetailOverlay = createEl('div', {
     className: 'child-detail-overlay d-none',
     attrs: { 'aria-hidden': 'true' },
@@ -651,7 +714,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   );
   content.append(intro, accordion);
   panel.append(header, content);
-  overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog);
+  overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog, entlassungConfirmDialog);
 
   const updateProfileInputs = (nextProfile = {}) => {
     const nextName = typeof nextProfile.name === 'string' ? nextProfile.name : '';
@@ -706,6 +769,45 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     childFormErrors = [];
     renderChildFormErrors();
   };
+
+  let entlassungConfirmAction = null;
+  const closeEntlassungConfirm = () => {
+    entlassungConfirmDialog.classList.add('d-none');
+    entlassungConfirmDialog.setAttribute('aria-hidden', 'true');
+    entlassungConfirmInput.value = '';
+    entlassungConfirmFeedback.classList.add('d-none');
+    entlassungConfirmAction = null;
+  };
+
+  const openEntlassungConfirm = ({ label, time, onConfirm }) => {
+    const timeLabel = time || 'ohne Uhrzeit';
+    entlassungConfirmLabel.textContent = `${label} - ${timeLabel}`;
+    entlassungConfirmMessage.textContent =
+      `Möchtest du die Entlassungszeit ${label} - ${timeLabel} wirklich löschen? ` +
+      'Bitte "ja" eingeben, um zu bestätigen, oder Abbrechen wählen.';
+    entlassungConfirmInput.value = '';
+    entlassungConfirmFeedback.classList.add('d-none');
+    entlassungConfirmAction = onConfirm;
+    entlassungConfirmDialog.classList.remove('d-none');
+    entlassungConfirmDialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => {
+      entlassungConfirmInput?.focus();
+    });
+  };
+
+  entlassungConfirmCancel.addEventListener('click', () => closeEntlassungConfirm());
+  entlassungConfirmSubmit.addEventListener('click', () => {
+    const value = entlassungConfirmInput.value.trim().toLowerCase();
+    if (value !== 'ja') {
+      entlassungConfirmFeedback.classList.remove('d-none');
+      entlassungConfirmInput?.focus();
+      return;
+    }
+    entlassungConfirmFeedback.classList.add('d-none');
+    const action = entlassungConfirmAction;
+    closeEntlassungConfirm();
+    action?.();
+  });
 
   const getExistingNames = (excludeId = '') =>
     rows
@@ -985,10 +1087,16 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         });
 
         removeButton.addEventListener('click', () => {
-          daySlots.splice(index, 1);
-          entlassungState.regular[key] = daySlots;
-          persistEntlassung();
-          renderEntlassung();
+          openEntlassungConfirm({
+            label,
+            time: slot.time,
+            onConfirm: () => {
+              daySlots.splice(index, 1);
+              entlassungState.regular[key] = daySlots;
+              persistEntlassung();
+              renderEntlassung();
+            },
+          });
         });
 
         slotWrapper.append(timeRow, childList);
@@ -1164,10 +1272,17 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         });
 
         removeButton.addEventListener('click', () => {
-          entrySlots.splice(index, 1);
-          entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
-          persistEntlassung();
-          renderEntlassung();
+          const dateLabel = dateValue || 'ohne Datum';
+          openEntlassungConfirm({
+            label: `Sonderentlassung ${dateLabel}`,
+            time: slot.time,
+            onConfirm: () => {
+              entrySlots.splice(index, 1);
+              entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+              persistEntlassung();
+              renderEntlassung();
+            },
+          });
         });
 
         slotWrapper.append(timeRow, childList);
