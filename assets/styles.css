@@ -1415,19 +1415,24 @@ body.child-detail-overlay-open {
 }
 
 .observation-edit-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   border-radius: 999px;
-  border: 2px solid var(--group-color);
-  color: var(--group-color);
+  border: 1px solid #d1d5db;
+  color: #4b5563;
   font-weight: 600;
   padding: 0.5rem 0.85rem;
   min-height: 44px;
   flex: 1 1 200px;
   text-align: left;
+  background: #fff;
 }
 
 .observation-edit-group-toggle.active {
-  background-color: var(--group-color);
-  color: #fff;
+  background-color: #eef2f7;
+  border-color: #9ca3af;
+  color: #1f2937;
 }
 
 .observation-templates__filters-shell {
@@ -1497,19 +1502,34 @@ body.child-detail-overlay-open {
 }
 
 .observation-create-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   border-radius: 999px;
-  border: 2px solid var(--group-color);
-  color: var(--group-color);
+  border: 1px solid #d1d5db;
+  color: #4b5563;
   font-weight: 600;
   padding: 0.5rem 0.85rem;
   min-height: 44px;
   flex: 1 1 200px;
   text-align: left;
+  background: #fff;
 }
 
 .observation-create-group-toggle.active {
-  background-color: var(--group-color);
-  color: #fff;
+  background-color: #eef2f7;
+  border-color: #9ca3af;
+  color: #1f2937;
+}
+
+.observation-edit-group-toggle::before,
+.observation-create-group-toggle::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--group-color);
+  flex: 0 0 auto;
 }
 
 .observation-templates__group-mode {
