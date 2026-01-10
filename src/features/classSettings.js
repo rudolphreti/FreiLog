@@ -956,6 +956,23 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }, 2500);
   };
 
+  const sortEntlassungSlots = (slots) => {
+    slots.sort((a, b) => {
+      const timeA = typeof a?.time === 'string' ? a.time : '';
+      const timeB = typeof b?.time === 'string' ? b.time : '';
+      if (!timeA && !timeB) {
+        return 0;
+      }
+      if (!timeA) {
+        return 1;
+      }
+      if (!timeB) {
+        return -1;
+      }
+      return timeA.localeCompare(timeB);
+    });
+  };
+
   const renderEntlassung = () => {
     const childrenList = getAvailableChildren();
     entlassungState = ensureEntlassungStructure(entlassungState);
@@ -967,6 +984,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       const daySlots = Array.isArray(entlassungState.regular?.[key])
         ? entlassungState.regular[key]
         : [];
+      sortEntlassungSlots(daySlots);
       const assignedMap = new Map();
       daySlots.forEach((slot, index) => {
         (slot?.children || []).forEach((child) => {
@@ -1051,12 +1069,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setRegularError(key, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
+            const currentIndex = daySlots.indexOf(slot);
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
               daySlots.forEach((otherSlot, otherIndex) => {
-                if (otherIndex === index || !Array.isArray(otherSlot?.children)) {
+                if (otherIndex === currentIndex || !Array.isArray(otherSlot?.children)) {
                   return;
                 }
                 otherSlot.children = otherSlot.children.filter((name) => name !== child);
@@ -1081,6 +1100,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             return;
           }
           slot.time = nextValue;
+          sortEntlassungSlots(daySlots);
           entlassungState.regular[key] = daySlots;
           persistEntlassung();
           renderEntlassung();
@@ -1091,7 +1111,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             label,
             time: slot.time,
             onConfirm: () => {
-              daySlots.splice(index, 1);
+              const currentIndex = daySlots.indexOf(slot);
+              if (currentIndex !== -1) {
+                daySlots.splice(currentIndex, 1);
+              }
               entlassungState.regular[key] = daySlots;
               persistEntlassung();
               renderEntlassung();
@@ -1147,6 +1170,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     entlassungState.special.forEach((entry, entryIndex) => {
       const dateValue = typeof entry?.date === 'string' ? entry.date : '';
       const entrySlots = Array.isArray(entry?.times) ? entry.times : [];
+      sortEntlassungSlots(entrySlots);
       const assignedMap = new Map();
       entrySlots.forEach((slot, index) => {
         (slot?.children || []).forEach((child) => {
@@ -1236,12 +1260,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setSpecialError(dateValue, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
+            const currentIndex = entrySlots.indexOf(slot);
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
               entrySlots.forEach((otherSlot, otherIndex) => {
-                if (otherIndex === index || !Array.isArray(otherSlot?.children)) {
+                if (otherIndex === currentIndex || !Array.isArray(otherSlot?.children)) {
                   return;
                 }
                 otherSlot.children = otherSlot.children.filter((name) => name !== child);
@@ -1266,6 +1291,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             return;
           }
           slot.time = nextValue;
+          sortEntlassungSlots(entrySlots);
           entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
           persistEntlassung();
           renderEntlassung();
@@ -1277,7 +1303,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             label: `Sonderentlassung ${dateLabel}`,
             time: slot.time,
             onConfirm: () => {
-              entrySlots.splice(index, 1);
+              const currentIndex = entrySlots.indexOf(slot);
+              if (currentIndex !== -1) {
+                entrySlots.splice(currentIndex, 1);
+              }
               entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
               persistEntlassung();
               renderEntlassung();
