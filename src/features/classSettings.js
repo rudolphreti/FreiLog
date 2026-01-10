@@ -352,7 +352,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     accordionId,
   });
 
-  const cautionContent = createEl('div', {
+  const entlassungContent = createEl('div', {
     className: 'd-flex flex-column gap-2',
   });
 
@@ -509,7 +509,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       }),
     ],
   });
-  cautionContent.append(entlassungCard, deleteChildCard);
+  entlassungContent.append(entlassungCard);
+  const cautionContent = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    children: [deleteChildCard],
+  });
 
   const deleteChildConfirmDialog = createEl('div', {
     className: 'class-settings-confirm d-none',
@@ -559,6 +563,69 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     deleteChildConfirmActions,
   );
   deleteChildConfirmDialog.append(deleteChildConfirmPanel);
+
+  const entlassungConfirmDialog = createEl('div', {
+    className: 'class-settings-confirm d-none',
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'entlassung-confirm-title',
+      'aria-describedby': 'entlassung-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const entlassungConfirmPanel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const entlassungConfirmTitle = createEl('h4', {
+    className: 'h6 mb-2 text-danger',
+    attrs: { id: 'entlassung-confirm-title' },
+    text: 'Vorsicht',
+  });
+  const entlassungConfirmMessage = createEl('p', {
+    className: 'mb-2',
+    attrs: { id: 'entlassung-confirm-message' },
+    text: 'Möchtest du diese Entlassungszeit wirklich löschen?',
+  });
+  const entlassungConfirmLabel = createEl('p', {
+    className: 'fw-semibold mb-2 text-danger',
+  });
+  const entlassungConfirmInput = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      type: 'text',
+      placeholder: 'ja',
+      'aria-label': 'Bestätigung',
+    },
+  });
+  const entlassungConfirmFeedback = createEl('div', {
+    className: 'text-danger small d-none',
+    text: 'Bitte "ja" eingeben, um zu bestätigen.',
+  });
+  const entlassungConfirmActions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+  });
+  const entlassungConfirmSubmit = createEl('button', {
+    className: 'btn btn-danger',
+    attrs: { type: 'button' },
+    text: 'Bestätigen',
+  });
+  const entlassungConfirmCancel = createEl('button', {
+    className: 'btn btn-outline-secondary',
+    attrs: { type: 'button' },
+    text: 'Abbrechen',
+  });
+  entlassungConfirmActions.append(entlassungConfirmSubmit, entlassungConfirmCancel);
+  entlassungConfirmPanel.append(
+    entlassungConfirmTitle,
+    entlassungConfirmMessage,
+    entlassungConfirmLabel,
+    entlassungConfirmInput,
+    entlassungConfirmFeedback,
+    entlassungConfirmActions,
+  );
+  entlassungConfirmDialog.append(entlassungConfirmPanel);
 
   const childDetailOverlay = createEl('div', {
     className: 'child-detail-overlay d-none',
@@ -632,10 +699,22 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     accordionId,
   });
 
-  accordion.append(generalItem.element, childrenItem.element, cautionItem.element);
+  const entlassungItem = buildAccordionItem({
+    id: 'class-entlassung',
+    title: 'Entlassung',
+    content: entlassungContent,
+    accordionId,
+  });
+
+  accordion.append(
+    generalItem.element,
+    childrenItem.element,
+    entlassungItem.element,
+    cautionItem.element,
+  );
   content.append(intro, accordion);
   panel.append(header, content);
-  overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog);
+  overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog, entlassungConfirmDialog);
 
   const updateProfileInputs = (nextProfile = {}) => {
     const nextName = typeof nextProfile.name === 'string' ? nextProfile.name : '';
@@ -690,6 +769,45 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     childFormErrors = [];
     renderChildFormErrors();
   };
+
+  let entlassungConfirmAction = null;
+  const closeEntlassungConfirm = () => {
+    entlassungConfirmDialog.classList.add('d-none');
+    entlassungConfirmDialog.setAttribute('aria-hidden', 'true');
+    entlassungConfirmInput.value = '';
+    entlassungConfirmFeedback.classList.add('d-none');
+    entlassungConfirmAction = null;
+  };
+
+  const openEntlassungConfirm = ({ label, time, onConfirm }) => {
+    const timeLabel = time || 'ohne Uhrzeit';
+    entlassungConfirmLabel.textContent = `${label} - ${timeLabel}`;
+    entlassungConfirmMessage.textContent =
+      `Möchtest du die Entlassungszeit ${label} - ${timeLabel} wirklich löschen? ` +
+      'Bitte "ja" eingeben, um zu bestätigen, oder Abbrechen wählen.';
+    entlassungConfirmInput.value = '';
+    entlassungConfirmFeedback.classList.add('d-none');
+    entlassungConfirmAction = onConfirm;
+    entlassungConfirmDialog.classList.remove('d-none');
+    entlassungConfirmDialog.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => {
+      entlassungConfirmInput?.focus();
+    });
+  };
+
+  entlassungConfirmCancel.addEventListener('click', () => closeEntlassungConfirm());
+  entlassungConfirmSubmit.addEventListener('click', () => {
+    const value = entlassungConfirmInput.value.trim().toLowerCase();
+    if (value !== 'ja') {
+      entlassungConfirmFeedback.classList.remove('d-none');
+      entlassungConfirmInput?.focus();
+      return;
+    }
+    entlassungConfirmFeedback.classList.add('d-none');
+    const action = entlassungConfirmAction;
+    closeEntlassungConfirm();
+    action?.();
+  });
 
   const getExistingNames = (excludeId = '') =>
     rows
@@ -838,6 +956,23 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }, 2500);
   };
 
+  const sortEntlassungSlots = (slots) => {
+    slots.sort((a, b) => {
+      const timeA = typeof a?.time === 'string' ? a.time : '';
+      const timeB = typeof b?.time === 'string' ? b.time : '';
+      if (!timeA && !timeB) {
+        return 0;
+      }
+      if (!timeA) {
+        return 1;
+      }
+      if (!timeB) {
+        return -1;
+      }
+      return timeA.localeCompare(timeB);
+    });
+  };
+
   const renderEntlassung = () => {
     const childrenList = getAvailableChildren();
     entlassungState = ensureEntlassungStructure(entlassungState);
@@ -849,6 +984,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       const daySlots = Array.isArray(entlassungState.regular?.[key])
         ? entlassungState.regular[key]
         : [];
+      sortEntlassungSlots(daySlots);
       const assignedMap = new Map();
       daySlots.forEach((slot, index) => {
         (slot?.children || []).forEach((child) => {
@@ -920,10 +1056,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
           const assignedElsewhere =
             assignedMap.has(child) && assignedMap.get(child) !== index;
+          if (assignedElsewhere && !isSelected) {
+            return;
+          }
           const childButton = createEl('button', {
-            className: `btn btn-sm ${
-              isSelected ? 'btn-primary' : 'btn-outline-secondary'
-            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
             attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
             text: child,
           });
@@ -932,14 +1069,17 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setRegularError(key, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
-            if (assignedElsewhere && !isSelected) {
-              setRegularError(key, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
-              return;
-            }
+            const currentIndex = daySlots.indexOf(slot);
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
+              daySlots.forEach((otherSlot, otherIndex) => {
+                if (otherIndex === currentIndex || !Array.isArray(otherSlot?.children)) {
+                  return;
+                }
+                otherSlot.children = otherSlot.children.filter((name) => name !== child);
+              });
               slot.children = [...nextChildren, child];
             }
             entlassungState.regular[key] = daySlots;
@@ -960,16 +1100,26 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             return;
           }
           slot.time = nextValue;
+          sortEntlassungSlots(daySlots);
           entlassungState.regular[key] = daySlots;
           persistEntlassung();
           renderEntlassung();
         });
 
         removeButton.addEventListener('click', () => {
-          daySlots.splice(index, 1);
-          entlassungState.regular[key] = daySlots;
-          persistEntlassung();
-          renderEntlassung();
+          openEntlassungConfirm({
+            label,
+            time: slot.time,
+            onConfirm: () => {
+              const currentIndex = daySlots.indexOf(slot);
+              if (currentIndex !== -1) {
+                daySlots.splice(currentIndex, 1);
+              }
+              entlassungState.regular[key] = daySlots;
+              persistEntlassung();
+              renderEntlassung();
+            },
+          });
         });
 
         slotWrapper.append(timeRow, childList);
@@ -1020,6 +1170,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     entlassungState.special.forEach((entry, entryIndex) => {
       const dateValue = typeof entry?.date === 'string' ? entry.date : '';
       const entrySlots = Array.isArray(entry?.times) ? entry.times : [];
+      sortEntlassungSlots(entrySlots);
       const assignedMap = new Map();
       entrySlots.forEach((slot, index) => {
         (slot?.children || []).forEach((child) => {
@@ -1096,10 +1247,11 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
           const assignedElsewhere =
             assignedMap.has(child) && assignedMap.get(child) !== index;
+          if (assignedElsewhere && !isSelected) {
+            return;
+          }
           const childButton = createEl('button', {
-            className: `btn btn-sm ${
-              isSelected ? 'btn-primary' : 'btn-outline-secondary'
-            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
             attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
             text: child,
           });
@@ -1108,14 +1260,17 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
               setSpecialError(dateValue, 'Bitte zuerst eine Uhrzeit festlegen.');
               return;
             }
-            if (assignedElsewhere && !isSelected) {
-              setSpecialError(dateValue, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
-              return;
-            }
+            const currentIndex = entrySlots.indexOf(slot);
             const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
             if (isSelected) {
               slot.children = nextChildren.filter((name) => name !== child);
             } else {
+              entrySlots.forEach((otherSlot, otherIndex) => {
+                if (otherIndex === currentIndex || !Array.isArray(otherSlot?.children)) {
+                  return;
+                }
+                otherSlot.children = otherSlot.children.filter((name) => name !== child);
+              });
               slot.children = [...nextChildren, child];
             }
             entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
@@ -1136,16 +1291,27 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             return;
           }
           slot.time = nextValue;
+          sortEntlassungSlots(entrySlots);
           entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
           persistEntlassung();
           renderEntlassung();
         });
 
         removeButton.addEventListener('click', () => {
-          entrySlots.splice(index, 1);
-          entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
-          persistEntlassung();
-          renderEntlassung();
+          const dateLabel = dateValue || 'ohne Datum';
+          openEntlassungConfirm({
+            label: `Sonderentlassung ${dateLabel}`,
+            time: slot.time,
+            onConfirm: () => {
+              const currentIndex = entrySlots.indexOf(slot);
+              if (currentIndex !== -1) {
+                entrySlots.splice(currentIndex, 1);
+              }
+              entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+              persistEntlassung();
+              renderEntlassung();
+            },
+          });
         });
 
         slotWrapper.append(timeRow, childList);
