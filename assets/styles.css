@@ -527,6 +527,16 @@ body {
   flex: 1 1 220px;
 }
 
+.weekly-table__type-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weekly-table__type-option {
+  margin: 0;
+}
+
 .weekly-table__container {
   background: transparent;
   border: 0;
@@ -792,6 +802,20 @@ body.child-detail-overlay-open {
 
 .weekly-table__toggle {
   align-self: flex-start;
+}
+
+.weekly-table__week-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.weekly-table__week-group + .weekly-table__week-group {
+  margin-top: 1rem;
+}
+
+.weekly-table__week-heading {
+  font-size: 0.95rem;
 }
 
 .weekly-table thead th {
