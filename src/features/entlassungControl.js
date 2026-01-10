@@ -1,6 +1,15 @@
-import { todayYmd } from '../utils/date.js';
-
 const STORAGE_KEY = 'freilog.entlassungStatus';
+
+const getExpirationTimestamp = (ymd) => {
+  if (!ymd || typeof ymd !== 'string') {
+    return null;
+  }
+  const expiration = new Date(`${ymd}T23:59:59.999`);
+  if (Number.isNaN(expiration.getTime())) {
+    return null;
+  }
+  return expiration.getTime();
+};
 
 const getStorage = () => {
   if (typeof localStorage === 'undefined') {
@@ -24,17 +33,24 @@ const setStorage = (payload) => {
   if (typeof localStorage === 'undefined') {
     return;
   }
+  if (!payload) {
+    localStorage.removeItem(STORAGE_KEY);
+    return;
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 };
 
 export const getEntlassungStatus = (selectedDate) => {
-  const today = todayYmd();
-  if (selectedDate !== today) {
+  const stored = getStorage();
+  if (!stored || stored.date !== selectedDate || !Array.isArray(stored.children)) {
     return new Set();
   }
 
-  const stored = getStorage();
-  if (!stored || stored.date !== today || !Array.isArray(stored.children)) {
+  const expiresAt = Number.isFinite(stored.expiresAt)
+    ? stored.expiresAt
+    : getExpirationTimestamp(stored.date);
+  if (!expiresAt || Date.now() > expiresAt) {
+    setStorage(null);
     return new Set();
   }
 
@@ -42,8 +58,7 @@ export const getEntlassungStatus = (selectedDate) => {
 };
 
 export const toggleEntlassungStatus = (selectedDate, child) => {
-  const today = todayYmd();
-  if (selectedDate !== today || !child) {
+  if (!child) {
     return getEntlassungStatus(selectedDate);
   }
 
@@ -54,9 +69,11 @@ export const toggleEntlassungStatus = (selectedDate, child) => {
     next.add(child);
   }
 
+  const expiresAt = getExpirationTimestamp(selectedDate);
   setStorage({
-    date: today,
+    date: selectedDate,
     children: Array.from(next).sort((a, b) => a.localeCompare(b, 'de')),
+    expiresAt,
   });
 
   return next;
