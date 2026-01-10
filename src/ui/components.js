@@ -423,6 +423,12 @@ export const buildAngebotSection = ({
       createEl('span', { text: `${UI_LABELS.angebotToday}...` }),
     ],
   });
+  const manageButton = createEl('button', {
+    className: 'btn btn-outline-secondary d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    dataset: { role: 'angebot-manage-open' },
+    children: [createEl('span', { text: '🛠️' }), createEl('span', { text: 'Verwalten...' })],
+  });
 
   const infoTitle = createEl('p', {
     className: 'text-muted small mb-1',
@@ -484,7 +490,7 @@ export const buildAngebotSection = ({
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [openButton, infoTitle, modulesContainer],
+    children: [openButton, manageButton, infoTitle, modulesContainer],
   });
 
   if (readOnly) {
@@ -496,6 +502,7 @@ export const buildAngebotSection = ({
     refs: {
       selectedList: modulesContainer,
       openButton,
+      manageButton,
     },
   };
 };
@@ -619,7 +626,17 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
   };
 };
 
-export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
+export const buildAngebotCatalogOverlay = ({
+  angebotGroups,
+  savedFilters,
+  title = UI_LABELS.angebotCatalog,
+  role = 'angebot-catalog-overlay',
+  closeRole = 'angebot-catalog-close',
+  searchAriaLabel = `${UI_LABELS.angebotCatalog} durchsuchen`,
+  showCreateButton = false,
+  createButtonLabel = UI_LABELS.angebotCreate,
+  createButtonRole = 'angebot-create-open',
+}) => {
   const normalizedSavedFilters = normalizeSavedAngebotFilters(
     savedFilters || DEFAULT_SAVED_ANGEBOT_FILTERS,
   );
@@ -630,7 +647,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   const overlay = createEl('div', {
     className: 'angebot-catalog-overlay observation-templates-overlay',
     dataset: {
-      role: 'angebot-catalog-overlay',
+      role,
       angebotFilter: normalizedSavedFilters.selectedLetter || 'ALL',
       angebotQuery: '',
       angebotGroups: normalizedSelectedGroups.join(','),
@@ -650,16 +667,30 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
-  const title = createEl('h3', {
+  const titleEl = createEl('h3', {
     className: 'h5 mb-0',
-    text: UI_LABELS.angebotCatalog,
+    text: title,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
-    dataset: { role: 'angebot-catalog-close' },
+    dataset: { role: closeRole },
   });
-  header.append(title, closeButton);
+  const headerActions = createEl('div', {
+    className: 'd-flex align-items-center gap-2',
+  });
+  if (showCreateButton) {
+    headerActions.append(
+      createEl('button', {
+        className: 'btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2',
+        attrs: { type: 'button' },
+        dataset: { role: createButtonRole },
+        children: [createEl('span', { text: '＋' }), createEl('span', { text: createButtonLabel })],
+      }),
+    );
+  }
+  headerActions.append(closeButton);
+  header.append(titleEl, headerActions);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
@@ -752,7 +783,7 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
       type: 'search',
       placeholder: 'Suchen...',
       autocomplete: 'off',
-      'aria-label': `${UI_LABELS.angebotCatalog} durchsuchen`,
+      'aria-label': searchAriaLabel,
     },
     dataset: { role: 'angebot-search' },
   });
@@ -859,6 +890,152 @@ export const buildAngebotCatalogOverlay = ({ angebotGroups, savedFilters }) => {
       groupModeToggle,
     },
   };
+};
+
+export const buildAngebotDetailOverlay = () => {
+  const overlay = createEl('div', {
+    className: 'angebot-detail-overlay observation-create-overlay',
+    dataset: { role: 'angebot-detail-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const panel = createEl('div', {
+    className: 'observation-create-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-create-overlay__header',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Angebot',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-create-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'angebot-detail-close' },
+  });
+  header.append(title, closeButton);
+
+  const previewDots = createEl('span', {
+    className: 'observation-group-dots',
+    dataset: { role: 'angebot-detail-dots' },
+  });
+  const previewText = createEl('span', {
+    dataset: { role: 'angebot-detail-text' },
+  });
+  const previewPill = createEl('span', {
+    className:
+      'badge rounded-pill text-bg-secondary d-inline-flex align-items-center tag-badge observation-pill',
+    children: [previewDots, previewText],
+  });
+
+  const groupsTitle = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Gruppen',
+  });
+  const groupsList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    dataset: { role: 'angebot-detail-groups' },
+  });
+  const groupsEmpty = createEl('p', {
+    className: 'text-muted small mb-0',
+    text: 'Keine Gruppen zugeordnet.',
+    dataset: { role: 'angebot-detail-groups-empty' },
+  });
+
+  const actions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2',
+    children: [
+      createEl('button', {
+        className: 'btn btn-outline-primary',
+        text: 'Bearbeiten',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-detail-edit' },
+      }),
+      createEl('button', {
+        className: 'btn btn-danger',
+        text: 'Löschen',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-detail-delete' },
+      }),
+    ],
+  });
+
+  const content = createEl('div', {
+    className: 'observation-create-overlay__content d-flex flex-column gap-3',
+    children: [previewPill, groupsTitle, groupsList, groupsEmpty, actions],
+  });
+
+  panel.append(header, content);
+  overlay.appendChild(panel);
+
+  return {
+    element: overlay,
+  };
+};
+
+export const buildAngebotDeleteConfirm = () => {
+  const overlay = createEl('div', {
+    className: 'class-settings-confirm angebot-delete-confirm d-none',
+    dataset: { role: 'angebot-delete-confirm-overlay' },
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'angebot-delete-confirm-title',
+      'aria-describedby': 'angebot-delete-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const panel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-2',
+    attrs: { id: 'angebot-delete-confirm-title' },
+    text: 'Angebot löschen?',
+  });
+  const message = createEl('p', {
+    className: 'text-muted mb-3',
+    attrs: { id: 'angebot-delete-confirm-message' },
+    text: '',
+    dataset: { role: 'angebot-delete-confirm-message' },
+  });
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Bestätigung',
+    attrs: { for: 'angebot-delete-confirm-input' },
+  });
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      id: 'angebot-delete-confirm-input',
+      type: 'text',
+      autocomplete: 'off',
+      placeholder: 'ja',
+    },
+    dataset: { role: 'angebot-delete-confirm-input' },
+  });
+  const actions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+    children: [
+      createEl('button', {
+        className: 'btn btn-danger',
+        text: 'Angebot löschen',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-delete-confirm' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'angebot-delete-cancel' },
+      }),
+    ],
+  });
+  panel.append(title, message, inputLabel, input, actions);
+  overlay.appendChild(panel);
+  return { element: overlay };
 };
 
 export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
@@ -993,7 +1170,7 @@ export const buildAngebotCreateOverlay = ({ angebotGroups }) => {
 
 export const buildAngebotEditOverlay = ({ angebotGroups }) => {
   const overlay = createEl('div', {
-    className: 'angebot-edit-overlay observation-edit-overlay',
+    className: 'angebot-edit-overlay observation-edit-overlay angebot-edit-overlay--global',
     dataset: { role: 'angebot-edit-overlay' },
     attrs: { 'aria-hidden': 'true' },
   });

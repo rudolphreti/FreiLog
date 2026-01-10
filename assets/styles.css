@@ -629,6 +629,10 @@ body {
   backdrop-filter: blur(1px);
 }
 
+.class-settings-confirm.angebot-delete-confirm {
+  z-index: 2030;
+}
+
 .class-settings-confirm__panel {
   background: #ffffff;
   border-radius: 12px;
@@ -1360,6 +1364,11 @@ body.child-detail-overlay-open {
   pointer-events: none;
   transition: opacity 0.2s ease;
   z-index: 5;
+}
+
+.angebot-edit-overlay--global {
+  position: fixed;
+  z-index: 2020;
 }
 
 .observation-edit-overlay.is-open {

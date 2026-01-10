@@ -10,10 +10,13 @@ import {
   buildAngebotCatalogOverlay,
   buildAngebotCreateOverlay,
   buildAngebotEditOverlay,
+  buildAngebotDetailOverlay,
+  buildAngebotDeleteConfirm,
   buildMainTabsSection,
   buildEntlassungSection,
   buildObservationsSection,
 } from './components.js';
+import { UI_LABELS } from './labels.js';
 import { normalizeEntlassung } from '../db/dbSchema.js';
 import { getTimetableDayKey } from '../utils/angebotModules.js';
 import { bindDateEntry } from '../features/dateEntry.js';
@@ -155,6 +158,9 @@ let angebotCatalogView = null;
 let angebotCatalogBinding = null;
 let angebotCreateOverlay = null;
 let angebotEditOverlay = null;
+let angebotManageOverlayView = null;
+let angebotDetailOverlayView = null;
+let angebotDeleteConfirmView = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -303,11 +309,30 @@ export const renderApp = (root, state) => {
       savedFilters: savedAngebotFilters,
     });
   }
+  if (!angebotManageOverlayView) {
+    angebotManageOverlayView = buildAngebotCatalogOverlay({
+      angebotGroups,
+      savedFilters: savedAngebotFilters,
+      title: UI_LABELS.angebotManage,
+      role: 'angebot-manage-overlay',
+      closeRole: 'angebot-manage-close',
+      searchAriaLabel: `${UI_LABELS.angebotManage} durchsuchen`,
+      showCreateButton: true,
+      createButtonLabel: UI_LABELS.angebotCreate,
+      createButtonRole: 'angebot-manage-create-open',
+    });
+  }
   if (!angebotCreateOverlay) {
     angebotCreateOverlay = buildAngebotCreateOverlay({ angebotGroups });
   }
   if (!angebotEditOverlay) {
     angebotEditOverlay = buildAngebotEditOverlay({ angebotGroups });
+  }
+  if (!angebotDetailOverlayView) {
+    angebotDetailOverlayView = buildAngebotDetailOverlay();
+  }
+  if (!angebotDeleteConfirmView) {
+    angebotDeleteConfirmView = buildAngebotDeleteConfirm();
   }
   if (!weeklyTableViewBinding) {
     weeklyTableViewBinding = createWeeklyTableView({
@@ -404,8 +429,11 @@ export const renderApp = (root, state) => {
       timetableSettingsView.element,
       angebotOverlayView.element,
       angebotCatalogView.element,
+      angebotManageOverlayView.element,
       angebotCreateOverlay.element,
       angebotEditOverlay.element,
+      angebotDetailOverlayView.element,
+      angebotDeleteConfirmView.element,
     );
     root.appendChild(container);
 
@@ -460,10 +488,14 @@ export const renderApp = (root, state) => {
     });
     angebotCatalogBinding = bindAngebotCatalog({
       openButton: angebotSection.refs.openButton,
+      manageOpenButton: angebotSection.refs.manageButton,
       overlay: angebotOverlayView.element,
       catalogOverlay: angebotCatalogView.element,
+      manageOverlay: angebotManageOverlayView.element,
       createOverlay: angebotCreateOverlay.element,
       editOverlay: angebotEditOverlay.element,
+      detailOverlay: angebotDetailOverlayView.element,
+      deleteConfirmOverlay: angebotDeleteConfirmView.element,
       date: selectedDate,
       angebotGroups,
       selectedAngebote,
@@ -559,6 +591,7 @@ export const renderApp = (root, state) => {
       savedFilters: savedAngebotFilters,
       readOnly: isReadOnlyDay,
       openButton: angebotSection.refs.openButton,
+      manageOpenButton: angebotSection.refs.manageButton,
     });
   }
 

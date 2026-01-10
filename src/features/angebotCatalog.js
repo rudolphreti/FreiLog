@@ -2,6 +2,7 @@ import {
   addPreset,
   getAngebotCatalog,
   getEntry,
+  removeAngebotCatalogEntry,
   updateAngebotCatalogEntry,
   updateEntry,
   upsertAngebotCatalogEntry,
@@ -537,12 +538,31 @@ const persistFilters = debounce((overlay) => {
 const normalizeCatalog = (catalog) =>
   Array.isArray(catalog) ? catalog : Array.isArray(getAngebotCatalog()) ? getAngebotCatalog() : [];
 
+const closeDrawerIfOpen = () => {
+  const drawerEl = document.getElementById('mainDrawer');
+  if (!drawerEl || !drawerEl.classList.contains('show')) {
+    return;
+  }
+  const closeButton = drawerEl.querySelector('[data-bs-dismiss="offcanvas"]');
+  if (closeButton instanceof HTMLElement) {
+    closeButton.click();
+  }
+  drawerEl.classList.remove('show');
+  drawerEl.setAttribute('aria-hidden', 'true');
+  const backdrop = document.querySelector('.offcanvas-backdrop');
+  backdrop?.parentElement?.removeChild(backdrop);
+};
+
 export const bindAngebotCatalog = ({
   openButton,
+  manageOpenButton,
   overlay,
   catalogOverlay,
+  manageOverlay,
   createOverlay,
   editOverlay,
+  detailOverlay,
+  deleteConfirmOverlay,
   date,
   angebotGroups,
   selectedAngebote,
@@ -573,6 +593,12 @@ export const bindAngebotCatalog = ({
   let longPressTimer = null;
   let suppressClick = false;
   let openButtonRef = openButton || null;
+  let manageOpenButtonRef = manageOpenButton || null;
+  let manageOverlayRef = manageOverlay || null;
+  let detailOverlayRef = detailOverlay || null;
+  let deleteConfirmRef = deleteConfirmOverlay || null;
+  let detailOffer = null;
+  let createContext = 'day';
 
   const getActiveModuleId = () => {
     const active = overlay.dataset.activeModule;
@@ -608,21 +634,6 @@ export const bindAngebotCatalog = ({
     return '';
   };
 
-  const closeDrawerIfOpen = () => {
-    const drawerEl = document.getElementById('mainDrawer');
-    if (!drawerEl || !drawerEl.classList.contains('show')) {
-      return;
-    }
-    const closeButton = drawerEl.querySelector('[data-bs-dismiss="offcanvas"]');
-    if (closeButton instanceof HTMLElement) {
-      closeButton.click();
-    }
-    drawerEl.classList.remove('show');
-    drawerEl.setAttribute('aria-hidden', 'true');
-    const backdrop = document.querySelector('.offcanvas-backdrop');
-    backdrop?.parentElement?.removeChild(backdrop);
-  };
-
   setFilterState(catalogOverlay, {
     filter: savedFilters?.selectedLetter || 'ALL',
     groups: normalizeAngebotGroups(savedFilters?.selectedGroups || []).join(','),
@@ -631,8 +642,35 @@ export const bindAngebotCatalog = ({
     showAndOr: savedFilters?.showAndOr !== false,
     showAlphabet: savedFilters?.showAlphabet === true,
   });
+  if (manageOverlayRef) {
+    setFilterState(manageOverlayRef, {
+      filter: savedFilters?.selectedLetter || 'ALL',
+      groups: normalizeAngebotGroups(savedFilters?.selectedGroups || []).join(','),
+      groupMode: savedFilters?.andOrMode === 'OR' ? 'OR' : 'AND',
+      multi: savedFilters?.multiGroups === true,
+      showAndOr: savedFilters?.showAndOr !== false,
+      showAlphabet: savedFilters?.showAlphabet === true,
+    });
+  }
 
   const getGroupMap = () => buildAngebotCatalogGroupMap(currentCatalog);
+  const getCatalogEntryByLabel = (label) => {
+    const normalized = normalizeAngebotText(label);
+    const key = normalizeAngebotKey(normalized);
+    if (!key) {
+      return null;
+    }
+    const entry = currentCatalog.find(
+      (item) => normalizeAngebotKey(item?.text || item || '') === key,
+    );
+    const groups = normalizeAngebotGroups(
+      entry && typeof entry === 'object' ? entry.groups : getGroupMap().get(key) || [],
+    );
+    return {
+      text: normalized,
+      groups,
+    };
+  };
 
   const setOpenButton = (button) => {
     if (openButtonRef && openButtonRef instanceof HTMLElement) {
@@ -641,6 +679,15 @@ export const bindAngebotCatalog = ({
     openButtonRef = button || null;
     if (openButtonRef && openButtonRef instanceof HTMLElement) {
       openButtonRef.addEventListener('click', handleOpen);
+    }
+  };
+  const setManageOpenButton = (button) => {
+    if (manageOpenButtonRef && manageOpenButtonRef instanceof HTMLElement) {
+      manageOpenButtonRef.removeEventListener('click', handleManageOpen);
+    }
+    manageOpenButtonRef = button || null;
+    if (manageOpenButtonRef && manageOpenButtonRef instanceof HTMLElement) {
+      manageOpenButtonRef.addEventListener('click', handleManageOpen);
     }
   };
 
@@ -660,7 +707,7 @@ export const bindAngebotCatalog = ({
     return new Set(moduleOffers.map((item) => normalizeAngebotKey(item)).filter(Boolean));
   };
 
-  const render = () => {
+  const renderDaily = () => {
     const groupMap = getGroupMap();
     const filters = getFilterState(catalogOverlay);
     const selectedList = flattenModuleAssignments(currentAssignments, currentSelected);
@@ -702,6 +749,29 @@ export const bindAngebotCatalog = ({
     syncGroupUi(catalogOverlay, angebotGroups);
   };
 
+  const renderManage = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const groupMap = getGroupMap();
+    const filters = getFilterState(manageOverlayRef);
+    const catalogList = manageOverlayRef.querySelector('[data-role="angebot-catalog-list"]');
+    renderCatalogList({
+      container: catalogList,
+      catalog: currentCatalog,
+      groupMap,
+      angebotGroups,
+      selectedSet: new Set(),
+      filters,
+    });
+    renderLetterButtons(manageOverlayRef, currentCatalog);
+    const searchInput = manageOverlayRef.querySelector('[data-role="angebot-search"]');
+    if (searchInput instanceof HTMLInputElement) {
+      searchInput.value = filters.query || '';
+    }
+    syncGroupUi(manageOverlayRef, angebotGroups);
+  };
+
   const openOverlay = () => {
     if (isReadOnly) {
       return;
@@ -710,7 +780,7 @@ export const bindAngebotCatalog = ({
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
-    render();
+    renderDaily();
   };
 
   const closeOverlay = () => {
@@ -721,6 +791,112 @@ export const bindAngebotCatalog = ({
     closeEditOverlay();
     catalogOverlay.classList.remove('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'true');
+  };
+
+  const openManageOverlay = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    closeDrawerIfOpen();
+    manageOverlayRef.classList.add('is-open');
+    manageOverlayRef.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('observation-overlay-open');
+    renderManage();
+  };
+
+  const closeManageOverlay = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    manageOverlayRef.classList.remove('is-open');
+    manageOverlayRef.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('observation-overlay-open');
+    closeDetailOverlay();
+    closeEditOverlay();
+  };
+
+  const updateDetailOverlay = (entry) => {
+    if (!detailOverlayRef) {
+      return;
+    }
+    const textEl = detailOverlayRef.querySelector('[data-role="angebot-detail-text"]');
+    const dotsEl = detailOverlayRef.querySelector('[data-role="angebot-detail-dots"]');
+    const groupsEl = detailOverlayRef.querySelector('[data-role="angebot-detail-groups"]');
+    const groupsEmpty = detailOverlayRef.querySelector(
+      '[data-role="angebot-detail-groups-empty"]',
+    );
+    if (textEl instanceof HTMLElement) {
+      textEl.textContent = entry?.text || '';
+    }
+    if (dotsEl instanceof HTMLElement) {
+      dotsEl.replaceChildren(buildGroupDots(entry?.groups || [], angebotGroups));
+    }
+    if (groupsEl instanceof HTMLElement) {
+      groupsEl.replaceChildren();
+      (entry?.groups || []).forEach((group) => {
+        const label = angebotGroups?.[group]?.label || group;
+        const badge = document.createElement('span');
+        badge.className = 'badge text-bg-light border';
+        badge.textContent = label;
+        groupsEl.appendChild(badge);
+      });
+    }
+    if (groupsEmpty instanceof HTMLElement) {
+      groupsEmpty.hidden = Boolean(entry?.groups?.length);
+    }
+  };
+
+  const openDetailOverlay = (entry) => {
+    if (!detailOverlayRef || !entry) {
+      return;
+    }
+    detailOffer = entry;
+    updateDetailOverlay(entry);
+    detailOverlayRef.classList.add('is-open');
+    detailOverlayRef.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeDetailOverlay = () => {
+    if (!detailOverlayRef) {
+      return;
+    }
+    detailOffer = null;
+    detailOverlayRef.classList.remove('is-open');
+    detailOverlayRef.setAttribute('aria-hidden', 'true');
+  };
+
+  const openDeleteConfirm = () => {
+    if (!deleteConfirmRef) {
+      return;
+    }
+    const messageEl = deleteConfirmRef.querySelector(
+      '[data-role="angebot-delete-confirm-message"]',
+    );
+    if (messageEl instanceof HTMLElement) {
+      const name = detailOffer?.text || '';
+      messageEl.textContent =
+        `Czy na pewno chcesz usunąć Angebot ${name}? ` +
+        'Operacja nie może zostać cofnięta. Wszystkie przypisania tej oferty zostaną utracone! ' +
+        'Wpisz "ja" żeby potwierdzić lub naciśnij Abbrechen.';
+    }
+    const input = deleteConfirmRef.querySelector('[data-role="angebot-delete-confirm-input"]');
+    if (input instanceof HTMLInputElement) {
+      input.value = '';
+    }
+    const confirmButton = deleteConfirmRef.querySelector('[data-role="angebot-delete-confirm"]');
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = true;
+    }
+    deleteConfirmRef.classList.remove('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeDeleteConfirm = () => {
+    if (!deleteConfirmRef) {
+      return;
+    }
+    deleteConfirmRef.classList.add('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'true');
   };
 
   const focusCatalogSearchInput = () => {
@@ -742,12 +918,104 @@ export const bindAngebotCatalog = ({
     closeDrawerIfOpen();
     catalogOverlay.classList.add('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'false');
-    render();
+    renderDaily();
     focusCatalogSearchInput();
   };
   const closeCatalogOverlay = () => {
     catalogOverlay.classList.remove('is-open');
     catalogOverlay.setAttribute('aria-hidden', 'true');
+  };
+
+  const handleFilterClick = (target, filterOverlay, renderFn) => {
+    if (!filterOverlay) {
+      return false;
+    }
+    const settingsPanel = filterOverlay.querySelector('[data-role="angebot-settings-panel"]');
+    const isSettingsToggle = target.closest('[data-role="angebot-settings-toggle"]');
+    const { settingsOpen } = getFilterState(filterOverlay);
+    if (
+      settingsOpen &&
+      settingsPanel &&
+      !isSettingsToggle &&
+      !settingsPanel.contains(target)
+    ) {
+      setFilterState(filterOverlay, { settingsOpen: false });
+      syncGroupUi(filterOverlay, angebotGroups);
+    }
+    const settingsToggle = target.closest('[data-role="angebot-settings-toggle"]');
+    if (settingsToggle) {
+      const current = getFilterState(filterOverlay);
+      setFilterState(filterOverlay, { settingsOpen: !current.settingsOpen });
+      syncGroupUi(filterOverlay, angebotGroups);
+      return true;
+    }
+    const multiSwitch = target.closest('[data-role="angebot-multi-switch"]');
+    if (multiSwitch instanceof HTMLInputElement) {
+      setFilterState(filterOverlay, { multi: multiSwitch.checked });
+      syncGroupUi(filterOverlay, angebotGroups);
+      persistFilters(filterOverlay);
+      return true;
+    }
+    const alphabetSwitch = target.closest('[data-role="angebot-alphabet-switch"]');
+    if (alphabetSwitch instanceof HTMLInputElement) {
+      setFilterState(filterOverlay, { showAlphabet: alphabetSwitch.checked });
+      syncGroupUi(filterOverlay, angebotGroups);
+      renderFn();
+      persistFilters(filterOverlay);
+      return true;
+    }
+    const andOrSwitch = target.closest('[data-role="angebot-andor-switch"]');
+    if (andOrSwitch instanceof HTMLInputElement) {
+      setFilterState(filterOverlay, { showAndOr: andOrSwitch.checked });
+      syncGroupUi(filterOverlay, angebotGroups);
+      persistFilters(filterOverlay);
+      return true;
+    }
+    const groupButton = target.closest('[data-role="angebot-group-filter"]');
+    if (groupButton) {
+      const value = groupButton.dataset.value;
+      if (!value) {
+        return true;
+      }
+      const state = getFilterState(filterOverlay);
+      const selected = new Set(state.selectedGroups);
+      if (selected.has(value)) {
+        selected.delete(value);
+      } else {
+        if (!state.multiGroups) {
+          selected.clear();
+        }
+        selected.add(value);
+      }
+      setFilterState(filterOverlay, { groups: Array.from(selected).join(',') });
+      syncGroupUi(filterOverlay, angebotGroups);
+      renderFn();
+      persistFilters(filterOverlay);
+      return true;
+    }
+    const groupModeButton = target.closest('[data-role="angebot-group-mode"]');
+    if (groupModeButton) {
+      const { multiGroups } = getFilterState(filterOverlay);
+      if (!multiGroups) {
+        return true;
+      }
+      const value = groupModeButton.dataset.value === 'OR' ? 'OR' : 'AND';
+      setFilterState(filterOverlay, { groupMode: value });
+      syncGroupUi(filterOverlay, angebotGroups);
+      renderFn();
+      persistFilters(filterOverlay);
+      return true;
+    }
+    const letterButton = target.closest('[data-role="angebot-letter"]');
+    if (letterButton) {
+      const value = letterButton.dataset.value || 'ALL';
+      setFilterState(filterOverlay, { filter: value });
+      syncGroupUi(filterOverlay, angebotGroups);
+      renderFn();
+      persistFilters(filterOverlay);
+      return true;
+    }
+    return false;
   };
 
   const setCreateGroups = (groups) => {
@@ -801,11 +1069,14 @@ export const bindAngebotCatalog = ({
     }
   };
 
-  const openCreateOverlay = () => {
-    if (isReadOnly) {
+  const openCreateOverlay = (context = 'day') => {
+    createContext = context;
+    if (context === 'day' && isReadOnly) {
       return;
     }
-    closeCatalogOverlay();
+    if (context === 'day') {
+      closeCatalogOverlay();
+    }
     createOverlay.classList.add('is-open');
     createOverlay.setAttribute('aria-hidden', 'false');
     setCreateGroups([]);
@@ -820,6 +1091,7 @@ export const bindAngebotCatalog = ({
   const closeCreateOverlay = () => {
     createOverlay.classList.remove('is-open');
     createOverlay.setAttribute('aria-hidden', 'true');
+    createContext = 'day';
   };
 
   const setEditGroups = (groups) => {
@@ -881,7 +1153,7 @@ export const bindAngebotCatalog = ({
       updateEntry(currentDate, { angebote: nextSelected });
       currentSelected = nextSelected;
       currentAssignments = {};
-      render();
+      renderDaily();
       return;
     }
 
@@ -911,7 +1183,7 @@ export const bindAngebotCatalog = ({
     upsertAngebotCatalogEntry(normalized);
     updateEntry(currentDate, { angebotModules: nextAssignments });
     setAssignments(nextAssignments);
-    render();
+    renderDaily();
   };
 
   const removeOfferForDate = (label, moduleId = '') => {
@@ -927,7 +1199,7 @@ export const bindAngebotCatalog = ({
       updateEntry(currentDate, { angebote: updated });
       currentSelected = updated;
       currentAssignments = {};
-      render();
+      renderDaily();
       return;
     }
 
@@ -946,7 +1218,7 @@ export const bindAngebotCatalog = ({
       });
       updateEntry(currentDate, { angebotModules: stripped });
       setAssignments(stripped);
-      render();
+      renderDaily();
       return;
     }
 
@@ -956,11 +1228,105 @@ export const bindAngebotCatalog = ({
     );
     updateEntry(currentDate, { angebotModules: updatedAssignments });
     setAssignments(updatedAssignments);
-    render();
+    renderDaily();
   };
 
   const handleOpen = () => {
     openOverlay();
+  };
+
+  const handleManageOpen = () => {
+    openManageOverlay();
+  };
+
+  const handleManageClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (!manageOverlayRef) {
+      return;
+    }
+    if (handleFilterClick(target, manageOverlayRef, renderManage)) {
+      return;
+    }
+    if (target === manageOverlayRef || target.closest('[data-role="angebot-manage-close"]')) {
+      closeManageOverlay();
+      return;
+    }
+    if (target.closest('[data-role="angebot-manage-create-open"]')) {
+      openCreateOverlay('manage');
+      return;
+    }
+    const manageButton = target.closest('[data-role="angebot-add"]');
+    if (manageButton) {
+      const value = manageButton.dataset.value;
+      const entry = value ? getCatalogEntryByLabel(value) : null;
+      if (entry) {
+        openDetailOverlay(entry);
+      }
+    }
+  };
+
+  const handleDetailClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target === detailOverlayRef || target.closest('[data-role="angebot-detail-close"]')) {
+      closeDetailOverlay();
+      return;
+    }
+    if (target.closest('[data-role="angebot-detail-edit"]')) {
+      if (detailOffer) {
+        openEditOverlay(detailOffer);
+      }
+      closeDetailOverlay();
+      return;
+    }
+    if (target.closest('[data-role="angebot-detail-delete"]')) {
+      openDeleteConfirm();
+    }
+  };
+
+  const handleDeleteConfirmClick = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.closest('[data-role="angebot-delete-cancel"]')) {
+      closeDeleteConfirm();
+      return;
+    }
+    if (target.closest('[data-role="angebot-delete-confirm"]')) {
+      const input = deleteConfirmRef?.querySelector('[data-role="angebot-delete-confirm-input"]');
+      const typed =
+        input instanceof HTMLInputElement ? input.value.trim().toLocaleLowerCase('de') : '';
+      if (typed !== 'ja') {
+        return;
+      }
+      if (detailOffer?.text) {
+        removeAngebotCatalogEntry(detailOffer.text);
+      }
+      closeDeleteConfirm();
+      closeDetailOverlay();
+      renderDaily();
+      renderManage();
+    }
+  };
+
+  const handleDeleteConfirmInput = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-delete-confirm-input') {
+      return;
+    }
+    const confirmButton = deleteConfirmRef?.querySelector('[data-role="angebot-delete-confirm"]');
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = target.value.trim().toLocaleLowerCase('de') !== 'ja';
+    }
   };
 
   const handleOverlayClick = (event) => {
@@ -968,22 +1334,13 @@ export const bindAngebotCatalog = ({
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    const settingsPanel = catalogOverlay.querySelector('[data-role="angebot-settings-panel"]');
-    const isSettingsToggle = target.closest('[data-role="angebot-settings-toggle"]');
-    const { settingsOpen } = getFilterState(catalogOverlay);
-    if (
-      settingsOpen &&
-      settingsPanel &&
-      !isSettingsToggle &&
-      !settingsPanel.contains(target)
-    ) {
-      setFilterState(catalogOverlay, { settingsOpen: false });
-      syncGroupUi(catalogOverlay, angebotGroups);
+    if (handleFilterClick(target, catalogOverlay, renderDaily)) {
+      return;
     }
     const moduleTab = target.closest('[data-role="angebot-module-tab"]');
     if (moduleTab) {
       overlay.dataset.activeModule = moduleTab.dataset.moduleId || '';
-      render();
+      renderDaily();
       return;
     }
     if (target === overlay || target.closest('[data-role="angebot-close"]')) {
@@ -999,7 +1356,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     if (target.closest('[data-role="angebot-create-open"]')) {
-      openCreateOverlay();
+      openCreateOverlay('day');
       return;
     }
     if (target.closest('[data-role="angebot-create-close"]')) {
@@ -1012,79 +1369,6 @@ export const bindAngebotCatalog = ({
     }
     if (target.closest('[data-role="angebot-catalog-open"]')) {
       openCatalogOverlay();
-      return;
-    }
-    const settingsToggle = target.closest('[data-role="angebot-settings-toggle"]');
-    if (settingsToggle) {
-      const current = getFilterState(catalogOverlay);
-      setFilterState(catalogOverlay, { settingsOpen: !current.settingsOpen });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      return;
-    }
-    const multiSwitch = target.closest('[data-role="angebot-multi-switch"]');
-    if (multiSwitch instanceof HTMLInputElement) {
-      setFilterState(catalogOverlay, { multi: multiSwitch.checked });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      persistFilters(catalogOverlay);
-      return;
-    }
-    const alphabetSwitch = target.closest('[data-role="angebot-alphabet-switch"]');
-    if (alphabetSwitch instanceof HTMLInputElement) {
-      setFilterState(catalogOverlay, { showAlphabet: alphabetSwitch.checked });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      render();
-      persistFilters(catalogOverlay);
-      return;
-    }
-    const andOrSwitch = target.closest('[data-role="angebot-andor-switch"]');
-    if (andOrSwitch instanceof HTMLInputElement) {
-      setFilterState(catalogOverlay, { showAndOr: andOrSwitch.checked });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      persistFilters(catalogOverlay);
-      return;
-    }
-    const groupButton = target.closest('[data-role="angebot-group-filter"]');
-    if (groupButton) {
-      const value = groupButton.dataset.value;
-      if (!value) {
-        return;
-      }
-      const state = getFilterState(catalogOverlay);
-      const selected = new Set(state.selectedGroups);
-      if (selected.has(value)) {
-        selected.delete(value);
-      } else {
-        if (!state.multiGroups) {
-          selected.clear();
-        }
-        selected.add(value);
-      }
-      setFilterState(catalogOverlay, { groups: Array.from(selected).join(',') });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      render();
-      persistFilters(catalogOverlay);
-      return;
-    }
-    const groupModeButton = target.closest('[data-role="angebot-group-mode"]');
-    if (groupModeButton) {
-      const { multiGroups } = getFilterState(catalogOverlay);
-      if (!multiGroups) {
-        return;
-      }
-      const value = groupModeButton.dataset.value === 'OR' ? 'OR' : 'AND';
-      setFilterState(catalogOverlay, { groupMode: value });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      render();
-      persistFilters(catalogOverlay);
-      return;
-    }
-    const letterButton = target.closest('[data-role="angebot-letter"]');
-    if (letterButton) {
-      const value = letterButton.dataset.value || 'ALL';
-      setFilterState(catalogOverlay, { filter: value });
-      syncGroupUi(catalogOverlay, angebotGroups);
-      render();
-      persistFilters(catalogOverlay);
       return;
     }
     const topButton = target.closest('[data-role="angebot-top-add"]');
@@ -1182,8 +1466,18 @@ export const bindAngebotCatalog = ({
     if (target.dataset.role !== 'angebot-search') {
       return;
     }
-    setFilterState(catalogOverlay, { query: normalizeFilterQuery(target.value) });
-    render();
+    const overlayElement = event.currentTarget;
+    if (!(overlayElement instanceof HTMLElement)) {
+      return;
+    }
+    setFilterState(overlayElement, { query: normalizeFilterQuery(target.value) });
+    if (overlayElement === catalogOverlay) {
+      renderDaily();
+      return;
+    }
+    if (overlayElement === manageOverlayRef) {
+      renderManage();
+    }
   };
 
   const handleCreateSubmit = (event) => {
@@ -1194,7 +1488,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     event.preventDefault();
-    if (isReadOnly) {
+    if (createContext === 'day' && isReadOnly) {
       closeCreateOverlay();
       return;
     }
@@ -1204,6 +1498,13 @@ export const bindAngebotCatalog = ({
     }
     const normalized = normalizeAngebotText(input.value);
     if (!normalized) {
+      return;
+    }
+    if (createContext === 'manage') {
+      const groups = getCreateGroups();
+      upsertAngebotCatalogEntry(normalized, groups);
+      closeCreateOverlay();
+      renderManage();
       return;
     }
     const activeModuleSelectedKeys = getSelectedKeysForActiveModule();
@@ -1246,6 +1547,8 @@ export const bindAngebotCatalog = ({
       groups,
     });
     closeEditOverlay();
+    renderDaily();
+    renderManage();
   };
 
   const handleCreateClick = (event) => {
@@ -1285,6 +1588,11 @@ export const bindAngebotCatalog = ({
     if (!(target instanceof HTMLElement)) {
       return;
     }
+    const closeButton = target.closest('[data-role="angebot-edit-close"]');
+    if (closeButton) {
+      closeEditOverlay();
+      return;
+    }
     const groupButton = target.closest('[data-role="angebot-edit-group"]');
     if (groupButton) {
       const value = groupButton.dataset.value;
@@ -1307,6 +1615,17 @@ export const bindAngebotCatalog = ({
   catalogOverlay.addEventListener('pointerup', handlePointerUp);
   catalogOverlay.addEventListener('pointercancel', handlePointerUp);
   catalogOverlay.addEventListener('input', handleSearchInput);
+  if (manageOverlayRef) {
+    manageOverlayRef.addEventListener('click', handleManageClick);
+    manageOverlayRef.addEventListener('input', handleSearchInput);
+  }
+  if (detailOverlayRef) {
+    detailOverlayRef.addEventListener('click', handleDetailClick);
+  }
+  if (deleteConfirmRef) {
+    deleteConfirmRef.addEventListener('click', handleDeleteConfirmClick);
+    deleteConfirmRef.addEventListener('input', handleDeleteConfirmInput);
+  }
   createOverlay.addEventListener('input', (event) => {
     const target = event.target;
     if (target instanceof HTMLInputElement && target.dataset.role === 'angebot-create-input') {
@@ -1318,6 +1637,7 @@ export const bindAngebotCatalog = ({
   editOverlay.addEventListener('click', handleEditClick);
   editOverlay.addEventListener('submit', handleEditSubmit);
   setOpenButton(openButtonRef);
+  setManageOpenButton(manageOpenButtonRef);
 
   return {
     update: ({
@@ -1329,6 +1649,7 @@ export const bindAngebotCatalog = ({
       savedFilters: nextSavedFilters,
       readOnly: nextReadOnly = false,
       openButton: nextOpenButton,
+      manageOpenButton: nextManageOpenButton,
       modules: nextModules = currentModules,
       moduleAssignments: nextModuleAssignments = currentAssignments,
     }) => {
@@ -1355,12 +1676,27 @@ export const bindAngebotCatalog = ({
         });
       }
       syncGroupUi(catalogOverlay, angebotGroups);
-      render();
+      renderDaily();
+      renderManage();
+      if (manageOverlayRef && nextSavedFilters) {
+        setFilterState(manageOverlayRef, {
+          filter: nextSavedFilters.selectedLetter || manageOverlayRef.dataset.angebotFilter || 'ALL',
+          groups: normalizeAngebotGroups(nextSavedFilters.selectedGroups || []).join(','),
+          groupMode: nextSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+          multi: nextSavedFilters.multiGroups === true,
+          showAndOr: nextSavedFilters.showAndOr !== false,
+          showAlphabet: nextSavedFilters.showAlphabet === true,
+        });
+        syncGroupUi(manageOverlayRef, angebotGroups);
+      }
       if (nextOpenButton) {
         setOpenButton(nextOpenButton);
       }
       if (openButtonRef) {
         openButtonRef.disabled = isReadOnly;
+      }
+      if (nextManageOpenButton) {
+        setManageOpenButton(nextManageOpenButton);
       }
     },
   };

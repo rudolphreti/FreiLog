@@ -183,6 +183,33 @@ const replaceAngebotReferences = (days, fromKey, toText) => {
   });
 };
 
+const removeAngebotReferences = (days, targetKey) => {
+  if (!days || typeof days !== 'object') {
+    return;
+  }
+  Object.values(days).forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+    if (Array.isArray(entry.angebote)) {
+      entry.angebote = entry.angebote.filter(
+        (item) => normalizeAngebotKey(item) !== targetKey,
+      );
+    }
+    if (entry.angebotModules && typeof entry.angebotModules === 'object') {
+      Object.keys(entry.angebotModules).forEach((moduleId) => {
+        const list = entry.angebotModules[moduleId];
+        if (!Array.isArray(list)) {
+          return;
+        }
+        entry.angebotModules[moduleId] = list.filter(
+          (item) => normalizeAngebotKey(item) !== targetKey,
+        );
+      });
+    }
+  });
+};
+
 const buildDefaultObservations = (childrenList) => {
   if (!Array.isArray(childrenList)) {
     return {};
@@ -879,6 +906,41 @@ export const updateAngebotCatalogEntry = ({ currentText, nextText, groups = [] }
   });
 
   return result;
+};
+
+export const removeAngebotCatalogEntry = (value) => {
+  const normalizedText = normalizeAngebotText(value);
+  const normalizedKey = normalizeAngebotKey(normalizedText);
+  if (!normalizedText || !normalizedKey) {
+    return false;
+  }
+
+  let removed = false;
+
+  updateAppData((data) => {
+    const catalog = normalizeAngebotCatalog(
+      data.angebotCatalog || data.angebote,
+      data.angebote,
+    );
+    const filtered = catalog.filter(
+      (entry) => normalizeAngebotKey(entry?.text || entry || '') !== normalizedKey,
+    );
+    if (filtered.length === catalog.length) {
+      return;
+    }
+    removed = true;
+    data.angebotCatalog = filtered;
+    data.angebote = ensureUniqueSortedStrings(
+      (data.angebote || []).filter(
+        (item) => normalizeAngebotKey(item) !== normalizedKey,
+      ),
+    );
+    if (data.days) {
+      removeAngebotReferences(data.days, normalizedKey);
+    }
+  });
+
+  return removed;
 };
 
 export const upsertObservationCatalogEntry = (value, groups = []) => {
