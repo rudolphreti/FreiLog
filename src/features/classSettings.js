@@ -223,10 +223,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   header.append(title, closeButton);
 
   const content = createEl('div', { className: 'class-settings-overlay__content' });
-  const intro = createEl('p', {
-    className: 'text-muted small mb-3',
-    text: 'Verwalte allgemeine Angaben sowie die Kinderliste für deine Gruppe.',
-  });
 
   const accordionId = 'classSettingsAccordion';
   const accordion = createEl('div', {
@@ -381,10 +377,6 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             className: 'd-flex flex-column gap-1',
             children: [
               createEl('div', { className: 'h6 mb-0', text: 'Entlassung' }),
-              createEl('p', {
-                className: 'small text-muted mb-0',
-                text: 'Lege Entlassungszeiten fest und weise pro Tag jeweils genau eine Uhrzeit pro Kind zu.',
-              }),
             ],
           }),
           createEl('ul', {
@@ -712,7 +704,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     entlassungItem.element,
     cautionItem.element,
   );
-  content.append(intro, accordion);
+  content.append(accordion);
   panel.append(header, content);
   overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog, entlassungConfirmDialog);
 

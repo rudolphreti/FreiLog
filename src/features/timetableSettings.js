@@ -759,10 +759,6 @@ export const createTimetableSettingsView = ({
           className: 'd-flex flex-column',
           children: [
             createEl('h4', { className: 'h5 mb-0', text: 'Wochenübersicht' }),
-            createEl('p', {
-              className: 'text-muted small mb-0',
-              text: 'Farbbalken zeigen die belegten Fächer je Stunde. Im Bearbeitungsmodus können Stunden angepasst werden; Mehrfachauswahl teilt die Zelle auf.',
-            }),
           ],
         }),
         editToggle,
@@ -774,14 +770,6 @@ export const createTimetableSettingsView = ({
 
   subjectsBody.append(
     createEl('h4', { className: 'h5 mb-1', text: 'Fächer' }),
-    createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Verwalte die Liste verfügbarer Fächer. Die Liste ist alphabetisch sortiert.',
-    }),
-    createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Jedes Fach kann eine eigene Farbe bekommen; diese wird in der Wochenübersicht angezeigt.',
-    }),
     subjectFormRow,
     subjectsList,
     status.subjects,
@@ -789,10 +777,6 @@ export const createTimetableSettingsView = ({
 
   lessonsBody.append(
     createEl('h4', { className: 'h5 mb-1', text: 'Stundenzeiten' }),
-    createEl('p', {
-      className: 'text-muted small mb-0',
-      text: 'Start- und Endzeiten für jede Stunde bearbeiten (HH:MM).',
-    }),
     lessonsTable,
     status.lessons,
   );
