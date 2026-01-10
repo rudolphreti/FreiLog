@@ -2031,15 +2031,6 @@ const buildObservationCreateOverlay = ({ observationGroups }) => {
   };
 };
 
-const buildEntlassungInfoRow = ({ label, content }) =>
-  createEl('div', {
-    className: 'd-flex flex-wrap align-items-center gap-2 entlassung-info-row',
-    children: [
-      createEl('span', { className: 'text-muted small', text: label }),
-      content,
-    ],
-  });
-
 const buildEntlassungBadge = (text, className = 'badge text-bg-light text-secondary') =>
   createEl('span', { className, text });
 
@@ -2067,7 +2058,11 @@ const buildEntlassungChildButton = ({
       `btn btn-sm rounded-pill d-inline-flex align-items-center gap-2 entlassung-child-button ${
         isEntlassen ? 'btn-secondary' : 'btn-outline-secondary'
       }`,
-    attrs: { type: 'button', disabled: readOnly || isAbsent ? 'true' : null },
+    attrs: {
+      type: 'button',
+      disabled: readOnly || isAbsent ? 'true' : null,
+      'aria-pressed': isEntlassen ? 'true' : 'false',
+    },
     dataset: {
       role: 'entlassung-child',
       child,
@@ -2242,11 +2237,10 @@ export const buildEntlassungSection = ({
       }),
     ],
   });
-  const meta = createEl('div', { className: 'd-flex flex-column gap-2' });
   const slotsWrapper = createEl('div', { className: 'd-flex flex-column gap-2' });
   const notice = createEl('div', { className: 'alert mb-0', hidden: true });
 
-  body.append(header, meta, notice, slotsWrapper);
+  body.append(header, notice, slotsWrapper);
   section.appendChild(body);
 
   const update = ({
@@ -2263,39 +2257,6 @@ export const buildEntlassungSection = ({
     const status = nextStatusSet instanceof Set ? nextStatusSet : new Set();
 
     const dayLabel = nextFreeDayInfo?.label || 'Schulfrei';
-    const dayBadge = nextReadOnly
-      ? buildEntlassungBadge(dayLabel, 'badge text-bg-success')
-      : buildEntlassungBadge('Schultag', 'badge text-bg-primary');
-
-    const typeBadge = buildEntlassungBadge(
-      nextLabel || 'Ordentliche Entlassung',
-      nextLabel === 'Sonderentlassung' ? 'badge text-bg-warning' : 'badge text-bg-secondary',
-    );
-
-    const absentContent = Array.from(absentSet).length
-      ? createEl('div', {
-          className: 'd-flex flex-wrap gap-2',
-          children: Array.from(absentSet)
-            .sort((a, b) => a.localeCompare(b, 'de'))
-            .map((child) => buildEntlassungBadge(child)),
-        })
-      : createEl('span', { className: 'text-muted small', text: 'Keine Abwesenheiten' });
-
-    meta.replaceChildren(
-      buildEntlassungInfoRow({
-        label: 'Entlassungstyp',
-        content: typeBadge,
-      }),
-      buildEntlassungInfoRow({
-        label: 'Tag',
-        content: dayBadge,
-      }),
-      buildEntlassungInfoRow({
-        label: 'Abwesend',
-        content: absentContent,
-      }),
-    );
-
     if (nextReadOnly) {
       notice.hidden = false;
       notice.className = 'alert alert-success mb-0';

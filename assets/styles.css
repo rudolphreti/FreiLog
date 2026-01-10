@@ -1742,10 +1742,6 @@ body.observation-overlay-open {
   gap: 0.35rem;
 }
 
-.entlassung-panel .entlassung-info-row {
-  row-gap: 0.25rem;
-}
-
 .entlassung-panel .entlassung-slot .badge {
   font-weight: 500;
 }

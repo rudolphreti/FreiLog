@@ -69,6 +69,12 @@ const updateEntlassungButtonState = (button, isEntlassen) => {
   button.dataset.entlassen = isEntlassen ? 'true' : 'false';
   button.classList.toggle('btn-secondary', isEntlassen);
   button.classList.toggle('btn-outline-secondary', !isEntlassen);
+  button.setAttribute('aria-pressed', isEntlassen ? 'true' : 'false');
+  if (isEntlassen) {
+    ensureEntlassungBadge(button);
+  } else {
+    removeEntlassungBadge(button);
+  }
 };
 
 const ensureEntlassungBadge = (button) => {
@@ -112,11 +118,6 @@ export const bindEntlassungControl = ({ container, selectedDate }) => {
     const isEntlassen = nextStatus.has(child);
 
     updateEntlassungButtonState(target, isEntlassen);
-    if (isEntlassen) {
-      ensureEntlassungBadge(target);
-    } else {
-      removeEntlassungBadge(target);
-    }
   };
 
   container.addEventListener('click', handleClick);
