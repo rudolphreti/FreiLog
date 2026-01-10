@@ -2096,12 +2096,7 @@ const buildEntlassungChildButton = ({
 
 const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly }) => {
   if (!slots.length) {
-    return [
-      createEl('p', {
-        className: 'text-muted small mb-0',
-        text: 'Keine Entlassungszeiten hinterlegt.',
-      }),
-    ];
+    return [];
   }
 
   return slots.map((slot) => {
@@ -2248,10 +2243,6 @@ export const buildEntlassungSection = ({
     className: 'd-flex flex-column gap-1',
     children: [
       createEl('div', { className: 'h6 mb-0', text: 'Entlassung' }),
-      createEl('p', {
-        className: 'small text-muted mb-0',
-        text: 'Tägliche Kontrolle basierend auf den Entlassungszeiten aus „Meine Klasse“.',
-      }),
     ],
   });
   const slotsWrapper = createEl('div', { className: 'd-flex flex-column gap-2' });
