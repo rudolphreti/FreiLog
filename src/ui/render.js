@@ -15,6 +15,10 @@ import {
   buildMainTabsSection,
   buildEntlassungSection,
   buildObservationsSection,
+  buildObservationCatalogOverlay,
+  buildObservationCreateOverlay,
+  buildObservationDeleteConfirm,
+  buildObservationEditOverlay,
 } from './components.js';
 import { UI_LABELS } from './labels.js';
 import { normalizeEntlassung } from '../db/dbSchema.js';
@@ -22,7 +26,7 @@ import { getTimetableDayKey } from '../utils/angebotModules.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
 import { bindAngebotCatalog } from '../features/angebotCatalog.js';
-import { bindObservations } from '../features/observations.js';
+import { bindObservationCatalog, bindObservations } from '../features/observations.js';
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { bindEntlassungControl, getEntlassungStatus } from '../features/entlassungControl.js';
@@ -161,6 +165,11 @@ let angebotEditOverlay = null;
 let angebotManageOverlayView = null;
 let angebotDetailOverlayView = null;
 let angebotDeleteConfirmView = null;
+let observationCatalogOverlayView = null;
+let observationCatalogBinding = null;
+let observationCatalogCreateOverlay = null;
+let observationCatalogEditOverlay = null;
+let observationDeleteConfirmView = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -334,6 +343,27 @@ export const renderApp = (root, state) => {
   if (!angebotDeleteConfirmView) {
     angebotDeleteConfirmView = buildAngebotDeleteConfirm();
   }
+  if (!observationCatalogOverlayView) {
+    observationCatalogOverlayView = buildObservationCatalogOverlay({
+      observationCatalog,
+      observationGroups,
+      savedFilters: savedObsFilters,
+    });
+  }
+  if (!observationCatalogCreateOverlay) {
+    observationCatalogCreateOverlay = buildObservationCreateOverlay({
+      observationGroups,
+    });
+  }
+  if (!observationCatalogEditOverlay) {
+    observationCatalogEditOverlay = buildObservationEditOverlay({
+      observationGroups,
+      showDeleteButton: true,
+    });
+  }
+  if (!observationDeleteConfirmView) {
+    observationDeleteConfirmView = buildObservationDeleteConfirm();
+  }
   if (!weeklyTableViewBinding) {
     weeklyTableViewBinding = createWeeklyTableView({
       days: weeklyDays,
@@ -434,6 +464,10 @@ export const renderApp = (root, state) => {
       angebotEditOverlay.element,
       angebotDetailOverlayView.element,
       angebotDeleteConfirmView.element,
+      observationCatalogOverlayView.element,
+      observationCatalogCreateOverlay.element,
+      observationCatalogEditOverlay.element,
+      observationDeleteConfirmView.element,
     );
     root.appendChild(container);
 
@@ -521,6 +555,16 @@ export const renderApp = (root, state) => {
       savedFilters: savedObsFilters,
       readOnly: isReadOnlyDay,
     });
+    observationCatalogBinding = bindObservationCatalog({
+      openButton: settingsActions?.observationCatalogButton,
+      overlay: observationCatalogOverlayView.element,
+      createOverlay: observationCatalogCreateOverlay.element,
+      editOverlay: observationCatalogEditOverlay.element,
+      deleteConfirmOverlay: observationDeleteConfirmView.element,
+      observationGroups,
+      catalog: observationCatalog,
+      savedFilters: savedObsFilters,
+    });
     entlassungBinding = bindEntlassungControl({
       container: entlassungSection.element,
       selectedDate,
@@ -607,6 +651,14 @@ export const renderApp = (root, state) => {
     fileInput: actions?.importInput,
   });
   const settingsActions = drawerContentRefs?.settings;
+  if (observationCatalogBinding) {
+    observationCatalogBinding.update({
+      catalog: observationCatalog,
+      observationGroups,
+      savedFilters: savedObsFilters,
+      openButton: settingsActions?.observationCatalogButton,
+    });
+  }
   bindDummyDataLoader({
     button: actions?.dummyDataButton,
     onLoaded: closeDrawer,

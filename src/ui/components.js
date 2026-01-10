@@ -277,7 +277,10 @@ export const buildDrawerContent = ({
   const timetableButton = actionButton(UI_LABELS.timetable, '🗓️', {
     'data-role': 'timetable-settings',
   });
-  settingsContent.append(classButton, freeDaysButton, timetableButton);
+  const observationCatalogButton = actionButton('Beobachtungen...', '👀', {
+    'data-role': 'observation-catalog-settings',
+  });
+  settingsContent.append(classButton, freeDaysButton, timetableButton, observationCatalogButton);
 
   const settingsSectionItem = buildAccordionItem({
     id: 'einstellungen',
@@ -307,6 +310,7 @@ export const buildDrawerContent = ({
         classButton,
         freeDaysButton,
         timetableButton,
+        observationCatalogButton,
       },
       sections: {
         actions: actionsSectionItem,
@@ -1452,7 +1456,12 @@ const buildObservationTemplateEntries = (templates, catalog) => {
   const catalogGroups = new Map();
 
   catalogEntries.forEach((entry) => {
-    const text = typeof entry?.text === 'string' ? entry.text.trim() : '';
+    const text =
+      typeof entry === 'string'
+        ? entry.trim()
+        : typeof entry?.text === 'string'
+          ? entry.text.trim()
+          : '';
     if (!text) {
       return;
     }
@@ -1463,14 +1472,35 @@ const buildObservationTemplateEntries = (templates, catalog) => {
   });
 
   return normalized
-    .filter((item) => typeof item === 'string' && item.trim())
     .map((item) => {
-      const text = item.trim();
-      return {
-        text,
-        groups: catalogGroups.get(normalizeObservationKey(text)) || [],
-      };
-    });
+      if (typeof item === 'string') {
+        const text = item.trim();
+        if (!text) {
+          return null;
+        }
+        return {
+          text,
+          groups: catalogGroups.get(normalizeObservationKey(text)) || [],
+        };
+      }
+      if (item && typeof item === 'object') {
+        const text = typeof item.text === 'string' ? item.text.trim() : '';
+        if (!text) {
+          return null;
+        }
+        const normalizedGroups = normalizeObservationGroups(item.groups || []);
+        const mergedGroups = normalizeObservationGroups([
+          ...(catalogGroups.get(normalizeObservationKey(text)) || []),
+          ...normalizedGroups,
+        ]);
+        return {
+          text,
+          groups: mergedGroups,
+        };
+      }
+      return null;
+    })
+    .filter(Boolean);
 };
 
 const buildTemplateGroups = (templates) => {
@@ -1515,11 +1545,17 @@ const buildTemplateGroups = (templates) => {
   };
 };
 
-const buildObservationTemplatesOverlay = ({
+export const buildObservationTemplatesOverlay = ({
   templates,
   observationCatalog,
   observationGroups,
   savedFilters,
+  title = UI_LABELS.observationCatalog,
+  role = 'observation-templates-overlay',
+  closeRole = 'observation-template-close',
+  showCreateButton = false,
+  createButtonLabel = UI_LABELS.observationCreate,
+  createButtonRole = 'observation-create-open',
 }) => {
   const templateEntries = buildObservationTemplateEntries(
     templates,
@@ -1536,7 +1572,7 @@ const buildObservationTemplatesOverlay = ({
   const overlay = createEl('div', {
     className: 'observation-templates-overlay',
     dataset: {
-      role: 'observation-templates-overlay',
+      role,
       templateFilter: normalizedSavedFilters.selectedLetter || 'ALL',
       templateQuery: '',
       templateGroups: normalizedSelectedGroups.join(','),
@@ -1556,16 +1592,33 @@ const buildObservationTemplatesOverlay = ({
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
-  const title = createEl('h3', {
+  const titleEl = createEl('h3', {
     className: 'h5 mb-0',
-    text: UI_LABELS.observationCatalog,
+    text: title,
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
-    dataset: { role: 'observation-template-close' },
+    dataset: { role: closeRole },
   });
-  header.append(title, closeButton);
+  const headerActions = createEl('div', {
+    className: 'd-flex align-items-center gap-2',
+  });
+  if (showCreateButton) {
+    headerActions.append(
+      createEl('button', {
+        className: 'btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2',
+        attrs: { type: 'button' },
+        dataset: { role: createButtonRole },
+        children: [
+          createEl('span', { text: '＋' }),
+          createEl('span', { text: createButtonLabel }),
+        ],
+      }),
+    );
+  }
+  headerActions.append(closeButton);
+  header.append(titleEl, headerActions);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
@@ -1842,6 +1895,23 @@ const buildObservationTemplatesOverlay = ({
   };
 };
 
+export const buildObservationCatalogOverlay = ({
+  observationCatalog,
+  observationGroups,
+  savedFilters,
+}) =>
+  buildObservationTemplatesOverlay({
+    templates: observationCatalog,
+    observationCatalog,
+    observationGroups,
+    savedFilters,
+    role: 'observation-catalog-overlay',
+    closeRole: 'observation-catalog-close',
+    showCreateButton: true,
+    createButtonLabel: UI_LABELS.observationCreate,
+    createButtonRole: 'observation-catalog-create-open',
+  });
+
 const getObservationCount = (observationsByChild, child) => {
   const items = observationsByChild?.[child];
   if (Array.isArray(items)) {
@@ -2053,7 +2123,10 @@ const createDetailPanel = ({
   };
 };
 
-const buildObservationEditOverlay = ({ observationGroups }) => {
+export const buildObservationEditOverlay = ({
+  observationGroups,
+  showDeleteButton = false,
+}) => {
   const overlay = createEl('div', {
     className: 'observation-edit-overlay',
     dataset: { role: 'observation-edit-overlay' },
@@ -2080,6 +2153,16 @@ const buildObservationEditOverlay = ({ observationGroups }) => {
         attrs: { type: 'submit' },
         dataset: { role: 'observation-edit-save' },
       }),
+      ...(showDeleteButton
+        ? [
+            createEl('button', {
+              className: 'btn btn-danger',
+              text: 'Löschen',
+              attrs: { type: 'button' },
+              dataset: { role: 'observation-edit-delete' },
+            }),
+          ]
+        : []),
       createEl('button', {
         className: 'btn btn-outline-secondary',
         text: 'Abbrechen',
@@ -2144,7 +2227,71 @@ const buildObservationEditOverlay = ({ observationGroups }) => {
   };
 };
 
-const buildObservationCreateOverlay = ({ observationGroups }) => {
+export const buildObservationDeleteConfirm = () => {
+  const overlay = createEl('div', {
+    className: 'class-settings-confirm angebot-delete-confirm d-none',
+    dataset: { role: 'observation-delete-confirm-overlay' },
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'observation-delete-confirm-title',
+      'aria-describedby': 'observation-delete-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const panel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-2',
+    attrs: { id: 'observation-delete-confirm-title' },
+    text: 'Beobachtung löschen?',
+  });
+  const message = createEl('p', {
+    className: 'text-muted mb-3',
+    attrs: { id: 'observation-delete-confirm-message' },
+    text: '',
+    dataset: { role: 'observation-delete-confirm-message' },
+  });
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Bestätigung',
+    attrs: { for: 'observation-delete-confirm-input' },
+  });
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      id: 'observation-delete-confirm-input',
+      type: 'text',
+      autocomplete: 'off',
+      placeholder: 'ja',
+    },
+    dataset: { role: 'observation-delete-confirm-input' },
+  });
+  const actions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+    children: [
+      createEl('button', {
+        className: 'btn btn-danger',
+        text: 'Beobachtung löschen',
+        attrs: { type: 'button' },
+        dataset: { role: 'observation-delete-confirm' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'observation-delete-cancel' },
+      }),
+    ],
+  });
+  panel.append(title, message, inputLabel, input, actions);
+  overlay.appendChild(panel);
+  return { element: overlay };
+};
+
+export const buildObservationCreateOverlay = ({ observationGroups }) => {
   const overlay = createEl('div', {
     className: 'observation-create-overlay',
     dataset: { role: 'observation-create-overlay' },

@@ -159,6 +159,33 @@ const replaceObservationReferences = (days, fromKey, toText) => {
   });
 };
 
+const removeObservationReferences = (days, targetKey) => {
+  if (!days || typeof days !== 'object') {
+    return;
+  }
+  Object.values(days).forEach((entry) => {
+    if (!entry || typeof entry !== 'object') {
+      return;
+    }
+    if (!entry.observations || typeof entry.observations !== 'object') {
+      return;
+    }
+    Object.keys(entry.observations).forEach((child) => {
+      const list = normalizeObservationList(entry.observations[child]);
+      if (!list.length) {
+        return;
+      }
+      const updated = list.filter(
+        (item) => normalizeObservationKey(item) !== targetKey,
+      );
+      if (updated.length === list.length) {
+        return;
+      }
+      entry.observations[child] = updated;
+    });
+  });
+};
+
 const replaceAngebotReferences = (days, fromKey, toText) => {
   if (!days || typeof days !== 'object') {
     return;
@@ -1118,6 +1145,41 @@ export const updateObservationCatalogEntry = ({
   });
 
   return result;
+};
+
+export const removeObservationCatalogEntry = (value) => {
+  const normalizedText = normalizeObservationText(value);
+  const normalizedKey = normalizeObservationKey(normalizedText);
+  if (!normalizedText || !normalizedKey) {
+    return false;
+  }
+
+  let removed = false;
+
+  updateAppData((data) => {
+    const catalog = Array.isArray(data.observationCatalog)
+      ? [...data.observationCatalog]
+      : [];
+    const filtered = catalog.filter(
+      (entry) =>
+        normalizeObservationKey(entry?.text || entry || '') !== normalizedKey,
+    );
+    if (filtered.length === catalog.length) {
+      return;
+    }
+    removed = true;
+    data.observationCatalog = filtered;
+    data.observationTemplates = ensureUniqueSortedStrings(
+      (data.observationTemplates || []).filter(
+        (item) => normalizeObservationKey(item) !== normalizedKey,
+      ),
+    );
+    if (data.days) {
+      removeObservationReferences(data.days, normalizedKey);
+    }
+  });
+
+  return removed;
 };
 
 export const addPreset = (type, value) => {

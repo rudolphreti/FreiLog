@@ -3,10 +3,12 @@ import {
   getChildrenList,
   getEntry,
   getPresets,
+  removeObservationCatalogEntry,
   upsertObservationCatalogEntry,
   updateObservationCatalogEntry,
   updateEntry,
 } from '../db/dbRepository.js';
+import { buildObservationTemplatesOverlay } from '../ui/components.js';
 import { debounce } from '../utils/debounce.js';
 import { normalizeObservationGroups } from '../utils/observationCatalog.js';
 import { setSavedObservationFilters } from '../state/store.js';
@@ -60,6 +62,21 @@ let pendingTemplateRestore = null;
 
 const getAbsentChildren = (entry) =>
   Array.isArray(entry?.absentChildIds) ? entry.absentChildIds : [];
+
+const closeDrawerIfOpen = () => {
+  const drawerEl = document.getElementById('mainDrawer');
+  if (!drawerEl || !drawerEl.classList.contains('show')) {
+    return;
+  }
+  const closeButton = drawerEl.querySelector('[data-bs-dismiss="offcanvas"]');
+  if (closeButton instanceof HTMLElement) {
+    closeButton.click();
+  }
+  drawerEl.classList.remove('show');
+  drawerEl.setAttribute('aria-hidden', 'true');
+  const backdrop = document.querySelector('.offcanvas-backdrop');
+  backdrop?.parentElement?.removeChild(backdrop);
+};
 
 const orderAbsentChildren = (absentSet) => {
   const children = getChildrenList();
@@ -1627,5 +1644,660 @@ export const bindObservations = ({
         closeEditOverlay();
       }
     },
+  };
+};
+
+export const bindObservationCatalog = ({
+  openButton,
+  overlay,
+  createOverlay,
+  editOverlay,
+  deleteConfirmOverlay,
+  observationGroups,
+  catalog,
+  savedFilters,
+}) => {
+  if (!overlay || !createOverlay || !editOverlay) {
+    return null;
+  }
+
+  let currentCatalog = Array.isArray(catalog) ? catalog : [];
+  let currentGroups = observationGroups || {};
+  let currentSavedFilters = savedFilters || null;
+  let isOverlayOpen = false;
+  let isCreateOverlayOpen = false;
+  let isEditOverlayOpen = false;
+  let editingObservation = null;
+  let openButtonRef = openButton || null;
+  let deleteConfirmRef = deleteConfirmOverlay || null;
+
+  const setOpenButton = (button) => {
+    if (openButtonRef && openButtonRef instanceof HTMLElement) {
+      openButtonRef.removeEventListener('click', handleOpen);
+    }
+    openButtonRef = button || null;
+    if (openButtonRef && openButtonRef instanceof HTMLElement) {
+      openButtonRef.addEventListener('click', handleOpen);
+    }
+  };
+
+  const rebuildOverlay = ({ preserveState = true } = {}) => {
+    const templateContent = overlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    const previousScrollTop = templateContent ? templateContent.scrollTop : 0;
+    const preservedState = preserveState ? getTemplateUiState(overlay) : null;
+    const refreshed = buildObservationTemplatesOverlay({
+      templates: currentCatalog,
+      observationCatalog: currentCatalog,
+      observationGroups: currentGroups,
+      savedFilters: currentSavedFilters,
+      role: 'observation-catalog-overlay',
+      closeRole: 'observation-catalog-close',
+      showCreateButton: true,
+      createButtonRole: 'observation-catalog-create-open',
+    });
+    if (refreshed?.element) {
+      const nextPanel = refreshed.element.querySelector(
+        '.observation-templates-overlay__panel',
+      );
+      const currentPanel = overlay.querySelector(
+        '.observation-templates-overlay__panel',
+      );
+      const nextHeader = nextPanel?.querySelector(
+        '.observation-templates-overlay__header',
+      );
+      const currentHeader = currentPanel?.querySelector(
+        '.observation-templates-overlay__header',
+      );
+      if (currentHeader && nextHeader) {
+        currentHeader.replaceChildren(...nextHeader.children);
+      }
+      const nextContent = nextPanel?.querySelector(
+        '.observation-templates-overlay__content',
+      );
+      const currentContent = currentPanel?.querySelector(
+        '.observation-templates-overlay__content',
+      );
+      if (currentContent && nextContent) {
+        currentContent.replaceChildren(...nextContent.children);
+        currentContent.scrollTop = previousScrollTop;
+      }
+    }
+
+    if (preservedState) {
+      restoreTemplateUiState(overlay, preservedState);
+    } else if (currentSavedFilters) {
+      restoreTemplateUiState(overlay, {
+        templateFilter: currentSavedFilters.selectedLetter || 'ALL',
+        templateQuery: overlay.dataset.templateQuery || '',
+        templateGroups: normalizeObservationGroups(
+          currentSavedFilters.selectedGroups || [],
+        ).join(','),
+        templateGroupMode:
+          currentSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+        templateMulti: currentSavedFilters.multiGroups === true,
+        templateShowAndOr: currentSavedFilters.showAndOr === true,
+        templateShowAlphabet: currentSavedFilters.showAlphabet === true,
+        templateSettingsOpen: false,
+      });
+    } else {
+      updateTemplateControls(overlay, { syncInput: true });
+      applyTemplateFilters(overlay);
+    }
+    if (templateContent) {
+      templateContent.scrollTop = previousScrollTop;
+    }
+  };
+
+  const openOverlay = () => {
+    closeDrawerIfOpen();
+    isOverlayOpen = true;
+    overlay.classList.add('is-open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('observation-overlay-open');
+    rebuildOverlay({ preserveState: false });
+  };
+
+  const closeOverlay = () => {
+    isOverlayOpen = false;
+    overlay.classList.remove('is-open');
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('observation-overlay-open');
+    closeCreateOverlay();
+    closeEditOverlay();
+    closeDeleteConfirm();
+    setTemplateSettingsOpen(overlay, false);
+  };
+
+  const setCreateGroups = (groups) => {
+    const normalized = normalizeObservationGroups(groups);
+    createOverlay.dataset.selectedGroups = normalized.join(',');
+    const buttons = createOverlay.querySelectorAll(
+      '[data-role="observation-create-group"]',
+    );
+    buttons.forEach((button) => {
+      const isActive = normalized.includes(button.dataset.value || '');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  const getCreateGroups = () =>
+    normalizeObservationGroups(
+      typeof createOverlay.dataset.selectedGroups === 'string'
+        ? createOverlay.dataset.selectedGroups.split(',')
+        : [],
+    );
+
+  const updateCreatePreview = () => {
+    const input = createOverlay.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    const previewPill = createOverlay.querySelector(
+      '[data-role="observation-create-preview-pill"]',
+    );
+    const previewText = createOverlay.querySelector(
+      '[data-role="observation-create-preview-text"]',
+    );
+    const previewDots = createOverlay.querySelector(
+      '[data-role="observation-create-preview-dots"]',
+    );
+    const previewEmpty = createOverlay.querySelector(
+      '[data-role="observation-create-preview-empty"]',
+    );
+    if (!isInputElement(input) || !isHtmlElement(previewPill)) {
+      return;
+    }
+
+    const text = normalizeObservationInput(input.value);
+    const groups = getCreateGroups();
+    const hasText = Boolean(text);
+    previewPill.hidden = !hasText;
+    if (isHtmlElement(previewEmpty)) {
+      previewEmpty.hidden = hasText;
+    }
+    if (!hasText) {
+      if (isHtmlElement(previewText)) {
+        previewText.textContent = '';
+      }
+      if (isHtmlElement(previewDots)) {
+        previewDots.textContent = '';
+      }
+      previewPill.classList.remove('observation-group-outline');
+      return;
+    }
+
+    if (isHtmlElement(previewText)) {
+      previewText.textContent = text;
+    }
+    if (isHtmlElement(previewDots)) {
+      previewDots.textContent = '';
+      previewDots.appendChild(buildGroupDots(groups, currentGroups));
+    }
+    previewPill.classList.toggle(
+      'observation-group-outline',
+      groups.includes('SCHWARZ'),
+    );
+  };
+
+  const openCreateOverlay = () => {
+    isCreateOverlayOpen = true;
+    createOverlay.classList.add('is-open');
+    createOverlay.setAttribute('aria-hidden', 'false');
+    setCreateGroups([]);
+    const input = createOverlay.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    focusTextInput(input, { resetValue: true, caret: 'end' });
+    updateCreatePreview();
+  };
+
+  const closeCreateOverlay = () => {
+    if (!isCreateOverlayOpen) {
+      return;
+    }
+    isCreateOverlayOpen = false;
+    createOverlay.classList.remove('is-open');
+    createOverlay.setAttribute('aria-hidden', 'true');
+  };
+
+  const setEditGroups = (groups) => {
+    const normalized = normalizeObservationGroups(groups);
+    editOverlay.dataset.selectedGroups = normalized.join(',');
+    const buttons = editOverlay.querySelectorAll(
+      '[data-role="observation-edit-group"]',
+    );
+    buttons.forEach((button) => {
+      const isActive = normalized.includes(button.dataset.value || '');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  };
+
+  const getEditGroups = () =>
+    normalizeObservationGroups(
+      typeof editOverlay.dataset.selectedGroups === 'string'
+        ? editOverlay.dataset.selectedGroups.split(',')
+        : [],
+    );
+
+  const openEditOverlay = ({ text, groups }) => {
+    if (!text) {
+      return;
+    }
+    editingObservation = { text };
+    isEditOverlayOpen = true;
+    editOverlay.classList.add('is-open');
+    editOverlay.setAttribute('aria-hidden', 'false');
+    setEditGroups(groups || []);
+    const input = editOverlay.querySelector(
+      '[data-role="observation-edit-input"]',
+    );
+    if (isInputElement(input)) {
+      input.value = text;
+      focusTextInput(input, { caret: 'end' });
+      input.select();
+    }
+  };
+
+  const closeEditOverlay = () => {
+    if (!isEditOverlayOpen) {
+      return;
+    }
+    isEditOverlayOpen = false;
+    editingObservation = null;
+    editOverlay.classList.remove('is-open');
+    editOverlay.setAttribute('aria-hidden', 'true');
+  };
+
+  const openDeleteConfirm = () => {
+    if (!deleteConfirmRef || !editingObservation?.text) {
+      return;
+    }
+    const messageEl = deleteConfirmRef.querySelector(
+      '[data-role="observation-delete-confirm-message"]',
+    );
+    if (isHtmlElement(messageEl)) {
+      messageEl.textContent = `“${editingObservation.text}” wird dauerhaft gelöscht.`;
+    }
+    const input = deleteConfirmRef.querySelector(
+      '[data-role="observation-delete-confirm-input"]',
+    );
+    if (isInputElement(input)) {
+      input.value = '';
+      input.focus();
+    }
+    const confirmButton = deleteConfirmRef.querySelector(
+      '[data-role="observation-delete-confirm"]',
+    );
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = true;
+    }
+    deleteConfirmRef.classList.remove('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeDeleteConfirm = () => {
+    if (!deleteConfirmRef) {
+      return;
+    }
+    deleteConfirmRef.classList.add('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'true');
+  };
+
+  const handleOpen = () => {
+    openOverlay();
+  };
+
+  const handleOverlayInput = (event) => {
+    const target = event.target;
+    if (!isInputElement(target)) {
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-search') {
+      setTemplateQuery(overlay, target.value);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-multi-switch') {
+      setTemplateMultiGroups(overlay, target.checked);
+      persistTemplateFilters(overlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-andor-switch') {
+      setTemplateShowAndOr(overlay, target.checked);
+      persistTemplateFilters(overlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-alphabet-switch') {
+      setTemplateShowAlphabet(overlay, target.checked);
+      persistTemplateFilters(overlay);
+    }
+  };
+
+  const handleOverlayClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const settingsPanel = overlay.querySelector(
+      '[data-role="observation-template-settings-panel"]',
+    );
+    const isSettingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    const { settingsOpen } = getTemplateFlags(overlay);
+    if (settingsOpen && settingsPanel && !isSettingsToggle && !settingsPanel.contains(target)) {
+      setTemplateSettingsOpen(overlay, false);
+    }
+
+    if (target === overlay) {
+      closeOverlay();
+      return;
+    }
+
+    const closeButton = target.closest(
+      '[data-role="observation-catalog-close"]',
+    );
+    if (closeButton) {
+      closeOverlay();
+      return;
+    }
+
+    if (target.closest('[data-role="observation-catalog-create-open"]')) {
+      openCreateOverlay();
+      return;
+    }
+
+    const settingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    if (settingsToggle) {
+      const { settingsOpen: nextOpen } = getTemplateFlags(overlay);
+      setTemplateSettingsOpen(overlay, !nextOpen);
+      return;
+    }
+
+    const templateButton = target.closest(
+      '[data-role="observation-template-add"]',
+    );
+    if (templateButton) {
+      const text = templateButton.dataset.value;
+      const groups = normalizeObservationGroups(
+        typeof templateButton.dataset.groups === 'string'
+          ? templateButton.dataset.groups.split(',')
+          : [],
+      );
+      if (text) {
+        openEditOverlay({ text, groups });
+      }
+      return;
+    }
+
+    const templateGroupButton = target.closest(
+      '[data-role="observation-template-group-filter"]',
+    );
+    if (templateGroupButton) {
+      toggleTemplateGroup(overlay, templateGroupButton.dataset.value);
+      persistTemplateFilters(overlay);
+      return;
+    }
+
+    const templateGroupModeButton = target.closest(
+      '[data-role="observation-template-group-mode"]',
+    );
+    if (templateGroupModeButton) {
+      const { multiGroups } = getTemplateFlags(overlay);
+      if (!multiGroups) {
+        return;
+      }
+      setTemplateGroupMode(overlay, templateGroupModeButton.dataset.value);
+      persistTemplateFilters(overlay);
+      return;
+    }
+
+    const templateFilterButton = target.closest(
+      '[data-role="observation-template-letter"]',
+    );
+    if (templateFilterButton) {
+      setTemplateFilter(
+        overlay,
+        templateFilterButton.dataset.value || 'ALL',
+      );
+      persistTemplateFilters(overlay);
+    }
+  };
+
+  const handleCreateSubmit = (event) => {
+    const target = event.target;
+    if (!isFormElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-create-form') {
+      return;
+    }
+    event.preventDefault();
+    const input = target.querySelector(
+      '[data-role="observation-create-input"]',
+    );
+    if (!isInputElement(input)) {
+      return;
+    }
+    const normalized = normalizeObservationInput(input.value);
+    if (!normalized) {
+      return;
+    }
+    const groups = getCreateGroups();
+    upsertObservationCatalogEntry(normalized, groups);
+    closeCreateOverlay();
+    rebuildOverlay();
+  };
+
+  const handleCreateInput = (event) => {
+    const target = event.target;
+    if (!isInputElement(target)) {
+      return;
+    }
+    if (target.dataset.role === 'observation-create-input') {
+      updateCreatePreview();
+    }
+  };
+
+  const handleCreateClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const closeButton = target.closest(
+      '[data-role="observation-create-close"]',
+    );
+    if (closeButton) {
+      closeCreateOverlay();
+      return;
+    }
+
+    const cancelButton = target.closest(
+      '[data-role="observation-create-cancel"]',
+    );
+    if (cancelButton) {
+      closeCreateOverlay();
+      return;
+    }
+
+    const groupButton = target.closest(
+      '[data-role="observation-create-group"]',
+    );
+    if (groupButton) {
+      const selected = new Set(getCreateGroups());
+      const value = groupButton.dataset.value;
+      if (value) {
+        if (selected.has(value)) {
+          selected.delete(value);
+        } else {
+          selected.add(value);
+        }
+        setCreateGroups(Array.from(selected));
+        updateCreatePreview();
+      }
+    }
+  };
+
+  const handleEditSubmit = (event) => {
+    const target = event.target;
+    if (!isFormElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-edit-form') {
+      return;
+    }
+    event.preventDefault();
+    if (!editingObservation) {
+      closeEditOverlay();
+      return;
+    }
+    const input = target.querySelector(
+      '[data-role="observation-edit-input"]',
+    );
+    if (!isInputElement(input)) {
+      return;
+    }
+    const normalized = normalizeObservationInput(input.value);
+    if (!normalized) {
+      return;
+    }
+    const groups = getEditGroups();
+    updateObservationCatalogEntry({
+      currentText: editingObservation.text,
+      nextText: normalized,
+      groups,
+    });
+    closeEditOverlay();
+    rebuildOverlay();
+  };
+
+  const handleEditClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+
+    const cancelButton = target.closest(
+      '[data-role="observation-edit-cancel"]',
+    );
+    if (cancelButton) {
+      closeEditOverlay();
+      return;
+    }
+
+    const deleteButton = target.closest(
+      '[data-role="observation-edit-delete"]',
+    );
+    if (deleteButton) {
+      openDeleteConfirm();
+      return;
+    }
+
+    const groupButton = target.closest(
+      '[data-role="observation-edit-group"]',
+    );
+    if (groupButton) {
+      const selected = new Set(getEditGroups());
+      const value = groupButton.dataset.value;
+      if (value) {
+        if (selected.has(value)) {
+          selected.delete(value);
+        } else {
+          selected.add(value);
+        }
+        setEditGroups(Array.from(selected));
+      }
+    }
+  };
+
+  const handleDeleteConfirmClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target)) {
+      return;
+    }
+    if (target.closest('[data-role="observation-delete-cancel"]')) {
+      closeDeleteConfirm();
+      return;
+    }
+    if (target.closest('[data-role="observation-delete-confirm"]')) {
+      const input = deleteConfirmRef?.querySelector(
+        '[data-role="observation-delete-confirm-input"]',
+      );
+      const typed =
+        input instanceof HTMLInputElement
+          ? input.value.trim().toLocaleLowerCase('de')
+          : '';
+      if (typed !== 'ja') {
+        return;
+      }
+      if (editingObservation?.text) {
+        removeObservationCatalogEntry(editingObservation.text);
+      }
+      closeDeleteConfirm();
+      closeEditOverlay();
+      rebuildOverlay();
+    }
+  };
+
+  const handleDeleteConfirmInput = (event) => {
+    const target = event.target;
+    if (!isInputElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-delete-confirm-input') {
+      return;
+    }
+    const confirmButton = deleteConfirmRef?.querySelector(
+      '[data-role="observation-delete-confirm"]',
+    );
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = target.value.trim().toLocaleLowerCase('de') !== 'ja';
+    }
+  };
+
+  setOpenButton(openButtonRef);
+  rebuildOverlay({ preserveState: false });
+
+  overlay.addEventListener('input', handleOverlayInput);
+  overlay.addEventListener('click', handleOverlayClick);
+  createOverlay.addEventListener('submit', handleCreateSubmit);
+  createOverlay.addEventListener('input', handleCreateInput);
+  createOverlay.addEventListener('click', handleCreateClick);
+  editOverlay.addEventListener('submit', handleEditSubmit);
+  editOverlay.addEventListener('click', handleEditClick);
+  if (deleteConfirmRef) {
+    deleteConfirmRef.addEventListener('click', handleDeleteConfirmClick);
+    deleteConfirmRef.addEventListener('input', handleDeleteConfirmInput);
+  }
+
+  return {
+    update: ({
+      catalog: nextCatalog,
+      observationGroups: nextGroups,
+      savedFilters: nextFilters,
+      openButton: nextOpenButton,
+    }) => {
+      currentCatalog = Array.isArray(nextCatalog) ? nextCatalog : currentCatalog;
+      currentGroups = nextGroups || currentGroups;
+      if (nextFilters) {
+        currentSavedFilters = nextFilters;
+      }
+      if (typeof nextOpenButton !== 'undefined') {
+        setOpenButton(nextOpenButton);
+      }
+      rebuildOverlay({ preserveState: isOverlayOpen });
+    },
+    open: () => openOverlay(),
+    close: () => closeOverlay(),
   };
 };
