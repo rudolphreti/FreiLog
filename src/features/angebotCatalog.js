@@ -868,7 +868,26 @@ export const bindAngebotCatalog = ({
     if (!deleteConfirmRef) {
       return;
     }
+    const messageEl = deleteConfirmRef.querySelector(
+      '[data-role="angebot-delete-confirm-message"]',
+    );
+    if (messageEl instanceof HTMLElement) {
+      const name = detailOffer?.text || '';
+      messageEl.textContent =
+        `Czy na pewno chcesz usunąć Angebot ${name}? ` +
+        'Operacja nie może zostać cofnięta. Wszystkie przypisania tej oferty zostaną utracone! ' +
+        'Wpisz "ja" żeby potwierdzić lub naciśnij Abbrechen.';
+    }
+    const input = deleteConfirmRef.querySelector('[data-role="angebot-delete-confirm-input"]');
+    if (input instanceof HTMLInputElement) {
+      input.value = '';
+    }
+    const confirmButton = deleteConfirmRef.querySelector('[data-role="angebot-delete-confirm"]');
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = true;
+    }
     deleteConfirmRef.classList.remove('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'false');
   };
 
   const closeDeleteConfirm = () => {
@@ -876,6 +895,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     deleteConfirmRef.classList.add('d-none');
+    deleteConfirmRef.setAttribute('aria-hidden', 'true');
   };
 
   const focusCatalogSearchInput = () => {
@@ -1278,6 +1298,12 @@ export const bindAngebotCatalog = ({
       return;
     }
     if (target.closest('[data-role="angebot-delete-confirm"]')) {
+      const input = deleteConfirmRef?.querySelector('[data-role="angebot-delete-confirm-input"]');
+      const typed =
+        input instanceof HTMLInputElement ? input.value.trim().toLocaleLowerCase('de') : '';
+      if (typed !== 'ja') {
+        return;
+      }
       if (detailOffer?.text) {
         removeAngebotCatalogEntry(detailOffer.text);
       }
@@ -1285,6 +1311,20 @@ export const bindAngebotCatalog = ({
       closeDetailOverlay();
       renderDaily();
       renderManage();
+    }
+  };
+
+  const handleDeleteConfirmInput = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-delete-confirm-input') {
+      return;
+    }
+    const confirmButton = deleteConfirmRef?.querySelector('[data-role="angebot-delete-confirm"]');
+    if (confirmButton instanceof HTMLButtonElement) {
+      confirmButton.disabled = target.value.trim().toLocaleLowerCase('de') !== 'ja';
     }
   };
 
@@ -1578,6 +1618,7 @@ export const bindAngebotCatalog = ({
   }
   if (deleteConfirmRef) {
     deleteConfirmRef.addEventListener('click', handleDeleteConfirmClick);
+    deleteConfirmRef.addEventListener('input', handleDeleteConfirmInput);
   }
   createOverlay.addEventListener('input', (event) => {
     const target = event.target;

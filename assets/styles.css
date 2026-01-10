@@ -629,6 +629,10 @@ body {
   backdrop-filter: blur(1px);
 }
 
+.class-settings-confirm.angebot-delete-confirm {
+  z-index: 2030;
+}
+
 .class-settings-confirm__panel {
   background: #ffffff;
   border-radius: 12px;

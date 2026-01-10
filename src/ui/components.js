@@ -976,12 +976,15 @@ export const buildAngebotDetailOverlay = () => {
 
 export const buildAngebotDeleteConfirm = () => {
   const overlay = createEl('div', {
-    className: 'class-settings-confirm d-none',
+    className: 'class-settings-confirm angebot-delete-confirm d-none',
     dataset: { role: 'angebot-delete-confirm-overlay' },
     attrs: {
       role: 'dialog',
+      'aria-modal': 'true',
       'aria-labelledby': 'angebot-delete-confirm-title',
       'aria-describedby': 'angebot-delete-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
     },
   });
   const panel = createEl('div', {
@@ -995,7 +998,23 @@ export const buildAngebotDeleteConfirm = () => {
   const message = createEl('p', {
     className: 'text-muted mb-3',
     attrs: { id: 'angebot-delete-confirm-message' },
-    text: 'Möchtest du dieses Angebot wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.',
+    text: '',
+    dataset: { role: 'angebot-delete-confirm-message' },
+  });
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Bestätigung',
+    attrs: { for: 'angebot-delete-confirm-input' },
+  });
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: {
+      id: 'angebot-delete-confirm-input',
+      type: 'text',
+      autocomplete: 'off',
+      placeholder: 'ja',
+    },
+    dataset: { role: 'angebot-delete-confirm-input' },
   });
   const actions = createEl('div', {
     className: 'class-settings-confirm__actions',
@@ -1014,7 +1033,7 @@ export const buildAngebotDeleteConfirm = () => {
       }),
     ],
   });
-  panel.append(title, message, actions);
+  panel.append(title, message, inputLabel, input, actions);
   overlay.appendChild(panel);
   return { element: overlay };
 };
