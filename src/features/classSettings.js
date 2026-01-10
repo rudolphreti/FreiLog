@@ -722,16 +722,18 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     const nextMotto = typeof nextProfile.motto === 'string' ? nextProfile.motto : '';
     const nextNotes = typeof nextProfile.notes === 'string' ? nextProfile.notes : '';
 
-    if (nameInput.value !== nextName) {
+    const isActive = (input) => document.activeElement === input;
+
+    if (!isActive(nameInput) && nameInput.value !== nextName) {
       nameInput.value = nextName;
     }
-    if (badgeInput.value !== nextBadge) {
+    if (!isActive(badgeInput) && badgeInput.value !== nextBadge) {
       badgeInput.value = nextBadge;
     }
-    if (mottoInput.value !== nextMotto) {
+    if (!isActive(mottoInput) && mottoInput.value !== nextMotto) {
       mottoInput.value = nextMotto;
     }
-    if (notesInput.value !== nextNotes) {
+    if (!isActive(notesInput) && notesInput.value !== nextNotes) {
       notesInput.value = nextNotes;
     }
   };
