@@ -667,7 +667,7 @@ export const buildAngebotCatalogOverlay = ({
   const header = createEl('div', {
     className: 'observation-templates-overlay__header',
   });
-  const title = createEl('h3', {
+  const titleEl = createEl('h3', {
     className: 'h5 mb-0',
     text: title,
   });
@@ -690,7 +690,7 @@ export const buildAngebotCatalogOverlay = ({
     );
   }
   headerActions.append(closeButton);
-  header.append(title, headerActions);
+  header.append(titleEl, headerActions);
 
   const groupFilterBar = createEl('div', {
     className: 'observation-templates__group-dots',
