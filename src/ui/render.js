@@ -329,7 +329,7 @@ export const renderApp = (root, state) => {
     angebotEditOverlay = buildAngebotEditOverlay({ angebotGroups });
   }
   if (!angebotDetailOverlayView) {
-    angebotDetailOverlayView = buildAngebotDetailOverlay();
+    angebotDetailOverlayView = buildAngebotDetailOverlay({ angebotGroups });
   }
   if (!angebotDeleteConfirmView) {
     angebotDeleteConfirmView = buildAngebotDeleteConfirm();

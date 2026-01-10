@@ -815,34 +815,63 @@ export const bindAngebotCatalog = ({
     closeEditOverlay();
   };
 
+  const setDetailGroups = (groups) => {
+    if (!detailOverlayRef) {
+      return;
+    }
+    const normalized = normalizeAngebotGroups(groups);
+    detailOverlayRef.dataset.selectedGroups = normalized.join(',');
+    const buttons = detailOverlayRef.querySelectorAll('[data-role="angebot-detail-group"]');
+    buttons.forEach((button) => {
+      const isActive = normalized.includes(button.dataset.value || '');
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    updateDetailPreview();
+  };
+
+  const getDetailGroups = () =>
+    normalizeAngebotGroups(
+      typeof detailOverlayRef?.dataset.selectedGroups === 'string'
+        ? detailOverlayRef.dataset.selectedGroups.split(',')
+        : [],
+    );
+
+  const updateDetailPreview = () => {
+    if (!detailOverlayRef) {
+      return;
+    }
+    const input = detailOverlayRef.querySelector('[data-role="angebot-detail-input"]');
+    const previewText = detailOverlayRef.querySelector('[data-role="angebot-detail-text"]');
+    const previewDots = detailOverlayRef.querySelector('[data-role="angebot-detail-dots"]');
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const text = normalizeAngebotText(input.value);
+    if (previewText instanceof HTMLElement) {
+      previewText.textContent = text;
+    }
+    if (previewDots instanceof HTMLElement) {
+      previewDots.replaceChildren(buildGroupDots(getDetailGroups(), angebotGroups));
+    }
+  };
+
   const updateDetailOverlay = (entry) => {
     if (!detailOverlayRef) {
       return;
     }
     const textEl = detailOverlayRef.querySelector('[data-role="angebot-detail-text"]');
     const dotsEl = detailOverlayRef.querySelector('[data-role="angebot-detail-dots"]');
-    const groupsEl = detailOverlayRef.querySelector('[data-role="angebot-detail-groups"]');
-    const groupsEmpty = detailOverlayRef.querySelector(
-      '[data-role="angebot-detail-groups-empty"]',
-    );
+    const input = detailOverlayRef.querySelector('[data-role="angebot-detail-input"]');
+    if (input instanceof HTMLInputElement) {
+      input.value = entry?.text || '';
+    }
+    setDetailGroups(entry?.groups || []);
     if (textEl instanceof HTMLElement) {
       textEl.textContent = entry?.text || '';
     }
     if (dotsEl instanceof HTMLElement) {
       dotsEl.replaceChildren(buildGroupDots(entry?.groups || [], angebotGroups));
-    }
-    if (groupsEl instanceof HTMLElement) {
-      groupsEl.replaceChildren();
-      (entry?.groups || []).forEach((group) => {
-        const label = angebotGroups?.[group]?.label || group;
-        const badge = document.createElement('span');
-        badge.className = 'badge text-bg-light border';
-        badge.textContent = label;
-        groupsEl.appendChild(badge);
-      });
-    }
-    if (groupsEmpty instanceof HTMLElement) {
-      groupsEmpty.hidden = Boolean(entry?.groups?.length);
     }
   };
 
@@ -851,6 +880,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     detailOffer = entry;
+    editingOffer = { text: entry.text };
     updateDetailOverlay(entry);
     detailOverlayRef.classList.add('is-open');
     detailOverlayRef.setAttribute('aria-hidden', 'false');
@@ -861,6 +891,7 @@ export const bindAngebotCatalog = ({
       return;
     }
     detailOffer = null;
+    editingOffer = null;
     detailOverlayRef.classList.remove('is-open');
     detailOverlayRef.setAttribute('aria-hidden', 'true');
   };
@@ -1277,16 +1308,71 @@ export const bindAngebotCatalog = ({
       closeDetailOverlay();
       return;
     }
-    if (target.closest('[data-role="angebot-detail-edit"]')) {
-      if (detailOffer) {
-        openEditOverlay(detailOffer);
-      }
+    const cancelButton = target.closest('[data-role="angebot-detail-cancel"]');
+    if (cancelButton) {
       closeDetailOverlay();
+      return;
+    }
+    const groupButton = target.closest('[data-role="angebot-detail-group"]');
+    if (groupButton) {
+      const value = groupButton.dataset.value;
+      if (!value) {
+        return;
+      }
+      const selected = new Set(getDetailGroups());
+      if (selected.has(value)) {
+        selected.delete(value);
+      } else {
+        selected.add(value);
+      }
+      setDetailGroups(Array.from(selected));
       return;
     }
     if (target.closest('[data-role="angebot-detail-delete"]')) {
       openDeleteConfirm();
     }
+  };
+
+  const handleDetailSubmit = (event) => {
+    if (!(event.target instanceof HTMLFormElement)) {
+      return;
+    }
+    if (event.target.dataset.role !== 'angebot-detail-form') {
+      return;
+    }
+    event.preventDefault();
+    if (!detailOffer) {
+      closeDetailOverlay();
+      return;
+    }
+    const input = event.target.querySelector('[data-role="angebot-detail-input"]');
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const normalized = normalizeAngebotText(input.value);
+    if (!normalized) {
+      return;
+    }
+    const groups = getDetailGroups();
+    updateAngebotCatalogEntry({
+      currentText: detailOffer.text,
+      nextText: normalized,
+      groups,
+    });
+    closeDetailOverlay();
+    renderDaily();
+    renderManage();
+  };
+
+  const handleDetailInput = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-detail-input') {
+      return;
+    }
+    updateDetailPreview();
   };
 
   const handleDeleteConfirmClick = (event) => {
@@ -1626,6 +1712,8 @@ export const bindAngebotCatalog = ({
   }
   if (detailOverlayRef) {
     detailOverlayRef.addEventListener('click', handleDetailClick);
+    detailOverlayRef.addEventListener('submit', handleDetailSubmit);
+    detailOverlayRef.addEventListener('input', handleDetailInput);
   }
   if (deleteConfirmRef) {
     deleteConfirmRef.addEventListener('click', handleDeleteConfirmClick);

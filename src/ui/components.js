@@ -892,7 +892,7 @@ export const buildAngebotCatalogOverlay = ({
   };
 };
 
-export const buildAngebotDetailOverlay = () => {
+export const buildAngebotDetailOverlay = ({ angebotGroups }) => {
   const overlay = createEl('div', {
     className: 'angebot-detail-overlay observation-create-overlay',
     dataset: { role: 'angebot-detail-overlay' },
@@ -929,28 +929,54 @@ export const buildAngebotDetailOverlay = () => {
     children: [previewDots, previewText],
   });
 
+  const input = createEl('input', {
+    className: 'form-control',
+    attrs: { type: 'text', placeholder: 'Angebotstitel...' },
+    dataset: { role: 'angebot-detail-input' },
+  });
+
+  const inputLabel = createEl('label', {
+    className: 'form-label text-muted small mb-0',
+    text: 'Angebot',
+  });
+
   const groupsTitle = createEl('p', {
     className: 'text-muted small mb-0',
     text: 'Gruppen',
   });
-  const groupsList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2',
+
+  const groupButtons = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-create-groups',
     dataset: { role: 'angebot-detail-groups' },
   });
-  const groupsEmpty = createEl('p', {
-    className: 'text-muted small mb-0',
-    text: 'Keine Gruppen zugeordnet.',
-    dataset: { role: 'angebot-detail-groups-empty' },
+
+  ANGEBOT_GROUP_CODES.forEach((code) => {
+    const entry = angebotGroups?.[code];
+    const label = entry?.label || code;
+    const color = entry?.color || '#6c757d';
+    const button = createEl('button', {
+      className: 'btn observation-create-group-toggle',
+      attrs: { type: 'button', style: `--group-color: ${color};` },
+      dataset: { role: 'angebot-detail-group', value: code },
+      text: label,
+    });
+    groupButtons.appendChild(button);
   });
 
   const actions = createEl('div', {
     className: 'd-flex flex-wrap gap-2',
     children: [
       createEl('button', {
-        className: 'btn btn-outline-primary',
-        text: 'Bearbeiten',
+        className: 'btn btn-primary',
+        text: 'Speichern',
+        attrs: { type: 'submit' },
+        dataset: { role: 'angebot-detail-save' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
         attrs: { type: 'button' },
-        dataset: { role: 'angebot-detail-edit' },
+        dataset: { role: 'angebot-detail-cancel' },
       }),
       createEl('button', {
         className: 'btn btn-danger',
@@ -961,9 +987,15 @@ export const buildAngebotDetailOverlay = () => {
     ],
   });
 
+  const form = createEl('form', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'angebot-detail-form' },
+    children: [previewPill, inputLabel, input, groupsTitle, groupButtons, actions],
+  });
+
   const content = createEl('div', {
-    className: 'observation-create-overlay__content d-flex flex-column gap-3',
-    children: [previewPill, groupsTitle, groupsList, groupsEmpty, actions],
+    className: 'observation-create-overlay__content',
+    children: [form],
   });
 
   panel.append(header, content);
