@@ -97,6 +97,9 @@ body {
   position: absolute;
   top: max(0.75rem, env(safe-area-inset-top));
   right: max(0.75rem, env(safe-area-inset-right));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   z-index: 2;
 }
 

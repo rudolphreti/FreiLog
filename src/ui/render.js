@@ -239,7 +239,12 @@ export const renderApp = (root, state) => {
 
   const preservedUi = getPreservedUiState(root);
 
-  const header = buildHeader({ selectedDate, showInitialActions: !hasData, freeDayInfo });
+  const header = buildHeader({
+    selectedDate,
+    showInitialActions: !hasData,
+    showExport: hasData,
+    freeDayInfo,
+  });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const freizeitModules = getFreizeitModulesForDate(
     selectedDate,

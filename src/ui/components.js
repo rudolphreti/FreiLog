@@ -15,9 +15,25 @@ import { ANGEBOT_GROUP_CODES, normalizeAngebotKey } from '../utils/angebotCatalo
 import { todayYmd } from '../utils/date.js';
 import { UI_LABELS } from './labels.js';
 
-export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayInfo = null }) => {
+export const buildHeader = ({
+  selectedDate,
+  showInitialActions = false,
+  showExport = false,
+  freeDayInfo = null,
+}) => {
   const header = createEl('header', {
     className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top app-header',
+  });
+
+  const exportButton = createEl('button', {
+    className: 'btn btn-outline-primary d-inline-flex align-items-center header-menu-btn',
+    children: [
+      createEl('span', { text: '⬇️' }),
+      createEl('span', { className: 'visually-hidden', text: 'Exportieren' }),
+    ],
+    attrs: {
+      type: 'button',
+    },
   });
 
   const menuButton = createEl('button', {
@@ -82,7 +98,7 @@ export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayI
 
   const menuContainer = createEl('div', {
     className: 'header-menu-anchor',
-    children: [menuButton],
+    children: [showExport ? exportButton : null, menuButton].filter(Boolean),
   });
 
   const headerContent = createEl('div', {
@@ -98,6 +114,7 @@ export const buildHeader = ({ selectedDate, showInitialActions = false, freeDayI
     refs: {
       dateInput,
       menuButton,
+      exportButton: showExport ? exportButton : null,
       importButton: showInitialActions ? importButton : null,
       dummyDataButton: showInitialActions ? dummyDataButton : null,
       importInput: showInitialActions ? importInput : null,
