@@ -32,7 +32,38 @@
     "badge": "🦋",
     "motto": "Gemeinsam entdecken wir Neues",
     "notes": "Beispieldaten für Tests.",
-    "childrenNotes": {}
+    "childrenNotes": {},
+    "entlassung": {
+      "regular": {
+        "monday": [
+          { "time": "15:30", "children": [] },
+          { "time": "16:30", "children": [] },
+          { "time": "17:30", "children": [] }
+        ],
+        "tuesday": [
+          { "time": "15:30", "children": [] },
+          { "time": "16:30", "children": [] },
+          { "time": "17:30", "children": [] }
+        ],
+        "wednesday": [
+          { "time": "15:30", "children": [] },
+          { "time": "16:30", "children": [] },
+          { "time": "17:30", "children": [] }
+        ],
+        "thursday": [
+          { "time": "15:30", "children": [] },
+          { "time": "16:30", "children": [] },
+          { "time": "17:30", "children": [] }
+        ],
+        "friday": [
+          { "time": "13:50", "children": [] },
+          { "time": "15:30", "children": [] },
+          { "time": "16:30", "children": [] },
+          { "time": "17:30", "children": [] }
+        ]
+      },
+      "special": []
+    }
   },
   "angebote": [
     "Ausflug",

@@ -1,8 +1,10 @@
-import { saveClassChildren, saveClassProfileFields } from '../db/dbRepository.js';
-import { normalizeChildName } from '../db/dbSchema.js';
+import { saveClassChildren, saveClassEntlassung, saveClassProfileFields } from '../db/dbRepository.js';
+import { normalizeChildName, normalizeEntlassung } from '../db/dbSchema.js';
 import { createEl } from '../ui/dom.js';
 import { UI_LABELS } from '../ui/labels.js';
+import { todayYmd } from '../utils/date.js';
 import { debounce } from '../utils/debounce.js';
+import { TIMETABLE_DAY_ORDER } from '../utils/timetable.js';
 
 const SEPARATORS = [' ', '-', '\u2010', "'", '’', 'ʼ', '.'];
 const isLatinLetter = (ch) => /\p{Letter}/u.test(ch) && /\p{Script=Latin}/u.test(ch);
@@ -203,6 +205,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let deleteChildFeedbackState = 'idle';
   let deleteChildConfirmationTarget = '';
   let deleteChildConfirmationLabel = '';
+  let entlassungState = normalizeEntlassung({}, []);
+  const entlassungRegularErrors = {};
+  const entlassungSpecialErrors = {};
 
   const overlay = createEl('div', {
     className: 'class-settings-overlay',
@@ -351,6 +356,109 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     className: 'd-flex flex-column gap-2',
   });
 
+  const entlassungTabListId = 'entlassung-tabs';
+  const entlassungRegularTabId = 'entlassung-regular-tab';
+  const entlassungSpecialTabId = 'entlassung-special-tab';
+  const entlassungRegularPaneId = 'entlassung-regular';
+  const entlassungSpecialPaneId = 'entlassung-special';
+
+  const entlassungRegularContainer = createEl('div', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'entlassung-regular' },
+  });
+  const entlassungSpecialContainer = createEl('div', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'entlassung-special' },
+  });
+
+  const entlassungCard = createEl('div', {
+    className: 'card border-0 shadow-sm',
+    children: [
+      createEl('div', {
+        className: 'card-body d-flex flex-column gap-3',
+        children: [
+          createEl('div', {
+            className: 'd-flex flex-column gap-1',
+            children: [
+              createEl('div', { className: 'h6 mb-0', text: 'Entlassung' }),
+              createEl('p', {
+                className: 'small text-muted mb-0',
+                text: 'Lege Entlassungszeiten fest und weise pro Tag jeweils genau eine Uhrzeit pro Kind zu.',
+              }),
+            ],
+          }),
+          createEl('ul', {
+            className: 'nav nav-tabs',
+            attrs: { id: entlassungTabListId, role: 'tablist' },
+            children: [
+              createEl('li', {
+                className: 'nav-item',
+                attrs: { role: 'presentation' },
+                children: [
+                  createEl('button', {
+                    className: 'nav-link active',
+                    attrs: {
+                      id: entlassungRegularTabId,
+                      type: 'button',
+                      role: 'tab',
+                      'data-bs-toggle': 'tab',
+                      'data-bs-target': `#${entlassungRegularPaneId}`,
+                      'aria-controls': entlassungRegularPaneId,
+                      'aria-selected': 'true',
+                    },
+                    text: 'Ordentliche Entlassung',
+                  }),
+                ],
+              }),
+              createEl('li', {
+                className: 'nav-item',
+                attrs: { role: 'presentation' },
+                children: [
+                  createEl('button', {
+                    className: 'nav-link',
+                    attrs: {
+                      id: entlassungSpecialTabId,
+                      type: 'button',
+                      role: 'tab',
+                      'data-bs-toggle': 'tab',
+                      'data-bs-target': `#${entlassungSpecialPaneId}`,
+                      'aria-controls': entlassungSpecialPaneId,
+                      'aria-selected': 'false',
+                    },
+                    text: 'Sonderentlassung',
+                  }),
+                ],
+              }),
+            ],
+          }),
+          createEl('div', {
+            className: 'tab-content border border-top-0 rounded-bottom bg-white p-3',
+            children: [
+              createEl('div', {
+                className: 'tab-pane fade show active',
+                attrs: {
+                  id: entlassungRegularPaneId,
+                  role: 'tabpanel',
+                  'aria-labelledby': entlassungRegularTabId,
+                },
+                children: [entlassungRegularContainer],
+              }),
+              createEl('div', {
+                className: 'tab-pane fade',
+                attrs: {
+                  id: entlassungSpecialPaneId,
+                  role: 'tabpanel',
+                  'aria-labelledby': entlassungSpecialTabId,
+                },
+                children: [entlassungSpecialContainer],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+
   const deleteChildInput = createEl('input', {
     className: 'form-control',
     attrs: {
@@ -401,7 +509,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       }),
     ],
   });
-  cautionContent.append(deleteChildCard);
+  cautionContent.append(entlassungCard, deleteChildCard);
 
   const deleteChildConfirmDialog = createEl('div', {
     className: 'class-settings-confirm d-none',
@@ -672,6 +780,418 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       });
 
     emptyChildrenEl?.classList.toggle('d-none', normalizedRows.length > 0);
+  };
+
+  const getAvailableChildren = () => {
+    const unique = new Set();
+    rows.forEach((row) => {
+      const normalized = normalizeChildName(row.name || row.originalName);
+      if (normalized) {
+        unique.add(normalized);
+      }
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'de'));
+  };
+
+  const ensureEntlassungStructure = (value = {}) => {
+    const regular = {};
+    TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+      regular[key] = Array.isArray(value?.regular?.[key]) ? value.regular[key] : [];
+    });
+    const special = Array.isArray(value?.special) ? value.special : [];
+    return { regular, special };
+  };
+
+  const persistEntlassung = debounce(() => {
+    saveClassEntlassung(entlassungState);
+  }, 200);
+
+  const setRegularError = (dayKey, message) => {
+    if (!message) {
+      delete entlassungRegularErrors[dayKey];
+      renderEntlassung();
+      return;
+    }
+    entlassungRegularErrors[dayKey] = message;
+    renderEntlassung();
+    window.setTimeout(() => {
+      if (entlassungRegularErrors[dayKey] === message) {
+        delete entlassungRegularErrors[dayKey];
+        renderEntlassung();
+      }
+    }, 2500);
+  };
+
+  const setSpecialError = (dateKey, message) => {
+    if (!message) {
+      delete entlassungSpecialErrors[dateKey];
+      renderEntlassung();
+      return;
+    }
+    entlassungSpecialErrors[dateKey] = message;
+    renderEntlassung();
+    window.setTimeout(() => {
+      if (entlassungSpecialErrors[dateKey] === message) {
+        delete entlassungSpecialErrors[dateKey];
+        renderEntlassung();
+      }
+    }, 2500);
+  };
+
+  const renderEntlassung = () => {
+    const childrenList = getAvailableChildren();
+    entlassungState = ensureEntlassungStructure(entlassungState);
+
+    entlassungRegularContainer.replaceChildren();
+    entlassungSpecialContainer.replaceChildren();
+
+    TIMETABLE_DAY_ORDER.forEach(({ key, label }) => {
+      const daySlots = Array.isArray(entlassungState.regular?.[key])
+        ? entlassungState.regular[key]
+        : [];
+      const assignedMap = new Map();
+      daySlots.forEach((slot, index) => {
+        (slot?.children || []).forEach((child) => {
+          if (!assignedMap.has(child)) {
+            assignedMap.set(child, index);
+          }
+        });
+      });
+
+      const addButton = createEl('button', {
+        className: 'btn btn-outline-primary btn-sm',
+        attrs: { type: 'button' },
+        text: 'Uhrzeit hinzufügen',
+      });
+      addButton.addEventListener('click', () => {
+        daySlots.push({ time: '', children: [] });
+        entlassungState.regular[key] = daySlots;
+        renderEntlassung();
+      });
+
+      const dayHeader = createEl('div', {
+        className: 'd-flex justify-content-between align-items-center gap-2',
+        children: [createEl('div', { className: 'fw-semibold', text: label }), addButton],
+      });
+
+      const dayErrorText = entlassungRegularErrors[key]
+        ? createEl('div', { className: 'text-danger small', text: entlassungRegularErrors[key] })
+        : null;
+
+      const dayNote = createEl('div', {
+        className: 'small text-muted',
+        text: 'Jedes Kind kann pro Tag nur einer Uhrzeit zugeordnet werden.',
+      });
+
+      const slotList = createEl('div', { className: 'd-flex flex-column gap-2' });
+
+      daySlots.forEach((slot, index) => {
+        const slotWrapper = createEl('div', {
+          className: 'border rounded-3 p-2 d-flex flex-column gap-2',
+        });
+        const timeInput = createEl('input', {
+          className: 'form-control form-control-sm',
+          attrs: {
+            type: 'time',
+            step: '300',
+            'aria-label': 'Entlassungszeit',
+          },
+        });
+        if (slot?.time) {
+          timeInput.value = slot.time;
+        }
+
+        const removeButton = createEl('button', {
+          className: 'btn btn-outline-danger btn-sm',
+          attrs: { type: 'button' },
+          text: 'Entfernen',
+        });
+
+        const timeRow = createEl('div', {
+          className: 'd-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2',
+          children: [
+            createEl('div', { className: 'flex-grow-1', children: [timeInput] }),
+            removeButton,
+          ],
+        });
+
+        const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+        childrenList.forEach((child) => {
+          const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
+          const assignedElsewhere =
+            assignedMap.has(child) && assignedMap.get(child) !== index;
+          const childButton = createEl('button', {
+            className: `btn btn-sm ${
+              isSelected ? 'btn-primary' : 'btn-outline-secondary'
+            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
+            text: child,
+          });
+          childButton.addEventListener('click', () => {
+            if (!slot.time) {
+              setRegularError(key, 'Bitte zuerst eine Uhrzeit festlegen.');
+              return;
+            }
+            if (assignedElsewhere && !isSelected) {
+              setRegularError(key, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
+              return;
+            }
+            const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
+            if (isSelected) {
+              slot.children = nextChildren.filter((name) => name !== child);
+            } else {
+              slot.children = [...nextChildren, child];
+            }
+            entlassungState.regular[key] = daySlots;
+            persistEntlassung();
+            renderEntlassung();
+          });
+          childList.append(childButton);
+        });
+
+        timeInput.addEventListener('change', (event) => {
+          const nextValue = event.target.value;
+          if (
+            nextValue &&
+            daySlots.some((other, otherIndex) => otherIndex !== index && other.time === nextValue)
+          ) {
+            setRegularError(key, 'Diese Uhrzeit existiert bereits für diesen Tag.');
+            event.target.value = slot.time || '';
+            return;
+          }
+          slot.time = nextValue;
+          entlassungState.regular[key] = daySlots;
+          persistEntlassung();
+          renderEntlassung();
+        });
+
+        removeButton.addEventListener('click', () => {
+          daySlots.splice(index, 1);
+          entlassungState.regular[key] = daySlots;
+          persistEntlassung();
+          renderEntlassung();
+        });
+
+        slotWrapper.append(timeRow, childList);
+        slotList.append(slotWrapper);
+      });
+
+      const daySection = createEl('div', {
+        className: 'd-flex flex-column gap-2',
+        children: [dayHeader, dayErrorText, slotList, dayNote].filter(Boolean),
+      });
+      entlassungRegularContainer.append(daySection);
+    });
+
+    const specialHeader = createEl('div', {
+      className: 'd-flex justify-content-between align-items-center gap-2',
+      children: [
+        createEl('div', { className: 'fw-semibold', text: 'Sonderentlassungen' }),
+        createEl('button', {
+          className: 'btn btn-outline-primary btn-sm',
+          attrs: { type: 'button' },
+          text: 'Datum hinzufügen',
+        }),
+      ],
+    });
+    const addSpecialButton = specialHeader.querySelector('button');
+    addSpecialButton?.addEventListener('click', () => {
+      const nextDate = todayYmd();
+      if (entlassungState.special.some((entry) => entry?.date === nextDate)) {
+        setSpecialError(nextDate, 'Für dieses Datum existiert bereits ein Eintrag.');
+        return;
+      }
+      entlassungState.special.push({ date: nextDate, times: [] });
+      persistEntlassung();
+      renderEntlassung();
+    });
+
+    entlassungSpecialContainer.append(specialHeader);
+
+    if (!entlassungState.special.length) {
+      entlassungSpecialContainer.append(
+        createEl('div', {
+          className: 'text-muted small',
+          text: 'Noch keine Sonderentlassungen festgelegt.',
+        }),
+      );
+    }
+
+    entlassungState.special.forEach((entry, entryIndex) => {
+      const dateValue = typeof entry?.date === 'string' ? entry.date : '';
+      const entrySlots = Array.isArray(entry?.times) ? entry.times : [];
+      const assignedMap = new Map();
+      entrySlots.forEach((slot, index) => {
+        (slot?.children || []).forEach((child) => {
+          if (!assignedMap.has(child)) {
+            assignedMap.set(child, index);
+          }
+        });
+      });
+
+      const dateInput = createEl('input', {
+        className: 'form-control form-control-sm',
+        attrs: { type: 'date', 'aria-label': 'Datum' },
+      });
+      if (dateValue) {
+        dateInput.value = dateValue;
+      }
+      const removeDateButton = createEl('button', {
+        className: 'btn btn-outline-danger btn-sm',
+        attrs: { type: 'button' },
+        text: 'Entfernen',
+      });
+      const addTimeButton = createEl('button', {
+        className: 'btn btn-outline-primary btn-sm',
+        attrs: { type: 'button' },
+        text: 'Uhrzeit hinzufügen',
+      });
+
+      const headerRow = createEl('div', {
+        className: 'd-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2',
+        children: [
+          createEl('div', { className: 'flex-grow-1', children: [dateInput] }),
+          addTimeButton,
+          removeDateButton,
+        ],
+      });
+
+      const entryErrorText = entlassungSpecialErrors[dateValue]
+        ? createEl('div', { className: 'text-danger small', text: entlassungSpecialErrors[dateValue] })
+        : null;
+
+      const slotList = createEl('div', { className: 'd-flex flex-column gap-2' });
+
+      entrySlots.forEach((slot, index) => {
+        const slotWrapper = createEl('div', {
+          className: 'border rounded-3 p-2 d-flex flex-column gap-2',
+        });
+        const timeInput = createEl('input', {
+          className: 'form-control form-control-sm',
+          attrs: {
+            type: 'time',
+            step: '300',
+            'aria-label': 'Entlassungszeit',
+          },
+        });
+        if (slot?.time) {
+          timeInput.value = slot.time;
+        }
+        const removeButton = createEl('button', {
+          className: 'btn btn-outline-danger btn-sm',
+          attrs: { type: 'button' },
+          text: 'Entfernen',
+        });
+
+        const timeRow = createEl('div', {
+          className: 'd-flex flex-column flex-sm-row align-items-start align-items-sm-center gap-2',
+          children: [
+            createEl('div', { className: 'flex-grow-1', children: [timeInput] }),
+            removeButton,
+          ],
+        });
+
+        const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+        childrenList.forEach((child) => {
+          const isSelected = Array.isArray(slot?.children) && slot.children.includes(child);
+          const assignedElsewhere =
+            assignedMap.has(child) && assignedMap.get(child) !== index;
+          const childButton = createEl('button', {
+            className: `btn btn-sm ${
+              isSelected ? 'btn-primary' : 'btn-outline-secondary'
+            }${assignedElsewhere && !isSelected ? ' opacity-50' : ''}`,
+            attrs: { type: 'button', 'aria-pressed': isSelected ? 'true' : 'false' },
+            text: child,
+          });
+          childButton.addEventListener('click', () => {
+            if (!slot.time) {
+              setSpecialError(dateValue, 'Bitte zuerst eine Uhrzeit festlegen.');
+              return;
+            }
+            if (assignedElsewhere && !isSelected) {
+              setSpecialError(dateValue, 'Dieses Kind ist bereits einer anderen Uhrzeit zugeordnet.');
+              return;
+            }
+            const nextChildren = Array.isArray(slot.children) ? [...slot.children] : [];
+            if (isSelected) {
+              slot.children = nextChildren.filter((name) => name !== child);
+            } else {
+              slot.children = [...nextChildren, child];
+            }
+            entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+            persistEntlassung();
+            renderEntlassung();
+          });
+          childList.append(childButton);
+        });
+
+        timeInput.addEventListener('change', (event) => {
+          const nextValue = event.target.value;
+          if (
+            nextValue &&
+            entrySlots.some((other, otherIndex) => otherIndex !== index && other.time === nextValue)
+          ) {
+            setSpecialError(dateValue, 'Diese Uhrzeit existiert bereits für dieses Datum.');
+            event.target.value = slot.time || '';
+            return;
+          }
+          slot.time = nextValue;
+          entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+          persistEntlassung();
+          renderEntlassung();
+        });
+
+        removeButton.addEventListener('click', () => {
+          entrySlots.splice(index, 1);
+          entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+          persistEntlassung();
+          renderEntlassung();
+        });
+
+        slotWrapper.append(timeRow, childList);
+        slotList.append(slotWrapper);
+      });
+
+      addTimeButton.addEventListener('click', () => {
+        entrySlots.push({ time: '', children: [] });
+        entlassungState.special[entryIndex] = { ...entry, times: entrySlots };
+        renderEntlassung();
+      });
+
+      removeDateButton.addEventListener('click', () => {
+        entlassungState.special.splice(entryIndex, 1);
+        persistEntlassung();
+        renderEntlassung();
+      });
+
+      dateInput.addEventListener('change', (event) => {
+        const nextDate = event.target.value;
+        if (!nextDate) {
+          setSpecialError(dateValue, 'Bitte ein gültiges Datum auswählen.');
+          event.target.value = dateValue;
+          return;
+        }
+        if (
+          entlassungState.special.some(
+            (other, otherIndex) => otherIndex !== entryIndex && other?.date === nextDate,
+          )
+        ) {
+          setSpecialError(dateValue, 'Dieses Datum existiert bereits.');
+          event.target.value = dateValue;
+          return;
+        }
+        entlassungState.special[entryIndex] = { ...entry, date: nextDate, times: entrySlots };
+        persistEntlassung();
+        renderEntlassung();
+      });
+
+      const entrySection = createEl('div', {
+        className: 'border rounded-3 p-3 d-flex flex-column gap-2',
+        children: [headerRow, entryErrorText, slotList].filter(Boolean),
+      });
+
+      entlassungSpecialContainer.append(entrySection);
+    });
   };
 
   const handleChildSave = () => {
@@ -993,6 +1513,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
     syncRows(nextProfile, nextChildren);
+    entlassungState = normalizeEntlassung(nextProfile.entlassung, getAvailableChildren());
+    renderEntlassung();
   };
 
   update({ profile, children });

@@ -36,12 +36,24 @@ import {
 
 export const SCHEMA_VERSION = 9;
 
+const createEmptyEntlassung = () => ({
+  regular: {
+    monday: [],
+    tuesday: [],
+    wednesday: [],
+    thursday: [],
+    friday: [],
+  },
+  special: [],
+});
+
 const DEFAULT_CLASS_PROFILE = {
   name: '',
   badge: '',
   motto: '',
   notes: '',
   childrenNotes: {},
+  entlassung: createEmptyEntlassung(),
 };
 
 export const DEFAULT_SAVED_ANGEBOT_FILTERS = {
@@ -168,6 +180,95 @@ const normalizeChildNotes = (value, childrenList = []) => {
   return result;
 };
 
+const normalizeEntlassungTime = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const trimmed = value.trim();
+  if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(trimmed)) {
+    return '';
+  }
+  return trimmed;
+};
+
+const normalizeEntlassungSlots = (value, allowedSet) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seenTimes = new Set();
+  const usedChildren = new Set();
+  const result = [];
+
+  value.forEach((slot) => {
+    const time = normalizeEntlassungTime(slot?.time);
+    if (!time || seenTimes.has(time)) {
+      return;
+    }
+
+    seenTimes.add(time);
+    const children = [];
+    const childList = Array.isArray(slot?.children) ? slot.children : [];
+    childList.forEach((child) => {
+      const normalizedChild = normalizeChildName(child);
+      if (!normalizedChild || usedChildren.has(normalizedChild)) {
+        return;
+      }
+      if (allowedSet && !allowedSet.has(normalizedChild)) {
+        return;
+      }
+      usedChildren.add(normalizedChild);
+      children.push(normalizedChild);
+    });
+
+    result.push({ time, children });
+  });
+
+  return result;
+};
+
+export const normalizeEntlassung = (value, childrenList = [], fallbackEntlassung = null) => {
+  const source = isPlainObject(value) ? value : {};
+  const fallback = isPlainObject(fallbackEntlassung)
+    ? fallbackEntlassung
+    : createEmptyEntlassung();
+  const baseRegular =
+    isPlainObject(source.regular) || Array.isArray(source.regular)
+      ? source.regular
+      : isPlainObject(fallback.regular)
+        ? fallback.regular
+        : {};
+  const baseSpecial = Array.isArray(source.special)
+    ? source.special
+    : Array.isArray(fallback.special)
+      ? fallback.special
+      : [];
+
+  const allowedSet = Array.isArray(childrenList)
+    ? new Set(childrenList.map((child) => normalizeChildName(child)).filter(Boolean))
+    : null;
+
+  const regular = {};
+  TIMETABLE_DAY_ORDER.forEach(({ key }) => {
+    regular[key] = normalizeEntlassungSlots(baseRegular?.[key], allowedSet);
+  });
+
+  const special = [];
+  baseSpecial.forEach((entry) => {
+    const date = typeof entry?.date === 'string' ? entry.date.trim() : '';
+    if (!isValidYmd(date)) {
+      return;
+    }
+    const times = normalizeEntlassungSlots(entry?.times, allowedSet);
+    special.push({ date, times });
+  });
+
+  return {
+    regular,
+    special,
+  };
+};
+
 const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) => {
   const source = isPlainObject(value) ? value : {};
   const fallback = isPlainObject(fallbackProfile) ? fallbackProfile : DEFAULT_CLASS_PROFILE;
@@ -204,6 +305,11 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
   );
   const fallbackNotes = normalizeChildNotes(baseProfile.childrenNotes, childrenList);
   const mergedNotes = { ...fallbackNotes, ...primaryNotes };
+  const entlassung = normalizeEntlassung(
+    source.entlassung,
+    childrenList,
+    baseProfile.entlassung,
+  );
 
   return {
     name,
@@ -211,6 +317,7 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
     motto,
     notes,
     childrenNotes: mergedNotes,
+    entlassung,
   };
 };
 

@@ -1,6 +1,7 @@
 import {
   ensureUniqueSortedStrings,
   normalizeChildName,
+  normalizeEntlassung,
   normalizeAppData,
   sanitizeDaysByDate,
 } from './dbSchema.js';
@@ -77,6 +78,16 @@ const createEmptyClassProfile = () => ({
   motto: '',
   notes: '',
   childrenNotes: {},
+  entlassung: {
+    regular: {
+      monday: [],
+      tuesday: [],
+      wednesday: [],
+      thursday: [],
+      friday: [],
+    },
+    special: [],
+  },
 });
 
 const ensureClassProfileDraft = (data) => {
@@ -97,6 +108,9 @@ const ensureClassProfileDraft = (data) => {
   }
   if (typeof data.classProfile.notes !== 'string') {
     data.classProfile.notes = '';
+  }
+  if (!data.classProfile.entlassung || typeof data.classProfile.entlassung !== 'object') {
+    data.classProfile.entlassung = createEmptyClassProfile().entlassung;
   }
 };
 
@@ -451,6 +465,14 @@ export const saveClassProfileFields = ({
     if (notes !== undefined) {
       data.classProfile.notes = typeof notes === 'string' ? notes : '';
     }
+  });
+};
+
+export const saveClassEntlassung = (entlassung) => {
+  updateAppData((data) => {
+    ensureClassProfileDraft(data);
+    const childrenList = Array.isArray(data.children) ? data.children : [];
+    data.classProfile.entlassung = normalizeEntlassung(entlassung, childrenList);
   });
 };
 
