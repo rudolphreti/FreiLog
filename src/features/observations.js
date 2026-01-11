@@ -106,6 +106,16 @@ const isTextAreaElement = (value) => value instanceof HTMLTextAreaElement;
 const isFormElement = (value) => value instanceof HTMLFormElement;
 const getCardChild = (card) => card?.dataset?.child || null;
 const getDetailChild = (element) => element?.closest('[data-child]')?.dataset?.child || null;
+const syncNoteInputState = (panel) => {
+  if (!panel) {
+    return;
+  }
+  const noteInput = panel.querySelector('[data-role="observation-note-input"]');
+  if (!isTextAreaElement(noteInput)) {
+    return;
+  }
+  noteInput.disabled = panel.dataset.absent === 'true';
+};
 
 export const getInitialLetters = (children) => {
   if (!Array.isArray(children)) {
@@ -785,6 +795,7 @@ export const bindObservations = ({
     });
     setOverlayTitle(activePanel ? child : '');
     overlayContent.scrollTop = 0;
+    syncNoteInputState(activePanel);
     return activePanel;
   };
 
