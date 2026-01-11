@@ -1129,6 +1129,7 @@ export const createWeeklyTableView = ({
         if (!child || !dateKey) {
           return;
         }
+        close();
         const safeDate = dateKey;
         setSelectedDate(safeDate);
 
