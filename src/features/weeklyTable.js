@@ -715,7 +715,7 @@ export const createWeeklyTableView = ({
   };
   let freeDayFilters = {
     weekend: false,
-    holidays: false,
+    holidays: true,
   };
   let daySelectionFilters = {
     working: true,
@@ -774,14 +774,6 @@ export const createWeeklyTableView = ({
       { value: 'absence', label: 'Abwesenheit', checked: true },
     ],
   });
-  const freeDayFilterGroup = buildTypeFilterGroup({
-    id: 'weekly-table-free-days',
-    label: 'Freie Tage',
-    options: [
-      { value: 'weekend', label: 'Wochenende', checked: false },
-      { value: 'holidays', label: 'Feiertage', checked: false },
-    ],
-  });
   const editToggleId = 'weekly-table-edit-toggle';
   const editToggle = createEl('input', {
     className: 'form-check-input',
@@ -804,7 +796,6 @@ export const createWeeklyTableView = ({
     monthSelectGroup.wrapper,
     childSelectGroup.wrapper,
     typeFilterGroup.wrapper,
-    freeDayFilterGroup.wrapper,
     editToggleWrapper,
   );
 
@@ -1289,16 +1280,6 @@ export const createWeeklyTableView = ({
         [key]: input.checked,
       };
       renderTable();
-    });
-  });
-
-  freeDayFilterGroup.inputs.forEach((input, key) => {
-    input.addEventListener('change', () => {
-      freeDayFilters = {
-        ...freeDayFilters,
-        [key]: input.checked,
-      };
-      render();
     });
   });
 
