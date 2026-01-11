@@ -102,8 +102,20 @@ const toggleAbsentChild = (date, child) => {
 
 const isHtmlElement = (value) => value instanceof HTMLElement;
 const isInputElement = (value) => value instanceof HTMLInputElement;
+const isTextAreaElement = (value) => value instanceof HTMLTextAreaElement;
 const isFormElement = (value) => value instanceof HTMLFormElement;
 const getCardChild = (card) => card?.dataset?.child || null;
+const getDetailChild = (element) => element?.closest('[data-child]')?.dataset?.child || null;
+const syncNoteInputState = (panel) => {
+  if (!panel) {
+    return;
+  }
+  const noteInput = panel.querySelector('[data-role="observation-note-input"]');
+  if (!isTextAreaElement(noteInput)) {
+    return;
+  }
+  noteInput.disabled = panel.dataset.absent === 'true';
+};
 
 export const getInitialLetters = (children) => {
   if (!Array.isArray(children)) {
@@ -739,10 +751,43 @@ export const bindObservations = ({
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
+  const persistObservationNote = debounce((child, value) => {
+    if (!child) {
+      return;
+    }
+    updateEntry(getDate(), {
+      observationNotes: {
+        [child]: value,
+      },
+    });
+  }, 250);
   let longPressTimer = null;
   let suppressNextClick = false;
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
+  const handleExternalOpen = (event) => {
+    const child = event?.detail?.child;
+    if (!child) {
+      return;
+    }
+    if (!openOverlay(child, { updateHistory: false })) {
+      return;
+    }
+    if (!event?.detail?.focusNote) {
+      return;
+    }
+    const safeChildSelector =
+      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(child)
+        : child;
+    const panel = overlayContent.querySelector(
+      `[data-child="${safeChildSelector}"]`,
+    );
+    const noteInput = panel?.querySelector('[data-role="observation-note-input"]');
+    if (isTextAreaElement(noteInput) && !noteInput.disabled) {
+      noteInput.focus();
+    }
+  };
 
   if (templatesOverlay) {
     const savedTemplateState = savedFilters
@@ -773,6 +818,7 @@ export const bindObservations = ({
     });
     setOverlayTitle(activePanel ? child : '');
     overlayContent.scrollTop = 0;
+    syncNoteInputState(activePanel);
     return activePanel;
   };
 
@@ -1091,6 +1137,18 @@ export const bindObservations = ({
       closeTemplateOverlay();
       openCreateOverlay(card.dataset.child);
     }
+  };
+
+  const handleOverlayInput = (event) => {
+    const target = event.target;
+    if (!isTextAreaElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-note-input') {
+      return;
+    }
+    const child = getDetailChild(target);
+    persistObservationNote(child, target.value);
   };
 
   const handleListClick = (event) => {
@@ -1561,12 +1619,14 @@ export const bindObservations = ({
   };
 
   overlayContent.addEventListener('click', handleOverlayClick);
+  overlayContent.addEventListener('input', handleOverlayInput);
   list.addEventListener('click', handleListClick);
   list.addEventListener('pointerdown', handleListPointerDown);
   list.addEventListener('pointerup', handleListPointerEnd);
   list.addEventListener('pointerleave', handleListPointerEnd);
   list.addEventListener('pointercancel', handleListPointerEnd);
   overlay.addEventListener('click', handleOverlayBackdropClick);
+  window.addEventListener('freilog:observation-open', handleExternalOpen);
 
   if (closeButton) {
     closeButton.addEventListener('click', () => {

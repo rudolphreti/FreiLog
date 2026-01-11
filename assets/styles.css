@@ -775,6 +775,11 @@ body.child-detail-overlay-open {
   gap: 0.35rem;
 }
 
+.weekly-table__note-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 .weekly-table__observation-item {
   display: inline-flex;
   align-items: center;
