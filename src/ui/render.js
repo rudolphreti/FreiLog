@@ -359,6 +359,7 @@ export const renderApp = (root, state) => {
     observationCatalogEditOverlay = buildObservationEditOverlay({
       observationGroups,
       showDeleteButton: true,
+      className: 'observation-edit-overlay observation-edit-overlay--global',
     });
   }
   if (!observationDeleteConfirmView) {

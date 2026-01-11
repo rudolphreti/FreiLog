@@ -1377,6 +1377,11 @@ body.child-detail-overlay-open {
   z-index: 5;
 }
 
+.observation-edit-overlay--global {
+  position: fixed;
+  z-index: 2020;
+}
+
 .angebot-edit-overlay--global {
   position: fixed;
   z-index: 2020;

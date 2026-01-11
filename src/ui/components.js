@@ -2128,9 +2128,10 @@ const createDetailPanel = ({
 export const buildObservationEditOverlay = ({
   observationGroups,
   showDeleteButton = false,
+  className = 'observation-edit-overlay',
 }) => {
   const overlay = createEl('div', {
-    className: 'observation-edit-overlay',
+    className,
     dataset: { role: 'observation-edit-overlay' },
     attrs: { 'aria-hidden': 'true' },
   });
