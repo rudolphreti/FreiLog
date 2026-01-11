@@ -1693,6 +1693,7 @@ export const bindObservationCatalog = ({
       observationGroups: currentGroups,
       savedFilters: currentSavedFilters,
       role: 'observation-catalog-overlay',
+      className: 'observation-templates-overlay observation-catalog-overlay',
       closeRole: 'observation-catalog-close',
       showCreateButton: true,
       createButtonRole: 'observation-catalog-create-open',

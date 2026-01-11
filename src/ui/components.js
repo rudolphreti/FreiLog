@@ -1552,6 +1552,7 @@ export const buildObservationTemplatesOverlay = ({
   savedFilters,
   title = UI_LABELS.observationCatalog,
   role = 'observation-templates-overlay',
+  className = 'observation-templates-overlay',
   closeRole = 'observation-template-close',
   showCreateButton = false,
   createButtonLabel = UI_LABELS.observationCreate,
@@ -1570,7 +1571,7 @@ export const buildObservationTemplatesOverlay = ({
     normalizedSavedFilters.selectedGroups,
   );
   const overlay = createEl('div', {
-    className: 'observation-templates-overlay',
+    className,
     dataset: {
       role,
       templateFilter: normalizedSavedFilters.selectedLetter || 'ALL',
@@ -1906,6 +1907,7 @@ export const buildObservationCatalogOverlay = ({
     observationGroups,
     savedFilters,
     role: 'observation-catalog-overlay',
+    className: 'observation-templates-overlay observation-catalog-overlay',
     closeRole: 'observation-catalog-close',
     showCreateButton: true,
     createButtonLabel: UI_LABELS.observationCreate,
