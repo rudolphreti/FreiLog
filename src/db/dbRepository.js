@@ -248,11 +248,23 @@ const buildDefaultObservations = (childrenList) => {
   }, {});
 };
 
+const buildDefaultObservationNotes = (childrenList) => {
+  if (!Array.isArray(childrenList)) {
+    return {};
+  }
+
+  return childrenList.reduce((acc, child) => {
+    acc[child] = '';
+    return acc;
+  }, {});
+};
+
 const createDefaultDay = (date, childrenList = []) => ({
   date,
   angebote: [],
   angebotModules: {},
   observations: buildDefaultObservations(childrenList),
+  observationNotes: buildDefaultObservationNotes(childrenList),
   absentChildIds: [],
   notes: '',
 });
@@ -298,6 +310,36 @@ const sanitizeObservationsForDate = (observations, { absentSet, childrenSet, isF
   return result;
 };
 
+const sanitizeObservationNotesForDate = (observationNotes, { absentSet, childrenSet, isFreeDay }) => {
+  const shouldFillChildren = childrenSet && childrenSet.size > 0;
+  if (isFreeDay) {
+    return shouldFillChildren ? buildDefaultObservationNotes(Array.from(childrenSet)) : {};
+  }
+
+  const result = {};
+  if (observationNotes && typeof observationNotes === 'object') {
+    Object.entries(observationNotes).forEach(([child, note]) => {
+      if (childrenSet && !childrenSet.has(child)) {
+        return;
+      }
+      if (absentSet.has(child)) {
+        return;
+      }
+      result[child] = normalizeNoteText(note);
+    });
+  }
+
+  if (shouldFillChildren) {
+    childrenSet.forEach((child) => {
+      if (!result[child]) {
+        result[child] = '';
+      }
+    });
+  }
+
+  return result;
+};
+
 const mergeObservations = (currentObservations, patchObservations) => {
   if (!patchObservations || typeof patchObservations !== 'object') {
     return currentObservations;
@@ -333,6 +375,23 @@ const mergeObservations = (currentObservations, patchObservations) => {
       ? incomingList
       : normalizeObservationList([...existing, ...incomingList]);
     base[child] = merged;
+  });
+
+  return base;
+};
+
+const mergeObservationNotes = (currentNotes, patchNotes) => {
+  if (!patchNotes || typeof patchNotes !== 'object') {
+    return currentNotes;
+  }
+
+  const base =
+    currentNotes && typeof currentNotes === 'object'
+      ? { ...currentNotes }
+      : {};
+
+  Object.entries(patchNotes).forEach(([child, incomingValue]) => {
+    base[child] = normalizeNoteText(incomingValue);
   });
 
   return base;
@@ -745,11 +804,25 @@ export const updateEntry = (date, patch) => {
         payload.observations,
       );
     }
+    if (payload.observationNotes) {
+      merged.observationNotes = mergeObservationNotes(
+        existing.observationNotes,
+        payload.observationNotes,
+      );
+    }
     const absentValues = merged.absentChildIds || merged.absentChildren || [];
     merged.absentChildIds = normalizeAbsentChildren(absentValues, childrenSet);
     const absentSet = new Set(merged.absentChildIds);
     merged.observations = sanitizeObservationsForDate(
       merged.observations || existing.observations,
+      {
+        absentSet,
+        childrenSet,
+        isFreeDay: isFreeDay(ymd, freeDays),
+      },
+    );
+    merged.observationNotes = sanitizeObservationNotesForDate(
+      merged.observationNotes || existing.observationNotes,
       {
         absentSet,
         childrenSet,

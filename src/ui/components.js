@@ -2008,6 +2008,7 @@ const createDetailPanel = ({
   observationGroups,
   getGroupsForLabel,
   todayItems = [],
+  note = '',
 }) => {
   const selectedKeys = buildSelectedObservationKeys(todayItems);
   const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups, selectedKeys);
@@ -2084,6 +2085,25 @@ const createDetailPanel = ({
     children: [addTitle, topTitle, topList, actionRow],
   });
 
+  const noteLabel = createEl('label', {
+    className: 'form-label mb-0',
+    text: 'Notizen',
+  });
+  const noteInput = createEl('textarea', {
+    className: 'form-control',
+    attrs: {
+      rows: '3',
+      placeholder: 'Notizen',
+      'aria-label': 'Notizen',
+    },
+    dataset: { role: 'observation-note-input' },
+  });
+  noteInput.value = note;
+  const noteSection = createEl('div', {
+    className: 'observation-section observation-section--notes d-flex flex-column gap-2',
+    children: [noteLabel, noteInput],
+  });
+
   const detail = createEl('div', {
     className: 'observation-detail d-flex flex-column gap-3 d-none',
     dataset: {
@@ -2092,7 +2112,7 @@ const createDetailPanel = ({
       templateQuery: '',
       absent: isAbsent ? 'true' : 'false',
     },
-    children: [todaySection, addSection, feedback],
+    children: [todaySection, addSection, noteSection, feedback],
   });
 
   let absentNotice = null;
@@ -2104,6 +2124,7 @@ const createDetailPanel = ({
     });
     todaySection.hidden = true;
     addSection.hidden = true;
+    noteSection.hidden = true;
     feedback.hidden = true;
     detail.append(absentNotice);
   }
@@ -2114,6 +2135,8 @@ const createDetailPanel = ({
       topList,
       todaySection,
       addSection,
+      noteSection,
+      noteInput,
       todayTitle,
       todayList,
       templatesButton,
@@ -2677,6 +2700,7 @@ export const buildEntlassungSection = ({
 export const buildObservationsSection = ({
   children,
   observations,
+  observationNotes,
   presets,
   observationStats,
   absentChildren,
@@ -2767,6 +2791,10 @@ export const buildObservationsSection = ({
 
   children.forEach((child) => {
     const data = observations[child] || {};
+    const note =
+      observationNotes && typeof observationNotes[child] === 'string'
+        ? observationNotes[child]
+        : '';
     const selectedKeys = buildSelectedObservationKeys(data);
     const topItems = buildTopItems(observationStats?.[child], observationCatalog, {
       excludeKeys: selectedKeys,
@@ -2779,7 +2807,9 @@ export const buildObservationsSection = ({
       observationGroups,
       getGroupsForLabel,
       todayItems: data,
+      note,
     });
+    refs.noteInput.disabled = isReadOnly || isAbsent;
     const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
     nextToday.dataset.role = 'observation-today-list';
     refs.todayList.replaceWith(nextToday);
@@ -2810,6 +2840,7 @@ export const buildObservationsSection = ({
     isAbsent,
     getGroupsForLabel,
     observationGroups,
+    note,
   }) => {
     const detail = overlayContent.querySelector(`[data-child="${child}"]`);
     if (!detail) {
@@ -2820,6 +2851,7 @@ export const buildObservationsSection = ({
         observationGroups,
         getGroupsForLabel,
         todayItems: data,
+        note,
       });
       panel.detail.hidden = true;
       detailRefs.set(child, panel.refs);
@@ -2854,6 +2886,15 @@ export const buildObservationsSection = ({
     refs.feedback.hidden = isHidden;
     refs.todaySection.hidden = isHidden;
     refs.addSection.hidden = isHidden;
+    refs.noteSection.hidden = isHidden;
+    refs.noteInput.disabled = isReadOnly || isAbsent;
+
+    if (refs.noteInput && document.activeElement !== refs.noteInput) {
+      const nextNote = typeof note === 'string' ? note : '';
+      if (refs.noteInput.value !== nextNote) {
+        refs.noteInput.value = nextNote;
+      }
+    }
 
     if (isAbsent) {
       const notice = createEl('p', {
@@ -2884,6 +2925,7 @@ export const buildObservationsSection = ({
   const update = ({
     nextChildren,
     nextObservations,
+    nextObservationNotes,
     nextObservationStats,
     nextAbsentChildren,
     nextObservationCatalog,
@@ -2946,6 +2988,10 @@ export const buildObservationsSection = ({
 
     nextChildren.forEach((child) => {
       const data = nextObservations[child] || {};
+      const note =
+        nextObservationNotes && typeof nextObservationNotes[child] === 'string'
+          ? nextObservationNotes[child]
+          : '';
       const selectedKeys = buildSelectedObservationKeys(data);
       const topItems = buildTopItems(nextObservationStats?.[child], nextObservationCatalog, {
         excludeKeys: selectedKeys,
@@ -2957,6 +3003,7 @@ export const buildObservationsSection = ({
         isAbsent: absentSetNext.has(child),
         getGroupsForLabel: getGroupsForLabelNext,
         observationGroups: nextObservationGroups,
+        note,
       });
     });
 
@@ -3040,6 +3087,13 @@ export const buildObservationsSection = ({
         templateContent.scrollTop = previousScrollTop;
       });
     }
+
+    detailRefs.forEach((detailRef) => {
+      if (detailRef?.noteInput) {
+        detailRef.noteInput.disabled =
+          isReadOnly || detailRef.noteSection?.hidden;
+      }
+    });
   };
 
   return {

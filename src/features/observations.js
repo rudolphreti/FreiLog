@@ -102,8 +102,10 @@ const toggleAbsentChild = (date, child) => {
 
 const isHtmlElement = (value) => value instanceof HTMLElement;
 const isInputElement = (value) => value instanceof HTMLInputElement;
+const isTextAreaElement = (value) => value instanceof HTMLTextAreaElement;
 const isFormElement = (value) => value instanceof HTMLFormElement;
 const getCardChild = (card) => card?.dataset?.child || null;
+const getDetailChild = (element) => element?.closest('[data-child]')?.dataset?.child || null;
 
 export const getInitialLetters = (children) => {
   if (!Array.isArray(children)) {
@@ -739,6 +741,16 @@ export const bindObservations = ({
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
+  const persistObservationNote = debounce((child, value) => {
+    if (!child) {
+      return;
+    }
+    updateEntry(getDate(), {
+      observationNotes: {
+        [child]: value,
+      },
+    });
+  }, 250);
   let longPressTimer = null;
   let suppressNextClick = false;
   let templateLongPressTimer = null;
@@ -1091,6 +1103,21 @@ export const bindObservations = ({
       closeTemplateOverlay();
       openCreateOverlay(card.dataset.child);
     }
+  };
+
+  const handleOverlayInput = (event) => {
+    const target = event.target;
+    if (!isTextAreaElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-note-input') {
+      return;
+    }
+    if (isReadOnly) {
+      return;
+    }
+    const child = getDetailChild(target);
+    persistObservationNote(child, target.value);
   };
 
   const handleListClick = (event) => {
@@ -1561,6 +1588,7 @@ export const bindObservations = ({
   };
 
   overlayContent.addEventListener('click', handleOverlayClick);
+  overlayContent.addEventListener('input', handleOverlayInput);
   list.addEventListener('click', handleListClick);
   list.addEventListener('pointerdown', handleListPointerDown);
   list.addEventListener('pointerup', handleListPointerEnd);

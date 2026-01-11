@@ -411,6 +411,30 @@ const normalizeObservationEntries = (value, childrenSet) => {
   return result;
 };
 
+const normalizeObservationNotes = (value, childrenSet) => {
+  const source = isPlainObject(value) ? value : {};
+  const allowed = childrenSet ? new Set(Array.from(childrenSet)) : null;
+  const result = {};
+
+  Object.entries(source).forEach(([child, note]) => {
+    const normalizedChild = normalizeChildName(child);
+    if (!normalizedChild || (allowed && !allowed.has(normalizedChild))) {
+      return;
+    }
+    result[normalizedChild] = typeof note === 'string' ? note : '';
+  });
+
+  if (allowed) {
+    allowed.forEach((child) => {
+      if (!result[child]) {
+        result[child] = '';
+      }
+    });
+  }
+
+  return result;
+};
+
 const normalizeDayEntry = (
   entry,
   date,
@@ -443,11 +467,16 @@ const normalizeDayEntry = (
     source.observations,
     childrenSet,
   );
+  const observationNotes = normalizeObservationNotes(
+    source.observationNotes,
+    childrenSet,
+  );
   const notes = typeof source.notes === 'string' ? source.notes : '';
 
   const isDayFree = isFreeDay(date, freeDays);
   const absentSet = new Set(filteredAbsent);
   const filteredObservations = {};
+  const filteredObservationNotes = {};
   if (!isDayFree) {
     Object.entries(observations).forEach(([child, tags]) => {
       if (absentSet.has(child)) {
@@ -455,6 +484,21 @@ const normalizeDayEntry = (
       }
       const normalized = ensureUniqueObservationTexts(tags);
       filteredObservations[child] = normalized;
+    });
+
+    Object.entries(observationNotes).forEach(([child, note]) => {
+      if (absentSet.has(child)) {
+        return;
+      }
+      filteredObservationNotes[child] = note;
+    });
+  }
+
+  if (childrenSet) {
+    childrenSet.forEach((child) => {
+      if (!filteredObservationNotes[child]) {
+        filteredObservationNotes[child] = '';
+      }
     });
   }
 
@@ -475,6 +519,7 @@ const normalizeDayEntry = (
     angebote: normalizedAngebote,
     angebotModules,
     observations: filteredObservations,
+    observationNotes: filteredObservationNotes,
     absentChildIds: filteredAbsent,
     notes,
   };

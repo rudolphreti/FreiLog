@@ -45,6 +45,7 @@ const createFallbackEntry = (date) => ({
   angebote: [],
   angebotModules: {},
   observations: {},
+  observationNotes: {},
   absentChildIds: [],
   notes: '',
 });
@@ -231,6 +232,10 @@ export const renderApp = (root, state) => {
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
+  const observationNotes =
+    entry.observationNotes && typeof entry.observationNotes === 'object'
+      ? entry.observationNotes
+      : {};
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const angebotCatalog = db.angebotCatalog || [];
@@ -290,6 +295,7 @@ export const renderApp = (root, state) => {
     : buildObservationsSection({
         children: sortedChildren,
         observations,
+        observationNotes,
         presets: observationPresets,
         observationStats,
         absentChildren,
@@ -594,6 +600,7 @@ export const renderApp = (root, state) => {
   appShell.observationsView.update({
     nextChildren: sortedChildren,
     nextObservations: observations,
+    nextObservationNotes: observationNotes,
     nextObservationStats: observationStats,
     nextAbsentChildren: absentChildren,
     nextObservationCatalog: observationCatalog,
