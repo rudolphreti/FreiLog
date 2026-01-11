@@ -765,6 +765,29 @@ export const bindObservations = ({
   let suppressNextClick = false;
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
+  const handleExternalOpen = (event) => {
+    const child = event?.detail?.child;
+    if (!child) {
+      return;
+    }
+    if (!openOverlay(child, { updateHistory: false })) {
+      return;
+    }
+    if (!event?.detail?.focusNote) {
+      return;
+    }
+    const safeChildSelector =
+      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(child)
+        : child;
+    const panel = overlayContent.querySelector(
+      `[data-child="${safeChildSelector}"]`,
+    );
+    const noteInput = panel?.querySelector('[data-role="observation-note-input"]');
+    if (isTextAreaElement(noteInput) && !noteInput.disabled) {
+      noteInput.focus();
+    }
+  };
 
   if (templatesOverlay) {
     const savedTemplateState = savedFilters
@@ -1603,6 +1626,7 @@ export const bindObservations = ({
   list.addEventListener('pointerleave', handleListPointerEnd);
   list.addEventListener('pointercancel', handleListPointerEnd);
   overlay.addEventListener('click', handleOverlayBackdropClick);
+  window.addEventListener('freilog:observation-open', handleExternalOpen);
 
   if (closeButton) {
     closeButton.addEventListener('click', () => {

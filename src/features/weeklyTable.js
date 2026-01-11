@@ -1133,28 +1133,13 @@ export const createWeeklyTableView = ({
         const safeDate = dateKey;
         setSelectedDate(safeDate);
 
-        const safeChildSelector = (() => {
-          if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
-            return CSS.escape(child);
-          }
-          return child;
-        })();
-
-        const openChild = (remaining = 8) => {
-          const button = document.querySelector(
-            `[data-role="observation-child"][data-child="${safeChildSelector}"]`,
+        window.setTimeout(() => {
+          window.dispatchEvent(
+            new CustomEvent('freilog:observation-open', {
+              detail: { child, focusNote: true },
+            }),
           );
-          if (button) {
-            button.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-            button.click();
-            return;
-          }
-          if (remaining > 0) {
-            window.setTimeout(() => openChild(remaining - 1), 80);
-          }
-        };
-
-        window.setTimeout(() => openChild(8), 120);
+        }, 120);
       },
       isEditMode,
       freeDays: currentFreeDays,
