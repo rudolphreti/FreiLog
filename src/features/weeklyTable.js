@@ -115,6 +115,82 @@ const getWeekDays = (week, includeWeekend = false) => {
   });
 };
 
+const toUtcDate = (ymd) => {
+  if (!isValidYmd(ymd)) {
+    return null;
+  }
+  const [year, month, day] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const formatYmd = (date) => {
+  if (!(date instanceof Date)) {
+    return '';
+  }
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const addUtcDays = (date, days) => {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const getDateRangeKeys = (startYmd, endYmd) => {
+  const startDate = toUtcDate(startYmd);
+  const endDate = toUtcDate(endYmd || startYmd);
+  if (!startDate || !endDate) {
+    return [];
+  }
+  const keys = [];
+  const startTime = startDate.getTime();
+  const endTime = endDate.getTime();
+  const forward = startTime <= endTime;
+  let cursor = forward ? startDate : endDate;
+  const end = forward ? endDate : startDate;
+  while (cursor <= end) {
+    keys.push(formatYmd(cursor));
+    cursor = addUtcDays(cursor, 1);
+  }
+  return keys;
+};
+
+const getDateRangeFromKeys = (keys) => {
+  const sorted = Array.isArray(keys)
+    ? keys.filter((key) => isValidYmd(key)).sort((a, b) => a.localeCompare(b))
+    : [];
+  if (!sorted.length) {
+    return null;
+  }
+  return {
+    startYmd: sorted[0],
+    endYmd: sorted[sorted.length - 1],
+  };
+};
+
+const getFreeDayDateKeys = (freeDays = []) => {
+  const entries = Array.isArray(freeDays) ? freeDays : [];
+  const keys = [];
+  entries.forEach((entry) => {
+    if (!entry) {
+      return;
+    }
+    const start = entry.start || entry.date || entry.startDate;
+    const end = entry.end || entry.until || entry.endDate || start;
+    getDateRangeKeys(start, end).forEach((key) => keys.push(key));
+  });
+  return keys;
+};
+
+const buildDaysIndex = (dateKeys, days) =>
+  dateKeys.reduce((acc, key) => {
+    acc[key] = days?.[key] || {};
+    return acc;
+  }, {});
+
 const getVisibleWeekDays = (week, visibleDateKeys, freeDays, freeDayFilters) => {
   const visibleSet =
     Array.isArray(visibleDateKeys) && visibleDateKeys.length
@@ -631,6 +707,7 @@ export const createWeeklyTableView = ({
   let selectedDay = null;
   let selectedMonth = null;
   let selectedChild = 'all';
+  let selectableDateKeys = [];
   let typeFilters = {
     observations: true,
     offers: true,
@@ -638,6 +715,10 @@ export const createWeeklyTableView = ({
   };
   let freeDayFilters = {
     weekend: false,
+    holidays: false,
+  };
+  let daySelectionFilters = {
+    working: false,
     holidays: false,
   };
   const getGroupsForLabel = (label) =>
@@ -680,6 +761,14 @@ export const createWeeklyTableView = ({
     id: 'weekly-table-month',
     label: 'Monat wählen',
   });
+  const daySelectionGroup = buildTypeFilterGroup({
+    id: 'weekly-table-day-selection',
+    label: 'Uwzględnij dni:',
+    options: [
+      { value: 'working', label: 'pracujące, w których nie ma wpisów', checked: false },
+      { value: 'holidays', label: 'świąteczne', checked: false },
+    ],
+  });
   const childSelectGroup = buildSelectGroup({
     id: 'weekly-table-child',
     label: 'Kind',
@@ -721,6 +810,7 @@ export const createWeeklyTableView = ({
     weekSelectGroup.wrapper,
     daySelectGroup.wrapper,
     monthSelectGroup.wrapper,
+    daySelectionGroup.wrapper,
     childSelectGroup.wrapper,
     typeFilterGroup.wrapper,
     freeDayFilterGroup.wrapper,
@@ -773,6 +863,36 @@ export const createWeeklyTableView = ({
     );
   };
 
+  const getSelectableDateKeys = () => {
+    const baseKeys = getSortedDateKeys(currentDays);
+    const includeHolidays = daySelectionFilters.holidays || freeDayFilters.holidays;
+    const holidayKeys = includeHolidays ? getFreeDayDateKeys(currentFreeDays) : [];
+    const keySet = new Set([...baseKeys, ...holidayKeys].filter((key) => isValidYmd(key)));
+
+    if (daySelectionFilters.working) {
+      const range = getDateRangeFromKeys([...keySet]);
+      if (range) {
+        const startDate = toUtcDate(range.startYmd);
+        const endDate = toUtcDate(range.endYmd);
+        if (startDate && endDate) {
+          let cursor = startDate;
+          while (cursor <= endDate) {
+            const ymd = formatYmd(cursor);
+            if (!keySet.has(ymd)) {
+              const freeInfo = getFreeDayInfo(ymd, currentFreeDays);
+              if (!isWeekend(ymd) && freeInfo?.type !== 'holiday') {
+                keySet.add(ymd);
+              }
+            }
+            cursor = addUtcDays(cursor, 1);
+          }
+        }
+      }
+    }
+
+    return [...keySet].sort((a, b) => a.localeCompare(b));
+  };
+
   const renderTimeOptions = () => {
     const options = [
       { value: 'day', label: 'Tag' },
@@ -800,11 +920,13 @@ export const createWeeklyTableView = ({
       );
     });
     const hasMultipleYears = schoolYears.length > 1;
-    if (selectedYear) {
+    if (selectedYear && schoolYears.some((year) => year.label === selectedYear)) {
       yearSelectGroup.select.value = selectedYear;
     } else if (schoolYears.length) {
       yearSelectGroup.select.value = schoolYears[schoolYears.length - 1].label;
       selectedYear = yearSelectGroup.select.value;
+    } else {
+      selectedYear = null;
     }
     return hasMultipleYears;
   };
@@ -839,7 +961,7 @@ export const createWeeklyTableView = ({
   };
 
   const renderDayOptions = () => {
-    const dateKeys = getSortedDateKeys(currentDays);
+    const dateKeys = selectableDateKeys;
     clearElement(daySelectGroup.select);
     dateKeys.forEach((dateKey) => {
       daySelectGroup.select.append(
@@ -864,7 +986,7 @@ export const createWeeklyTableView = ({
   };
 
   const renderMonthOptions = () => {
-    const dateKeys = getSortedDateKeys(currentDays);
+    const dateKeys = selectableDateKeys;
     const monthKeys = [...new Set(dateKeys.map((key) => getMonthKey(key)).filter(Boolean))];
     clearElement(monthSelectGroup.select);
     monthKeys.forEach((monthKey) => {
@@ -1114,6 +1236,8 @@ export const createWeeklyTableView = ({
   };
 
   const render = () => {
+    selectableDateKeys = getSelectableDateKeys();
+    schoolYears = getSchoolWeeks(buildDaysIndex(selectableDateKeys, currentDays));
     renderTimeOptions();
     const hasMultipleYears = renderYearOptions();
     renderWeekOptions();
@@ -1183,7 +1307,17 @@ export const createWeeklyTableView = ({
         ...freeDayFilters,
         [key]: input.checked,
       };
-      renderTable();
+      render();
+    });
+  });
+
+  daySelectionGroup.inputs.forEach((input, key) => {
+    input.addEventListener('change', () => {
+      daySelectionFilters = {
+        ...daySelectionFilters,
+        [key]: input.checked,
+      };
+      render();
     });
   });
 
@@ -1237,7 +1371,8 @@ export const createWeeklyTableView = ({
     currentTimetableSchedule = nextTimetableSchedule || {};
     currentTimetableLessons = Array.isArray(nextTimetableLessons) ? [...nextTimetableLessons] : [];
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
-    schoolYears = getSchoolWeeks(currentDays);
+    selectableDateKeys = getSelectableDateKeys();
+    schoolYears = getSchoolWeeks(buildDaysIndex(selectableDateKeys, currentDays));
     if (!schoolYears.length) {
       selectedYear = null;
       selectedWeekId = null;
@@ -1254,7 +1389,7 @@ export const createWeeklyTableView = ({
       const latest = getLatestWeekForYear(schoolYears, selectedYear);
       selectedWeekId = latest ? latest.id : activeYear.weeks[activeYear.weeks.length - 1].id;
     }
-    const dateKeys = getSortedDateKeys(currentDays);
+    const dateKeys = selectableDateKeys;
     if (!selectedDay || !dateKeys.includes(selectedDay)) {
       selectedDay = dateKeys.length ? dateKeys[dateKeys.length - 1] : null;
     }
