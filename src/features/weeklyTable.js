@@ -10,7 +10,7 @@ import {
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
 import { setSelectedDate } from '../state/store.js';
-import { getFreeDayInfo } from '../utils/freeDays.js';
+import { getFreeDayInfo, isWeekend } from '../utils/freeDays.js';
 import { UI_LABELS } from '../ui/labels.js';
 import {
   flattenModuleAssignments,
@@ -24,6 +24,10 @@ const WEEKDAY_LABELS = [
   { label: 'Mittwoch', offset: 2 },
   { label: 'Donnerstag', offset: 3 },
   { label: 'Freitag', offset: 4 },
+];
+const WEEKEND_LABELS = [
+  { label: 'Samstag', offset: 5 },
+  { label: 'Sonntag', offset: 6 },
 ];
 
 const normalizeValueList = (value) => {
@@ -97,12 +101,9 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
   };
 };
 
-const getWeekDays = (week, visibleDateKeys) => {
-  const visibleSet =
-    Array.isArray(visibleDateKeys) && visibleDateKeys.length
-      ? new Set(visibleDateKeys)
-      : null;
-  const days = WEEKDAY_LABELS.map((info) => {
+const getWeekDays = (week, includeWeekend = false) => {
+  const labels = includeWeekend ? [...WEEKDAY_LABELS, ...WEEKEND_LABELS] : WEEKDAY_LABELS;
+  return labels.map((info) => {
     const date = new Date(week.startDate);
     date.setUTCDate(date.getUTCDate() + info.offset);
     const ymd = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`;
@@ -112,10 +113,44 @@ const getWeekDays = (week, visibleDateKeys) => {
       displayDate: formatDisplayDate(ymd),
     };
   });
-  if (!visibleSet) {
-    return days;
-  }
-  return days.filter((item) => visibleSet.has(item.dateKey));
+};
+
+const getVisibleWeekDays = (week, visibleDateKeys, freeDays, freeDayFilters) => {
+  const visibleSet =
+    Array.isArray(visibleDateKeys) && visibleDateKeys.length
+      ? new Set(visibleDateKeys)
+      : null;
+  const showWeekend = freeDayFilters?.weekend ?? false;
+  const showHolidays = freeDayFilters?.holidays ?? false;
+  const days = getWeekDays(week, showWeekend);
+  return days
+    .map((item) => {
+      const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
+      const holidayLabel = freeInfo?.type === 'holiday' && freeInfo.label ? freeInfo.label : null;
+      return {
+        ...item,
+        freeInfo,
+        holidayLabel,
+        isWeekend: isWeekend(item.dateKey),
+      };
+    })
+    .filter((item) => {
+      if (visibleSet && !visibleSet.has(item.dateKey)) {
+        return false;
+      }
+      const isHoliday = item.freeInfo?.type === 'holiday';
+      const isWeekendDay = item.isWeekend;
+      if (!isHoliday && !isWeekendDay) {
+        return true;
+      }
+      if (isWeekendDay && showWeekend) {
+        return true;
+      }
+      if (isHoliday && showHolidays) {
+        return true;
+      }
+      return false;
+    });
 };
 
 const getSortedDateKeys = (days) => {
@@ -376,6 +411,7 @@ const buildWeeklyTable = ({
   timetableLessons,
   visibleDateKeys,
   typeFilters,
+  freeDayFilters,
 }) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
@@ -383,11 +419,12 @@ const buildWeeklyTable = ({
   const thead = createEl('thead');
   const headerRow = createEl('tr');
   headerRow.append(createEl('th', { scope: 'col', text: '' }));
-  const weekDays = getWeekDays(week, visibleDateKeys).map((item) => {
-    const freeInfo = getFreeDayInfo(item.dateKey, freeDays);
-    const holidayLabel = freeInfo?.type === 'holiday' && freeInfo.label ? freeInfo.label : null;
-    return { ...item, freeInfo, holidayLabel };
-  });
+  const weekDays = getVisibleWeekDays(
+    week,
+    visibleDateKeys,
+    freeDays,
+    freeDayFilters,
+  );
   weekDays.forEach((item) => {
     const cell = createEl('th', { scope: 'col' });
     const headerContent = createEl('div', { className: 'd-flex flex-column gap-1' });
@@ -599,6 +636,10 @@ export const createWeeklyTableView = ({
     offers: true,
     absence: true,
   };
+  let freeDayFilters = {
+    weekend: false,
+    holidays: false,
+  };
   const getGroupsForLabel = (label) =>
     observationGroupMap.get(normalizeObservationKey(label)) || [];
 
@@ -652,6 +693,14 @@ export const createWeeklyTableView = ({
       { value: 'absence', label: 'Abwesenheit', checked: true },
     ],
   });
+  const freeDayFilterGroup = buildTypeFilterGroup({
+    id: 'weekly-table-free-days',
+    label: 'Freie Tage',
+    options: [
+      { value: 'weekend', label: 'Wochenende', checked: false },
+      { value: 'holidays', label: 'Feiertage', checked: false },
+    ],
+  });
   const editToggleId = 'weekly-table-edit-toggle';
   const editToggle = createEl('input', {
     className: 'form-check-input',
@@ -674,6 +723,7 @@ export const createWeeklyTableView = ({
     monthSelectGroup.wrapper,
     childSelectGroup.wrapper,
     typeFilterGroup.wrapper,
+    freeDayFilterGroup.wrapper,
     editToggleWrapper,
   );
 
@@ -973,9 +1023,16 @@ export const createWeeklyTableView = ({
       timetableSchedule: currentTimetableSchedule,
       timetableLessons: currentTimetableLessons,
       typeFilters,
+      freeDayFilters,
     };
 
+    const hasVisibleDays = (week, visibleDateKeys = null) =>
+      getVisibleWeekDays(week, visibleDateKeys, currentFreeDays, freeDayFilters).length > 0;
+
     const buildWeekGroup = (week, visibleDateKeys, showHeading = false) => {
+      if (!hasVisibleDays(week, visibleDateKeys)) {
+        return null;
+      }
       const group = createEl('div', { className: 'weekly-table__week-group' });
       if (showHeading) {
         group.append(
@@ -1000,29 +1057,46 @@ export const createWeeklyTableView = ({
     if (selectedTimeFilter === 'day') {
       const week = selectedDay ? findWeekForDate(selectedDay) : null;
       if (week) {
-        tableGroups.push(buildWeekGroup(week, [selectedDay]));
+        const group = buildWeekGroup(week, [selectedDay]);
+        if (group) {
+          tableGroups.push(group);
+        }
       }
     } else if (selectedTimeFilter === 'month') {
       const weeks = selectedMonth ? getWeeksForMonth(selectedMonth) : [];
       weeks.forEach((week) => {
-        const visible = getWeekDays(week)
+        const visible = getVisibleWeekDays(
+          week,
+          null,
+          currentFreeDays,
+          freeDayFilters,
+        )
           .map((day) => day.dateKey)
           .filter((dateKey) => getMonthKey(dateKey) === selectedMonth);
         if (visible.length) {
-          tableGroups.push(buildWeekGroup(week, visible, true));
+          const group = buildWeekGroup(week, visible, true);
+          if (group) {
+            tableGroups.push(group);
+          }
         }
       });
     } else if (selectedTimeFilter === 'year') {
       const year = findSelectedYear();
       if (year && year.weeks.length) {
         year.weeks.forEach((week) => {
-          tableGroups.push(buildWeekGroup(week, null, true));
+          const group = buildWeekGroup(week, null, true);
+          if (group) {
+            tableGroups.push(group);
+          }
         });
       }
     } else {
       const week = findSelectedWeek();
       if (week) {
-        tableGroups.push(buildWeekGroup(week));
+        const group = buildWeekGroup(week);
+        if (group) {
+          tableGroups.push(group);
+        }
       }
     }
 
@@ -1097,6 +1171,16 @@ export const createWeeklyTableView = ({
     input.addEventListener('change', () => {
       typeFilters = {
         ...typeFilters,
+        [key]: input.checked,
+      };
+      renderTable();
+    });
+  });
+
+  freeDayFilterGroup.inputs.forEach((input, key) => {
+    input.addEventListener('change', () => {
+      freeDayFilters = {
+        ...freeDayFilters,
         [key]: input.checked,
       };
       renderTable();
