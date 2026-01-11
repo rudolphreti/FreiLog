@@ -770,23 +770,37 @@ export const bindObservations = ({
     if (!child) {
       return;
     }
-    if (!openOverlay(child, { updateHistory: false })) {
-      return;
-    }
-    if (!event?.detail?.focusNote) {
-      return;
-    }
-    const safeChildSelector =
-      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
-        ? CSS.escape(child)
-        : child;
-    const panel = overlayContent.querySelector(
-      `[data-child="${safeChildSelector}"]`,
-    );
-    const noteInput = panel?.querySelector('[data-role="observation-note-input"]');
-    if (isTextAreaElement(noteInput) && !noteInput.disabled) {
-      noteInput.focus();
-    }
+    const focusNote = event?.detail?.focusNote === true;
+    const attemptOpen = (remaining = 8) => {
+      if (!openOverlay(child, { updateHistory: false })) {
+        if (remaining > 0) {
+          window.setTimeout(() => attemptOpen(remaining - 1), 80);
+        }
+        return;
+      }
+      if (!focusNote) {
+        return;
+      }
+      const safeChildSelector =
+        typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+          ? CSS.escape(child)
+          : child;
+      const panel = overlayContent.querySelector(
+        `[data-child="${safeChildSelector}"]`,
+      );
+      const noteInput = panel?.querySelector('[data-role="observation-note-input"]');
+      if (isTextAreaElement(noteInput)) {
+        noteInput.disabled = panel?.dataset?.absent === 'true';
+        noteInput.removeAttribute('readonly');
+        requestAnimationFrame(() => {
+          if (!noteInput.disabled) {
+            noteInput.focus();
+            noteInput.click();
+          }
+        });
+      }
+    };
+    attemptOpen();
   };
 
   if (templatesOverlay) {
