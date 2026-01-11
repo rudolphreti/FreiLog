@@ -76,6 +76,8 @@ const normalizeEntryDates = (startRaw, endRaw) => {
   };
 };
 
+export const SUMMER_BREAK_LABEL = 'Sommerferien';
+
 export const DEFAULT_FREE_DAYS = [
   {
     start: '2025-10-26',
@@ -160,9 +162,12 @@ export const DEFAULT_FREE_DAYS = [
   {
     start: '2026-07-04',
     end: '2026-09-06',
-    label: 'Sommerferien',
+    label: SUMMER_BREAK_LABEL,
   },
 ];
+
+export const isSummerBreakEntry = (entry) =>
+  typeof entry?.label === 'string' && entry.label.trim() === SUMMER_BREAK_LABEL;
 
 export const normalizeFreeDayEntry = (value) => {
   if (!value || typeof value !== 'object') {

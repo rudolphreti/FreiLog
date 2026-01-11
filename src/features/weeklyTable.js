@@ -10,7 +10,7 @@ import {
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
 import { setSelectedDate } from '../state/store.js';
-import { getFreeDayInfo, isWeekend } from '../utils/freeDays.js';
+import { getFreeDayInfo, isSummerBreakEntry, isWeekend } from '../utils/freeDays.js';
 import { UI_LABELS } from '../ui/labels.js';
 import {
   flattenModuleAssignments,
@@ -176,6 +176,9 @@ const getFreeDayDateKeys = (freeDays = []) => {
   const keys = [];
   entries.forEach((entry) => {
     if (!entry) {
+      return;
+    }
+    if (isSummerBreakEntry(entry)) {
       return;
     }
     const start = entry.start || entry.date || entry.startDate;
