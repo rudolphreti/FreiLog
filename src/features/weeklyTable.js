@@ -718,8 +718,8 @@ export const createWeeklyTableView = ({
     holidays: false,
   };
   let daySelectionFilters = {
-    working: false,
-    holidays: false,
+    working: true,
+    holidays: true,
   };
   const getGroupsForLabel = (label) =>
     observationGroupMap.get(normalizeObservationKey(label)) || [];
@@ -760,14 +760,6 @@ export const createWeeklyTableView = ({
   const monthSelectGroup = buildSelectGroup({
     id: 'weekly-table-month',
     label: 'Monat wählen',
-  });
-  const daySelectionGroup = buildTypeFilterGroup({
-    id: 'weekly-table-day-selection',
-    label: UI_LABELS.weeklyTableDaySelectionLabel,
-    options: [
-      { value: 'working', label: UI_LABELS.weeklyTableDaySelectionWorking, checked: false },
-      { value: 'holidays', label: UI_LABELS.weeklyTableDaySelectionHolidays, checked: false },
-    ],
   });
   const childSelectGroup = buildSelectGroup({
     id: 'weekly-table-child',
@@ -810,7 +802,6 @@ export const createWeeklyTableView = ({
     weekSelectGroup.wrapper,
     daySelectGroup.wrapper,
     monthSelectGroup.wrapper,
-    daySelectionGroup.wrapper,
     childSelectGroup.wrapper,
     typeFilterGroup.wrapper,
     freeDayFilterGroup.wrapper,
@@ -1305,16 +1296,6 @@ export const createWeeklyTableView = ({
     input.addEventListener('change', () => {
       freeDayFilters = {
         ...freeDayFilters,
-        [key]: input.checked,
-      };
-      render();
-    });
-  });
-
-  daySelectionGroup.inputs.forEach((input, key) => {
-    input.addEventListener('change', () => {
-      daySelectionFilters = {
-        ...daySelectionFilters,
         [key]: input.checked,
       };
       render();
