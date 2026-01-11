@@ -485,14 +485,14 @@ const normalizeDayEntry = (
       const normalized = ensureUniqueObservationTexts(tags);
       filteredObservations[child] = normalized;
     });
-
-    Object.entries(observationNotes).forEach(([child, note]) => {
-      if (absentSet.has(child)) {
-        return;
-      }
-      filteredObservationNotes[child] = note;
-    });
   }
+
+  Object.entries(observationNotes).forEach(([child, note]) => {
+    if (absentSet.has(child)) {
+      return;
+    }
+    filteredObservationNotes[child] = note;
+  });
 
   if (childrenSet) {
     childrenSet.forEach((child) => {

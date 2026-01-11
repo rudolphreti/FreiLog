@@ -312,10 +312,6 @@ const sanitizeObservationsForDate = (observations, { absentSet, childrenSet, isF
 
 const sanitizeObservationNotesForDate = (observationNotes, { absentSet, childrenSet, isFreeDay }) => {
   const shouldFillChildren = childrenSet && childrenSet.size > 0;
-  if (isFreeDay) {
-    return shouldFillChildren ? buildDefaultObservationNotes(Array.from(childrenSet)) : {};
-  }
-
   const result = {};
   if (observationNotes && typeof observationNotes === 'object') {
     Object.entries(observationNotes).forEach(([child, note]) => {

@@ -2809,7 +2809,7 @@ export const buildObservationsSection = ({
       todayItems: data,
       note,
     });
-    refs.noteInput.disabled = isReadOnly || isAbsent;
+    refs.noteInput.disabled = isAbsent;
     const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
     nextToday.dataset.role = 'observation-today-list';
     refs.todayList.replaceWith(nextToday);
@@ -2887,7 +2887,7 @@ export const buildObservationsSection = ({
     refs.todaySection.hidden = isHidden;
     refs.addSection.hidden = isHidden;
     refs.noteSection.hidden = isHidden;
-    refs.noteInput.disabled = isReadOnly || isAbsent;
+    refs.noteInput.disabled = isAbsent;
 
     if (refs.noteInput && document.activeElement !== refs.noteInput) {
       const nextNote = typeof note === 'string' ? note : '';
@@ -3090,8 +3090,7 @@ export const buildObservationsSection = ({
 
     detailRefs.forEach((detailRef) => {
       if (detailRef?.noteInput) {
-        detailRef.noteInput.disabled =
-          isReadOnly || detailRef.noteSection?.hidden;
+        detailRef.noteInput.disabled = detailRef.noteSection?.hidden;
       }
     });
   };

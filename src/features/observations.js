@@ -1113,9 +1113,6 @@ export const bindObservations = ({
     if (target.dataset.role !== 'observation-note-input') {
       return;
     }
-    if (isReadOnly) {
-      return;
-    }
     const child = getDetailChild(target);
     persistObservationNote(child, target.value);
   };
