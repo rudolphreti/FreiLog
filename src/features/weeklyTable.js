@@ -763,10 +763,10 @@ export const createWeeklyTableView = ({
   });
   const daySelectionGroup = buildTypeFilterGroup({
     id: 'weekly-table-day-selection',
-    label: 'Uwzględnij dni:',
+    label: UI_LABELS.weeklyTableDaySelectionLabel,
     options: [
-      { value: 'working', label: 'pracujące, w których nie ma wpisów', checked: false },
-      { value: 'holidays', label: 'świąteczne', checked: false },
+      { value: 'working', label: UI_LABELS.weeklyTableDaySelectionWorking, checked: false },
+      { value: 'holidays', label: UI_LABELS.weeklyTableDaySelectionHolidays, checked: false },
     ],
   });
   const childSelectGroup = buildSelectGroup({
