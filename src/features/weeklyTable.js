@@ -63,6 +63,10 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
   const entry = days?.[dateKey] && typeof days[dateKey] === 'object' ? days[dateKey] : {};
   const angebote = normalizeValueList(entry.angebote);
   const observations = typeof entry.observations === 'object' ? entry.observations : {};
+  const observationNotes =
+    entry.observationNotes && typeof entry.observationNotes === 'object'
+      ? entry.observationNotes
+      : {};
   const absentChildren = Array.isArray(entry.absentChildIds)
     ? entry.absentChildIds
         .map((child) => (typeof child === 'string' ? child.trim() : ''))
@@ -77,6 +81,17 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
     if (normalized.length) {
       acc[child] = normalized;
     }
+    return acc;
+  }, {});
+  const normalizedNotes = Object.entries(observationNotes || {}).reduce((acc, [child, value]) => {
+    if (typeof value !== 'string') {
+      return acc;
+    }
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return acc;
+    }
+    acc[child] = trimmed;
     return acc;
   }, {});
 
@@ -97,6 +112,7 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
     angebotModules,
     freizeitModules,
     observations: normalizedObs,
+    observationNotes: normalizedNotes,
     absentChildren: [...new Set(absentChildren)],
   };
 };
@@ -427,6 +443,16 @@ const buildObservationList = (values, getGroupsForLabel, observationGroups) => {
   return list;
 };
 
+const buildObservationNoteIcon = () =>
+  createEl('span', {
+    className: 'weekly-table__note-icon',
+    text: '📝',
+    attrs: {
+      title: 'Notizen vorhanden',
+      'aria-label': 'Notizen vorhanden',
+    },
+  });
+
 const buildAbsenceBadge = () =>
   createEl('span', {
     className:
@@ -588,6 +614,7 @@ const buildWeeklyTable = ({
     weekDays.forEach((item) => {
       const dayEntry = getDayEntry(item.dateKey);
       const obs = dayEntry.observations[child] || [];
+      const note = dayEntry.observationNotes?.[child] || '';
       const freeInfo = item.freeInfo;
       const isAbsent = dayEntry.absentChildren.includes(child);
       const cellClasses = [
@@ -599,6 +626,9 @@ const buildWeeklyTable = ({
       const bodyChildren = [];
       if (showAbsence && isAbsent) {
         bodyChildren.push(buildAbsenceBadge());
+      }
+      if (note) {
+        bodyChildren.push(buildObservationNoteIcon());
       }
       if (showObservations) {
         bodyChildren.push(buildObservationList(obs, getGroupsForLabel, observationGroups));
