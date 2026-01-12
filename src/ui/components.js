@@ -2878,6 +2878,7 @@ export const buildObservationsSection = ({
     refs.todayList.replaceWith(nextToday);
     refs.todayList = nextToday;
 
+    const hadNoteFocus = document.activeElement === refs.noteInput;
     const isHidden = Boolean(isAbsent);
     refs.topList.hidden = isHidden;
     refs.todayTitle.hidden = isHidden;
@@ -2894,6 +2895,11 @@ export const buildObservationsSection = ({
       if (refs.noteInput.value !== nextNote) {
         refs.noteInput.value = nextNote;
       }
+    }
+    if (hadNoteFocus && !refs.noteInput.disabled) {
+      requestAnimationFrame(() => {
+        refs.noteInput.focus();
+      });
     }
 
     if (isAbsent) {
