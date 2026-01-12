@@ -703,6 +703,9 @@ export const bindObservations = ({
   overlayTitle,
   closeButton,
   templatesOverlay,
+  multiObservationButton,
+  multiTemplatesOverlay,
+  assignOverlay,
   editOverlay,
   createOverlay,
   date,
@@ -746,8 +749,11 @@ export const bindObservations = ({
   let isTemplateOverlayOpen = false;
   let isCreateOverlayOpen = false;
   let isEditOverlayOpen = false;
+  let isMultiTemplateOpen = false;
+  let isAssignOverlayOpen = false;
   let isReadOnly = Boolean(readOnly);
   let editingObservation = null;
+  let activeMultiObservation = null;
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
@@ -835,6 +841,128 @@ export const bindObservations = ({
       : getTemplateUiState(templatesOverlay);
     restoreTemplateUiState(templatesOverlay, savedTemplateState);
   }
+  if (multiTemplatesOverlay) {
+    const savedTemplateState = savedFilters
+      ? {
+          templateFilter: savedFilters.selectedLetter || 'ALL',
+          templateQuery: multiTemplatesOverlay.dataset.templateQuery || '',
+          templateGroups: normalizeObservationGroups(savedFilters.selectedGroups || []).join(','),
+          templateGroupMode: savedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+          templateMulti: savedFilters.multiGroups === true,
+          templateShowAndOr: savedFilters.showAndOr === true,
+          templateShowAlphabet: savedFilters.showAlphabet === true,
+          templateSettingsOpen: false,
+        }
+      : getTemplateUiState(multiTemplatesOverlay);
+    restoreTemplateUiState(multiTemplatesOverlay, savedTemplateState);
+  }
+
+  const updateBodyOverlayClass = () => {
+    const shouldBeOpen =
+      isOverlayOpen ||
+      isTemplateOverlayOpen ||
+      isCreateOverlayOpen ||
+      isEditOverlayOpen ||
+      isMultiTemplateOpen ||
+      isAssignOverlayOpen;
+    document.body.classList.toggle('observation-overlay-open', shouldBeOpen);
+  };
+
+  const setAssignObservationLabel = (value) => {
+    if (!assignOverlay) {
+      return;
+    }
+    const label = assignOverlay.querySelector(
+      '[data-role="observation-assign-observation"]',
+    );
+    if (isHtmlElement(label)) {
+      label.textContent = value ? `Beobachtung: ${value}` : '';
+    }
+  };
+
+  const buildAssignButton = ({ child, isAbsent }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-outline-primary observation-assign-pill';
+    button.textContent = child;
+    button.dataset.role = 'observation-assign-child';
+    button.dataset.child = child;
+    button.dataset.absent = isAbsent ? 'true' : 'false';
+    button.setAttribute('aria-pressed', 'false');
+    if (isAbsent) {
+      button.classList.add('is-absent');
+    }
+    button.disabled = isReadOnly || isAbsent;
+    return button;
+  };
+
+  const rebuildAssignList = () => {
+    if (!assignOverlay) {
+      return;
+    }
+    const assignList = assignOverlay.querySelector(
+      '[data-role="observation-assign-list"]',
+    );
+    if (!assignList) {
+      return;
+    }
+    const childButtons = list.querySelectorAll('[data-role="observation-child"]');
+    const nextButtons = [];
+    childButtons.forEach((button) => {
+      const child = button.dataset.child;
+      if (!child) {
+        return;
+      }
+      const isAbsent = button.dataset.absent === 'true';
+      nextButtons.push(buildAssignButton({ child, isAbsent }));
+    });
+    assignList.replaceChildren(...nextButtons);
+  };
+
+  const hasObservationForChild = (dateValue, child, observationKey) => {
+    if (!child || !observationKey) {
+      return false;
+    }
+    const entry = getEntry(dateValue);
+    const tags = normalizeObservationList(getObservationTags(entry, child));
+    return tags.some(
+      (tag) => normalizeObservationKey(tag) === observationKey,
+    );
+  };
+
+  const updateAssignButtonState = (button, isAssigned) => {
+    button.classList.toggle('is-assigned', isAssigned);
+    button.setAttribute('aria-pressed', isAssigned ? 'true' : 'false');
+  };
+
+  const refreshAssignButtons = () => {
+    if (!assignOverlay || !activeMultiObservation) {
+      return;
+    }
+    const observationKey = normalizeObservationKey(activeMultiObservation);
+    const assignList = assignOverlay.querySelector(
+      '[data-role="observation-assign-list"]',
+    );
+    if (!assignList) {
+      return;
+    }
+    assignList
+      .querySelectorAll('[data-role="observation-assign-child"]')
+      .forEach((button) => {
+        const child = button.dataset.child;
+        if (!child) {
+          return;
+        }
+        const isAbsent = button.dataset.absent === 'true';
+        const isAssigned = hasObservationForChild(
+          getDate(),
+          child,
+          observationKey,
+        );
+        updateAssignButtonState(button, isAssigned);
+        button.disabled = isReadOnly || isAbsent;
+      });
+  };
 
   const setOverlayState = (child) => {
     const detailPanels = overlayContent.querySelectorAll('[data-child]');
@@ -869,7 +997,7 @@ export const bindObservations = ({
     isOverlayOpen = true;
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('observation-overlay-open');
+    updateBodyOverlayClass();
     if (updateHistory) {
       const encoded = encodeURIComponent(child);
       history.pushState(
@@ -891,7 +1019,7 @@ export const bindObservations = ({
     activeChild = null;
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
-    document.body.classList.remove('observation-overlay-open');
+    updateBodyOverlayClass();
   };
 
   const openTemplateOverlay = (child, { focusSearch = true } = {}) => {
@@ -928,6 +1056,63 @@ export const bindObservations = ({
     templatesOverlay.classList.remove('is-open');
     templatesOverlay.setAttribute('aria-hidden', 'true');
     overlayPanel.classList.remove('is-template-open');
+  };
+
+  const openMultiTemplateOverlay = () => {
+    if (isReadOnly || !multiTemplatesOverlay) {
+      return;
+    }
+    closeDrawerIfOpen();
+    isMultiTemplateOpen = true;
+    multiTemplatesOverlay.dataset.isOpen = 'true';
+    multiTemplatesOverlay.classList.add('is-open');
+    multiTemplatesOverlay.setAttribute('aria-hidden', 'false');
+    restoreTemplateUiState(multiTemplatesOverlay, getTemplateUiState(multiTemplatesOverlay));
+    updateBodyOverlayClass();
+    const searchInput = multiTemplatesOverlay.querySelector(
+      '[data-role="observation-template-search"]',
+    );
+    if (isInputElement(searchInput)) {
+      searchInput.focus();
+    }
+  };
+
+  const closeMultiTemplateOverlay = () => {
+    if (!isMultiTemplateOpen || !multiTemplatesOverlay) {
+      return;
+    }
+    isMultiTemplateOpen = false;
+    multiTemplatesOverlay.dataset.isOpen = 'false';
+    setTemplateSettingsOpen(multiTemplatesOverlay, false);
+    multiTemplatesOverlay.classList.remove('is-open');
+    multiTemplatesOverlay.setAttribute('aria-hidden', 'true');
+    updateBodyOverlayClass();
+  };
+
+  const openAssignOverlay = (observation) => {
+    if (isReadOnly || !assignOverlay || !observation) {
+      return;
+    }
+    activeMultiObservation = observation;
+    rebuildAssignList();
+    setAssignObservationLabel(observation);
+    isAssignOverlayOpen = true;
+    assignOverlay.classList.add('is-open');
+    assignOverlay.setAttribute('aria-hidden', 'false');
+    refreshAssignButtons();
+    updateBodyOverlayClass();
+  };
+
+  const closeAssignOverlay = () => {
+    if (!isAssignOverlayOpen || !assignOverlay) {
+      return;
+    }
+    isAssignOverlayOpen = false;
+    activeMultiObservation = null;
+    assignOverlay.classList.remove('is-open');
+    assignOverlay.setAttribute('aria-hidden', 'true');
+    setAssignObservationLabel('');
+    updateBodyOverlayClass();
   };
 
   const setCreateGroups = (groups) => {
@@ -1247,6 +1432,35 @@ export const bindObservations = ({
     }
   };
 
+  const handleMultiTemplateInput = (event) => {
+    const target = event.target;
+    if (!isInputElement(target) || !multiTemplatesOverlay) {
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-search') {
+      setTemplateQuery(multiTemplatesOverlay, target.value);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-multi-switch') {
+      setTemplateMultiGroups(multiTemplatesOverlay, target.checked);
+      persistTemplateFilters(multiTemplatesOverlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-andor-switch') {
+      setTemplateShowAndOr(multiTemplatesOverlay, target.checked);
+      persistTemplateFilters(multiTemplatesOverlay);
+      return;
+    }
+
+    if (target.dataset.role === 'observation-template-alphabet-switch') {
+      setTemplateShowAlphabet(multiTemplatesOverlay, target.checked);
+      persistTemplateFilters(multiTemplatesOverlay);
+    }
+  };
+
   const getActiveCard = () => {
     if (!activeChild) {
       return null;
@@ -1530,6 +1744,150 @@ export const bindObservations = ({
     }
   };
 
+  const handleMultiTemplateClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target) || !multiTemplatesOverlay) {
+      return;
+    }
+
+    const settingsPanel = multiTemplatesOverlay.querySelector(
+      '[data-role="observation-template-settings-panel"]',
+    );
+    const isSettingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    const { settingsOpen } = getTemplateFlags(multiTemplatesOverlay);
+    if (settingsOpen && settingsPanel && !isSettingsToggle && !settingsPanel.contains(target)) {
+      setTemplateSettingsOpen(multiTemplatesOverlay, false);
+    }
+
+    if (target === multiTemplatesOverlay) {
+      closeMultiTemplateOverlay();
+      return;
+    }
+
+    const closeTemplateButton = target.closest(
+      '[data-role="observation-multi-catalog-close"]',
+    );
+    if (closeTemplateButton) {
+      closeMultiTemplateOverlay();
+      return;
+    }
+
+    const settingsToggle = target.closest(
+      '[data-role="observation-template-settings-toggle"]',
+    );
+    if (settingsToggle) {
+      const { settingsOpen: nextSettingsOpen } = getTemplateFlags(multiTemplatesOverlay);
+      setTemplateSettingsOpen(multiTemplatesOverlay, !nextSettingsOpen);
+      return;
+    }
+
+    const templateButton = target.closest(
+      '[data-role="observation-template-add"]',
+    );
+    if (templateButton) {
+      if (isReadOnly) {
+        return;
+      }
+      const tag = templateButton.dataset.value;
+      if (tag) {
+        closeMultiTemplateOverlay();
+        openAssignOverlay(tag);
+      }
+      return;
+    }
+
+    const templateGroupButton = target.closest(
+      '[data-role="observation-template-group-filter"]',
+    );
+    if (templateGroupButton) {
+      if (isReadOnly) {
+        return;
+      }
+      toggleTemplateGroup(
+        multiTemplatesOverlay,
+        templateGroupButton.dataset.value,
+      );
+      persistTemplateFilters(multiTemplatesOverlay);
+      return;
+    }
+
+    const templateGroupModeButton = target.closest(
+      '[data-role="observation-template-group-mode"]',
+    );
+    if (templateGroupModeButton) {
+      const { multiGroups } = getTemplateFlags(multiTemplatesOverlay);
+      if (isReadOnly || !multiGroups) {
+        return;
+      }
+      setTemplateGroupMode(
+        multiTemplatesOverlay,
+        templateGroupModeButton.dataset.value,
+      );
+      persistTemplateFilters(multiTemplatesOverlay);
+      return;
+    }
+
+    const templateFilterButton = target.closest(
+      '[data-role="observation-template-letter"]',
+    );
+    if (templateFilterButton) {
+      if (isReadOnly) {
+        return;
+      }
+      setTemplateFilter(
+        multiTemplatesOverlay,
+        templateFilterButton.dataset.value || 'ALL',
+      );
+      persistTemplateFilters(multiTemplatesOverlay);
+    }
+  };
+
+  const handleAssignOverlayClick = (event) => {
+    const target = event.target;
+    if (!isHtmlElement(target) || !assignOverlay) {
+      return;
+    }
+
+    if (target === assignOverlay) {
+      closeAssignOverlay();
+      return;
+    }
+
+    const closeButton = target.closest('[data-role="observation-assign-close"]');
+    if (closeButton) {
+      closeAssignOverlay();
+      return;
+    }
+
+    const childButton = target.closest('[data-role="observation-assign-child"]');
+    if (childButton) {
+      if (isReadOnly || !activeMultiObservation) {
+        return;
+      }
+      if (childButton.dataset.absent === 'true') {
+        return;
+      }
+      const child = childButton.dataset.child;
+      const observationKey = normalizeObservationKey(activeMultiObservation);
+      if (!child || !observationKey) {
+        return;
+      }
+      const isAssigned = hasObservationForChild(
+        getDate(),
+        child,
+        observationKey,
+      );
+      if (isAssigned) {
+        removeObservationForChild(getDate(), child, activeMultiObservation);
+      } else {
+        addTagForChild(getDate(), child, activeMultiObservation);
+      }
+      updateAssignButtonState(childButton, !isAssigned);
+    }
+  };
+
   const handleTemplatePointerDown = (event) => {
     const target = event.target;
     if (!isHtmlElement(target)) {
@@ -1662,6 +2020,12 @@ export const bindObservations = ({
   overlay.addEventListener('click', handleOverlayBackdropClick);
   window.addEventListener('freilog:observation-open', handleExternalOpen);
 
+  if (multiObservationButton) {
+    multiObservationButton.addEventListener('click', () => {
+      openMultiTemplateOverlay();
+    });
+  }
+
   if (closeButton) {
     closeButton.addEventListener('click', () => {
       closeOverlay();
@@ -1674,6 +2038,13 @@ export const bindObservations = ({
   templatesOverlay.addEventListener('pointerup', handleTemplatePointerEnd);
   templatesOverlay.addEventListener('pointerleave', handleTemplatePointerEnd);
   templatesOverlay.addEventListener('pointercancel', handleTemplatePointerEnd);
+  if (multiTemplatesOverlay) {
+    multiTemplatesOverlay.addEventListener('input', handleMultiTemplateInput);
+    multiTemplatesOverlay.addEventListener('click', handleMultiTemplateClick);
+  }
+  if (assignOverlay) {
+    assignOverlay.addEventListener('click', handleAssignOverlayClick);
+  }
   createOverlay.addEventListener('submit', handleCreateSubmit);
   createOverlay.addEventListener('input', handleCreateInput);
   createOverlay.addEventListener('click', handleCreateClick);
@@ -1725,6 +2096,9 @@ export const bindObservations = ({
       if (isOverlayOpen) {
         setOverlayTitle(activeChild);
       }
+      if (isAssignOverlayOpen) {
+        refreshAssignButtons();
+      }
     },
     updateReadOnly: (nextReadOnly) => {
       const next = Boolean(nextReadOnly);
@@ -1736,6 +2110,8 @@ export const bindObservations = ({
         closeTemplateOverlay();
         closeCreateOverlay();
         closeEditOverlay();
+        closeMultiTemplateOverlay();
+        closeAssignOverlay();
       }
     },
   };

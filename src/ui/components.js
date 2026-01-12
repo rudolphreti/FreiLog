@@ -1896,6 +1896,60 @@ export const buildObservationTemplatesOverlay = ({
   };
 };
 
+export const buildObservationAssignOverlay = () => {
+  const overlay = createEl('div', {
+    className: 'observation-templates-overlay observation-assign-overlay',
+    dataset: { role: 'observation-assign-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const overlayPanel = createEl('div', {
+    className: 'observation-templates-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const header = createEl('div', {
+    className: 'observation-templates-overlay__header',
+  });
+  const titleEl = createEl('h3', {
+    className: 'h5 mb-0',
+    text: 'Kinder zuweisen',
+  });
+  const closeButton = createEl('button', {
+    className: 'btn-close observation-templates-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'observation-assign-close' },
+  });
+  header.append(titleEl, closeButton);
+
+  const observationLabel = createEl('p', {
+    className: 'text-muted small mb-0',
+    dataset: { role: 'observation-assign-observation' },
+  });
+  const list = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-assign-list',
+    dataset: { role: 'observation-assign-list' },
+  });
+  const content = createEl('div', {
+    className: 'mt-3 d-flex flex-column gap-3',
+    children: [observationLabel, list],
+  });
+  const scrollContent = createEl('div', {
+    className: 'observation-templates-overlay__content',
+    children: [content],
+  });
+
+  overlayPanel.append(header, scrollContent);
+  overlay.appendChild(overlayPanel);
+
+  return {
+    element: overlay,
+    refs: {
+      list,
+      closeButton,
+      observationLabel,
+    },
+  };
+};
+
 export const buildObservationCatalogOverlay = ({
   observationCatalog,
   observationGroups,
@@ -2726,6 +2780,17 @@ export const buildObservationsSection = ({
   let currentFreeDayInfo = freeDayInfo;
   let readOnlyNotice = null;
 
+  const multiObservationButton = createEl('button', {
+    className:
+      'btn btn-outline-primary d-inline-flex align-items-center gap-2 observation-multi-button',
+    attrs: { type: 'button', disabled: isReadOnly ? 'true' : null },
+    dataset: { role: 'observation-multi-open' },
+    children: [
+      createEl('span', { text: '👀' }),
+      createEl('span', { text: 'Eine Beobachtung für viele Kindern...' }),
+    ],
+  });
+
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-child-list',
   });
@@ -2784,6 +2849,16 @@ export const buildObservationsSection = ({
     observationGroups,
     savedFilters: normalizedSavedFilters,
   });
+  const multiTemplatesOverlay = buildObservationTemplatesOverlay({
+    templates: observationCatalog,
+    observationCatalog,
+    observationGroups,
+    savedFilters: normalizedSavedFilters,
+    role: 'observation-multi-catalog-overlay',
+    className: 'observation-templates-overlay observation-multi-catalog-overlay',
+    closeRole: 'observation-multi-catalog-close',
+  });
+  const assignOverlay = buildObservationAssignOverlay();
   const editOverlay = buildObservationEditOverlay({ observationGroups });
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
 
@@ -2830,7 +2905,13 @@ export const buildObservationsSection = ({
   );
     overlay.appendChild(overlayPanel);
 
-    body.append(list, overlay);
+    body.append(
+      multiObservationButton,
+      list,
+      overlay,
+      multiTemplatesOverlay.element,
+      assignOverlay.element,
+    );
   section.appendChild(body);
 
   const updateChildDetail = ({
@@ -2919,6 +3000,7 @@ export const buildObservationsSection = ({
   };
 
   const refs = {
+    multiObservationButton,
     list,
     overlay,
     overlayPanel,
@@ -2926,6 +3008,8 @@ export const buildObservationsSection = ({
     overlayTitle,
     closeButton,
     templatesOverlay: templatesOverlay.element,
+    multiTemplatesOverlay: multiTemplatesOverlay.element,
+    assignOverlay: assignOverlay.element,
     editOverlay: editOverlay.element,
     createOverlay: createOverlay.element,
   };
@@ -2973,7 +3057,7 @@ export const buildObservationsSection = ({
         className: 'alert alert-success mb-0',
         text: `Keine Eingaben möglich – ${nextLabel}`,
       });
-      body.insertBefore(readOnlyNotice, list);
+      body.insertBefore(readOnlyNotice, multiObservationButton);
     } else if (!shouldBeReadOnly && readOnlyNotice) {
       readOnlyNotice.remove();
       readOnlyNotice = null;
@@ -2982,6 +3066,7 @@ export const buildObservationsSection = ({
     }
     isReadOnly = shouldBeReadOnly;
     currentFreeDayInfo = nextFreeDayInfo;
+    multiObservationButton.disabled = isReadOnly;
 
     list.replaceChildren(
       ...nextChildren.map((child) =>
@@ -3086,6 +3171,83 @@ export const buildObservationsSection = ({
       console.debug('freilog: template-overlay/update-skip', {
         isTemplateOpen,
         preservedFilter: refs.templatesOverlay.dataset.templateFilter,
+      });
+    }
+
+    const isMultiTemplateOpen = refs.multiTemplatesOverlay?.dataset.isOpen === 'true';
+    if (!isMultiTemplateOpen && Array.isArray(nextObservationCatalog)) {
+      const refreshed = buildObservationTemplatesOverlay({
+        templates: nextObservationCatalog,
+        observationCatalog: nextObservationCatalog,
+        observationGroups: nextObservationGroups,
+        savedFilters: currentSavedFilters,
+        role: 'observation-multi-catalog-overlay',
+        className: 'observation-templates-overlay observation-multi-catalog-overlay',
+        closeRole: 'observation-multi-catalog-close',
+      });
+      if (refreshed?.element) {
+        const nextPanel = refreshed.element.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const currentPanel = refs.multiTemplatesOverlay.querySelector(
+          '.observation-templates-overlay__panel',
+        );
+        const nextHeader = nextPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        const currentHeader = currentPanel?.querySelector(
+          '.observation-templates-overlay__header',
+        );
+        if (currentHeader && nextHeader) {
+          currentHeader.replaceChildren(...nextHeader.children);
+        }
+        const nextContent = nextPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        const currentContent = currentPanel?.querySelector(
+          '.observation-templates-overlay__content',
+        );
+        if (currentContent && nextContent) {
+          const preservedScrollTop = currentContent.scrollTop;
+          currentContent.replaceChildren(...nextContent.children);
+          currentContent.scrollTop = preservedScrollTop;
+        }
+        const nextFilter =
+          refreshed.element.dataset.templateFilter ||
+          refs.multiTemplatesOverlay.dataset.templateFilter;
+        const nextQuery =
+          refreshed.element.dataset.templateQuery ||
+          refs.multiTemplatesOverlay.dataset.templateQuery;
+        const nextGroups =
+          refreshed.element.dataset.templateGroups ||
+          refs.multiTemplatesOverlay.dataset.templateGroups;
+        const nextGroupMode =
+          refreshed.element.dataset.templateGroupMode ||
+          refs.multiTemplatesOverlay.dataset.templateGroupMode;
+        const nextMulti =
+          refreshed.element.dataset.templateMulti ||
+          refs.multiTemplatesOverlay.dataset.templateMulti;
+        const nextShowAlphabet =
+          refreshed.element.dataset.templateShowAlphabet ||
+          refs.multiTemplatesOverlay.dataset.templateShowAlphabet;
+        const nextSettingsOpen =
+          refreshed.element.dataset.templateSettingsOpen ||
+          refs.multiTemplatesOverlay.dataset.templateSettingsOpen;
+        Object.assign(refs.multiTemplatesOverlay.dataset, {
+          templateFilter: nextFilter,
+          templateQuery: nextQuery,
+          templateGroups: nextGroups,
+          templateGroupMode: nextGroupMode,
+          templateMulti: nextMulti,
+          templateShowAlphabet: nextShowAlphabet,
+          templateSettingsOpen: nextSettingsOpen,
+        });
+      }
+    } else if (isMultiTemplateOpen) {
+      // eslint-disable-next-line no-console
+      console.debug('freilog: multi-template-overlay/update-skip', {
+        isMultiTemplateOpen,
+        preservedFilter: refs.multiTemplatesOverlay.dataset.templateFilter,
       });
     }
 
