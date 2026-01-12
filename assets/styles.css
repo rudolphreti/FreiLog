@@ -494,7 +494,7 @@ body {
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  z-index: 4;
+  z-index: 10;
 }
 
 .weekly-table-filter-overlay.is-open {
