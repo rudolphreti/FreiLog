@@ -855,20 +855,6 @@ export const createWeeklyTableView = ({
       { value: 'absence', label: 'Abwesenheit', checked: true },
     ],
   });
-  const editToggleId = 'weekly-table-edit-toggle';
-  const editToggle = createEl('input', {
-    className: 'form-check-input',
-    attrs: { type: 'checkbox', id: editToggleId },
-  });
-  const editToggleLabel = createEl('label', {
-    className: 'form-check-label',
-    attrs: { for: editToggleId },
-    text: 'Bearbeiten',
-  });
-  const editToggleWrapper = createEl('div', {
-    className: 'form-check form-switch weekly-table__control weekly-table__toggle',
-    children: [editToggle, editToggleLabel],
-  });
   controls.append(
     timeSelectGroup.wrapper,
     yearSelectGroup.wrapper,
@@ -877,7 +863,6 @@ export const createWeeklyTableView = ({
     monthSelectGroup.wrapper,
     childSelectGroup.wrapper,
     typeFilterGroup.wrapper,
-    editToggleWrapper,
   );
   filterContent.append(controls);
   filterPanel.append(filterHeader, filterContent);
@@ -1361,13 +1346,8 @@ export const createWeeklyTableView = ({
 
   const setEditMode = (nextValue) => {
     isEditMode = Boolean(nextValue);
-    editToggle.checked = isEditMode;
     renderTable();
   };
-
-  editToggle.addEventListener('change', (event) => {
-    setEditMode(event.target.checked);
-  });
 
   const openFilterOverlay = () => {
     filterOverlay.classList.add('is-open');
