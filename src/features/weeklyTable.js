@@ -510,6 +510,8 @@ const buildWeeklyTable = ({
   getGroupsForLabel,
   observationGroups,
   onEditCell,
+  onOpenFilters,
+  onToggleEdit,
   isEditMode,
   freeDays,
   timetableSchedule,
@@ -523,7 +525,40 @@ const buildWeeklyTable = ({
   });
   const thead = createEl('thead');
   const headerRow = createEl('tr');
-  headerRow.append(createEl('th', { scope: 'col', text: '' }));
+  const cornerCell = createEl('th', { scope: 'col', className: 'weekly-table__corner' });
+  const cornerControls = createEl('div', { className: 'weekly-table__corner-controls' });
+  const filterButton = createEl('button', {
+    className: 'btn btn-light btn-sm weekly-table__corner-button weekly-table__filter-button',
+    attrs: { type: 'button', 'aria-label': 'Filter öffnen' },
+    text: '⚙️',
+  });
+  filterButton.addEventListener('click', () => {
+    if (typeof onOpenFilters === 'function') {
+      onOpenFilters();
+    }
+  });
+  const editButton = createEl('button', {
+    className: [
+      'btn btn-light btn-sm weekly-table__corner-button weekly-table__edit-toggle',
+      isEditMode ? 'is-active' : '',
+    ]
+      .filter(Boolean)
+      .join(' '),
+    attrs: {
+      type: 'button',
+      'aria-label': isEditMode ? 'Bearbeiten deaktivieren' : 'Bearbeiten aktivieren',
+      'aria-pressed': isEditMode ? 'true' : 'false',
+    },
+    text: '✎',
+  });
+  editButton.addEventListener('click', () => {
+    if (typeof onToggleEdit === 'function') {
+      onToggleEdit();
+    }
+  });
+  cornerControls.append(filterButton, editButton);
+  cornerCell.append(cornerControls);
+  headerRow.append(cornerCell);
   const weekDays = getVisibleWeekDays(
     week,
     visibleDateKeys,
@@ -771,9 +806,22 @@ export const createWeeklyTableView = ({
   header.append(title, closeButton);
 
   const content = createEl('div', { className: 'weekly-table-overlay__content' });
+  const filterOverlay = createEl('div', {
+    className: 'weekly-table-filter-overlay',
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const filterPanel = createEl('div', { className: 'weekly-table-filter-overlay__panel' });
+  const filterHeader = createEl('div', { className: 'weekly-table-filter-overlay__header' });
+  const filterTitle = createEl('h3', { className: 'h4 mb-0', text: 'Filter' });
+  const filterCloseButton = createEl('button', {
+    className: 'btn-close weekly-table-filter-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+  });
+  filterHeader.append(filterTitle, filterCloseButton);
   const controls = createEl('div', {
     className: 'weekly-table__controls',
   });
+  const filterContent = createEl('div', { className: 'weekly-table-filter-overlay__content' });
   const timeSelectGroup = buildSelectGroup({
     id: 'weekly-table-time',
     label: 'Zeit',
@@ -831,13 +879,16 @@ export const createWeeklyTableView = ({
     typeFilterGroup.wrapper,
     editToggleWrapper,
   );
+  filterContent.append(controls);
+  filterPanel.append(filterHeader, filterContent);
+  filterOverlay.append(filterPanel);
 
   const infoText = createEl('div', { className: 'text-muted small' });
   const tableContainer = createEl('div', { className: 'weekly-table__container' });
 
-  content.append(controls, infoText, tableContainer);
+  content.append(infoText, tableContainer);
   panel.append(header, content);
-  overlay.append(panel);
+  overlay.append(panel, filterOverlay);
 
   const isOpen = () => overlay.classList.contains('is-open');
 
@@ -1147,6 +1198,12 @@ export const createWeeklyTableView = ({
       timetableLessons: currentTimetableLessons,
       typeFilters,
       freeDayFilters,
+      onOpenFilters: () => {
+        openFilterOverlay();
+      },
+      onToggleEdit: () => {
+        setEditMode(!isEditMode);
+      },
     };
 
     const hasVisibleDays = (week, visibleDateKeys = null) =>
@@ -1302,10 +1359,25 @@ export const createWeeklyTableView = ({
     });
   });
 
-  editToggle.addEventListener('change', (event) => {
-    isEditMode = event.target.checked;
+  const setEditMode = (nextValue) => {
+    isEditMode = Boolean(nextValue);
+    editToggle.checked = isEditMode;
     renderTable();
+  };
+
+  editToggle.addEventListener('change', (event) => {
+    setEditMode(event.target.checked);
   });
+
+  const openFilterOverlay = () => {
+    filterOverlay.classList.add('is-open');
+    filterOverlay.setAttribute('aria-hidden', 'false');
+  };
+
+  const closeFilterOverlay = () => {
+    filterOverlay.classList.remove('is-open');
+    filterOverlay.setAttribute('aria-hidden', 'true');
+  };
 
   const open = () => {
     if (!schoolYears.length) {
@@ -1314,6 +1386,7 @@ export const createWeeklyTableView = ({
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('weekly-table-overlay-open');
+    closeFilterOverlay();
     render();
   };
 
@@ -1321,15 +1394,26 @@ export const createWeeklyTableView = ({
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('weekly-table-overlay-open');
+    closeFilterOverlay();
   };
 
   closeButton.addEventListener('click', () => {
     close();
   });
 
+  filterCloseButton.addEventListener('click', () => {
+    closeFilterOverlay();
+  });
+
   overlay.addEventListener('click', (event) => {
     if (event.target === overlay) {
       close();
+    }
+  });
+
+  filterOverlay.addEventListener('click', (event) => {
+    if (event.target === filterOverlay) {
+      closeFilterOverlay();
     }
   });
 
