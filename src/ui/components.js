@@ -2896,7 +2896,9 @@ export const buildObservationsSection = ({
         refs.noteInput.value = nextNote;
       }
     }
-    if (hadNoteFocus && !refs.noteInput.disabled) {
+    const shouldRestoreFocus =
+      hadNoteFocus || detail.dataset.noteEditing === 'true';
+    if (shouldRestoreFocus && !refs.noteInput.disabled) {
       requestAnimationFrame(() => {
         refs.noteInput.focus();
       });

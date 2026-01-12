@@ -765,6 +765,22 @@ export const bindObservations = ({
   let suppressNextClick = false;
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
+  const noteEditTimers = new Map();
+  const markNoteEditing = (panel) => {
+    if (!panel) {
+      return;
+    }
+    panel.dataset.noteEditing = 'true';
+    const existing = noteEditTimers.get(panel);
+    if (existing) {
+      window.clearTimeout(existing);
+    }
+    const timeoutId = window.setTimeout(() => {
+      delete panel.dataset.noteEditing;
+      noteEditTimers.delete(panel);
+    }, 1500);
+    noteEditTimers.set(panel, timeoutId);
+  };
   const handleExternalOpen = (event) => {
     const child = event?.detail?.child;
     if (!child) {
@@ -792,6 +808,7 @@ export const bindObservations = ({
       if (isTextAreaElement(noteInput)) {
         noteInput.disabled = panel?.dataset?.absent === 'true';
         noteInput.removeAttribute('readonly');
+        markNoteEditing(panel);
         requestAnimationFrame(() => {
           if (!noteInput.disabled) {
             noteInput.focus();
@@ -1162,6 +1179,8 @@ export const bindObservations = ({
     if (target.dataset.role !== 'observation-note-input') {
       return;
     }
+    const panel = target.closest('[data-child]');
+    markNoteEditing(panel);
     const child = getDetailChild(target);
     persistObservationNote(child, target.value);
   };
