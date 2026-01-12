@@ -840,6 +840,7 @@ export const bindObservations = ({
     if (!child) {
       return false;
     }
+    closeDrawerIfOpen();
     const activePanel = setOverlayState(child);
     if (!activePanel) {
       return false;
