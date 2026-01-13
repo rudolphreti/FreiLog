@@ -863,6 +863,12 @@ body.child-detail-overlay-open {
   line-height: 1;
 }
 
+.angebot-note-text,
+.weekly-table__offer-note {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .weekly-table__observation-item {
   display: inline-flex;
   align-items: center;

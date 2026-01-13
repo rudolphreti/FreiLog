@@ -17,6 +17,7 @@ import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -62,6 +63,7 @@ const normalizeObservationEntry = (value) => {
 const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) => {
   const entry = days?.[dateKey] && typeof days[dateKey] === 'object' ? days[dateKey] : {};
   const angebote = normalizeValueList(entry.angebote);
+  const angebotNotes = normalizeAngebotNote(entry.angebotNotes);
   const observations = typeof entry.observations === 'object' ? entry.observations : {};
   const observationNotes =
     entry.observationNotes && typeof entry.observationNotes === 'object'
@@ -111,6 +113,7 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
     angebote: normalizedAngebote,
     angebotModules,
     freizeitModules,
+    angebotNotes,
     observations: normalizedObs,
     observationNotes: normalizedNotes,
     absentChildren: [...new Set(absentChildren)],
@@ -338,6 +341,21 @@ const buildModuleOfferList = (modules, assignments, extras = []) => {
     container.append(moduleWrapper);
   });
 
+  return container;
+};
+
+const buildOfferNote = (note) =>
+  createEl('p', {
+    className: 'weekly-table__offer-note text-muted small mb-0',
+    text: note,
+  });
+
+const buildOfferCell = ({ modules, assignments, extras, note }) => {
+  const container = createEl('div', { className: 'weekly-table__offer-cell' });
+  container.append(buildModuleOfferList(modules, assignments, extras));
+  if (note) {
+    container.append(buildOfferNote(note));
+  }
   return container;
 };
 
@@ -616,11 +634,12 @@ const buildWeeklyTable = ({
         children: [
           buildCellContent({
             content: showOffers
-              ? buildModuleOfferList(
-                  dayEntry.freizeitModules,
-                  dayEntry.angebotModules,
-                  dayEntry.angebote,
-                )
+              ? buildOfferCell({
+                  modules: dayEntry.freizeitModules,
+                  assignments: dayEntry.angebotModules,
+                  extras: dayEntry.angebote,
+                  note: dayEntry.angebotNotes,
+                })
               : null,
             dateKey: item.dateKey,
             displayDate: item.displayDate,

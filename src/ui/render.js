@@ -44,6 +44,7 @@ const createFallbackEntry = (date) => ({
   date,
   angebote: [],
   angebotModules: {},
+  angebotNotes: '',
   observations: {},
   observationNotes: {},
   absentChildIds: [],
@@ -266,6 +267,7 @@ export const renderApp = (root, state) => {
     freeDayInfo,
   });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
+  const angebotNote = typeof entry.angebotNotes === 'string' ? entry.angebotNotes : '';
   const freizeitModules = getFreizeitModulesForDate(
     selectedDate,
     timetableSchedule,
@@ -283,6 +285,7 @@ export const renderApp = (root, state) => {
     readOnly: isReadOnlyDay,
     freizeitModules,
     angebotModules,
+    angebotNote,
   });
   const entlassungInfo = getEntlassungForDate(
     classProfile?.entlassung,
@@ -540,6 +543,7 @@ export const renderApp = (root, state) => {
       date: selectedDate,
       angebotGroups,
       selectedAngebote,
+      angebotNote,
       modules: freizeitModules,
       moduleAssignments: angebotModules,
       catalog: angebotCatalog,
@@ -638,6 +642,7 @@ export const renderApp = (root, state) => {
     angebotCatalogBinding.update({
       date: selectedDate,
       selectedAngebote,
+      angebotNote,
       modules: freizeitModules,
       moduleAssignments: angebotModules,
       catalog: angebotCatalog,

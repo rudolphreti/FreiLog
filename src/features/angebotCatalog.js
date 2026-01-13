@@ -14,6 +14,7 @@ import {
   normalizeAngebotKey,
   normalizeAngebotText,
 } from '../utils/angebotCatalog.js';
+import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { debounce } from '../utils/debounce.js';
 import { focusTextInput } from '../utils/focus.js';
 import { flattenModuleAssignments, normalizeModuleAssignments } from '../utils/angebotModules.js';
@@ -572,6 +573,7 @@ export const bindAngebotCatalog = ({
   readOnly = false,
   modules = [],
   moduleAssignments = {},
+  angebotNote = '',
 }) => {
   if (!overlay || !catalogOverlay || !createOverlay || !editOverlay) {
     return null;
@@ -588,6 +590,7 @@ export const bindAngebotCatalog = ({
     currentSelected,
   );
   currentSelected = flattenModuleAssignments(currentAssignments, currentSelected);
+  let currentNote = normalizeAngebotNote(angebotNote);
   let isReadOnly = Boolean(readOnly);
   let editingOffer = null;
   let longPressTimer = null;
@@ -599,6 +602,7 @@ export const bindAngebotCatalog = ({
   let deleteConfirmRef = deleteConfirmOverlay || null;
   let detailOffer = null;
   let createContext = 'day';
+  const noteInput = overlay.querySelector('[data-role="angebot-note-input"]');
 
   const getActiveModuleId = () => {
     const active = overlay.dataset.activeModule;
@@ -707,6 +711,32 @@ export const bindAngebotCatalog = ({
     return new Set(moduleOffers.map((item) => normalizeAngebotKey(item)).filter(Boolean));
   };
 
+  const renderNoteInput = () => {
+    if (!(noteInput instanceof HTMLTextAreaElement)) {
+      return;
+    }
+    noteInput.disabled = isReadOnly;
+    const nextNote = normalizeAngebotNote(currentNote);
+    if (document.activeElement !== noteInput && noteInput.value !== nextNote) {
+      noteInput.value = nextNote;
+    }
+  };
+
+  const persistNote = (value = currentNote) => {
+    if (isReadOnly) {
+      return;
+    }
+    const normalized = normalizeAngebotNote(value);
+    const entry = getEntry(currentDate);
+    const existing = typeof entry.angebotNotes === 'string' ? entry.angebotNotes : '';
+    if (existing === normalized) {
+      currentNote = normalized;
+      return;
+    }
+    updateEntry(currentDate, { angebotNotes: normalized });
+    currentNote = normalized;
+  };
+
   const renderDaily = () => {
     const groupMap = getGroupMap();
     const filters = getFilterState(catalogOverlay);
@@ -747,6 +777,7 @@ export const bindAngebotCatalog = ({
       searchInput.value = filters.query || '';
     }
     syncGroupUi(catalogOverlay, angebotGroups);
+    renderNoteInput();
   };
 
   const renderManage = () => {
@@ -784,6 +815,10 @@ export const bindAngebotCatalog = ({
   };
 
   const closeOverlay = () => {
+    if (noteInput instanceof HTMLTextAreaElement) {
+      currentNote = noteInput.value;
+    }
+    persistNote();
     overlay.classList.remove('is-open');
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('observation-overlay-open');
@@ -1566,6 +1601,28 @@ export const bindAngebotCatalog = ({
     }
   };
 
+  const handleNoteInput = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-note-input') {
+      return;
+    }
+    currentNote = target.value;
+  };
+
+  const handleNoteFocusOut = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLTextAreaElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-note-input') {
+      return;
+    }
+    persistNote(target.value);
+  };
+
   const handleCreateSubmit = (event) => {
     if (!(event.target instanceof HTMLFormElement)) {
       return;
@@ -1701,6 +1758,8 @@ export const bindAngebotCatalog = ({
   };
 
   overlay.addEventListener('click', handleOverlayClick);
+  overlay.addEventListener('input', handleNoteInput);
+  overlay.addEventListener('focusout', handleNoteFocusOut);
   catalogOverlay.addEventListener('click', handleOverlayClick);
   catalogOverlay.addEventListener('pointerdown', handlePointerDown);
   catalogOverlay.addEventListener('pointerup', handlePointerUp);
@@ -1736,6 +1795,7 @@ export const bindAngebotCatalog = ({
     update: ({
       date: nextDate,
       selectedAngebote: nextSelected,
+      angebotNote: nextAngebotNote,
       catalog: nextCatalog,
       topStats: nextStats,
       angebotGroups: nextGroups,
@@ -1746,11 +1806,20 @@ export const bindAngebotCatalog = ({
       modules: nextModules = currentModules,
       moduleAssignments: nextModuleAssignments = currentAssignments,
     }) => {
+      if (nextDate && nextDate !== currentDate) {
+        if (noteInput instanceof HTMLTextAreaElement) {
+          currentNote = noteInput.value;
+        }
+        persistNote();
+      }
       currentDate = nextDate || currentDate;
       currentCatalog = normalizeCatalog(nextCatalog || currentCatalog);
       currentTopStats = nextStats || {};
       currentModules = Array.isArray(nextModules) ? nextModules : [];
       setAssignments(nextModuleAssignments, nextSelected || currentSelected);
+      if (typeof nextAngebotNote === 'string') {
+        currentNote = normalizeAngebotNote(nextAngebotNote);
+      }
       if (!currentModules.length) {
         overlay.dataset.activeModule = '';
       } else if (!currentModules.some((module) => module.id === overlay.dataset.activeModule)) {
@@ -1791,6 +1860,7 @@ export const bindAngebotCatalog = ({
       if (nextManageOpenButton) {
         setManageOpenButton(nextManageOpenButton);
       }
+      renderNoteInput();
     },
   };
 };

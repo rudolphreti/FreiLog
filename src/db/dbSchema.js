@@ -10,6 +10,7 @@ import {
   normalizeAngebotKey,
   normalizeAngebotText,
 } from '../utils/angebotCatalog.js';
+import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import {
   OBSERVATION_GROUP_CODES,
   buildObservationId,
@@ -471,6 +472,7 @@ const normalizeDayEntry = (
     source.observationNotes,
     childrenSet,
   );
+  const angebotNotes = normalizeAngebotNote(source.angebotNotes);
   const notes = typeof source.notes === 'string' ? source.notes : '';
 
   const isDayFree = isFreeDay(date, freeDays);
@@ -521,6 +523,7 @@ const normalizeDayEntry = (
     observations: filteredObservations,
     observationNotes: filteredObservationNotes,
     absentChildIds: filteredAbsent,
+    angebotNotes,
     notes,
   };
 };

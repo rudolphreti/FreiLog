@@ -38,6 +38,7 @@ import {
   normalizeModuleAssignments,
   normalizeAngebotListForModules,
 } from '../utils/angebotModules.js';
+import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -263,6 +264,7 @@ const createDefaultDay = (date, childrenList = []) => ({
   date,
   angebote: [],
   angebotModules: {},
+  angebotNotes: '',
   observations: buildDefaultObservations(childrenList),
   observationNotes: buildDefaultObservationNotes(childrenList),
   absentChildIds: [],
@@ -806,6 +808,9 @@ export const updateEntry = (date, patch) => {
         payload.observationNotes,
       );
     }
+    merged.angebotNotes = normalizeAngebotNote(
+      payload.angebotNotes !== undefined ? payload.angebotNotes : existing.angebotNotes,
+    );
     const absentValues = merged.absentChildIds || merged.absentChildren || [];
     merged.absentChildIds = normalizeAbsentChildren(absentValues, childrenSet);
     const absentSet = new Set(merged.absentChildIds);

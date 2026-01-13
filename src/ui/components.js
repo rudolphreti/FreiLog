@@ -12,6 +12,7 @@ import {
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
 import { ANGEBOT_GROUP_CODES, normalizeAngebotKey } from '../utils/angebotCatalog.js';
+import { ANGEBOT_NOTE_LIMIT } from '../utils/angebotNotes.js';
 import { todayYmd } from '../utils/date.js';
 import { UI_LABELS } from './labels.js';
 
@@ -409,6 +410,7 @@ const buildObservationGroupDots = (groups, observationGroups) => {
 export const buildAngebotSection = ({
   angebote,
   selectedAngebote,
+  angebotNote = '',
   newValue,
   readOnly = false,
   freizeitModules = [],
@@ -500,6 +502,23 @@ export const buildAngebotSection = ({
   if (readOnly) {
     openButton.disabled = true;
   }
+
+  const normalizedNote = typeof angebotNote === 'string' ? angebotNote : '';
+  const hasNote = normalizedNote.trim().length > 0;
+  const noteLabel = createEl('p', {
+    className: 'text-muted small mb-1',
+    text: 'Notizen',
+  });
+  const noteText = createEl('p', {
+    className: 'angebot-note-text mb-0',
+    text: normalizedNote,
+  });
+  const noteSection = createEl('div', {
+    className: 'd-flex flex-column gap-1',
+    children: [noteLabel, noteText],
+  });
+  noteSection.hidden = !hasNote;
+  content.appendChild(noteSection);
 
   return {
     element: content,
@@ -611,7 +630,26 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
     children: [addTitle, topTitle, topList, actionRow],
   });
 
-  overlayContent.append(todaySection, addSection);
+  const noteLabel = createEl('label', {
+    className: 'form-label mb-0',
+    text: 'Notizen',
+  });
+  const noteInput = createEl('textarea', {
+    className: 'form-control',
+    attrs: {
+      rows: '3',
+      placeholder: 'Notizen',
+      'aria-label': 'Notizen',
+      maxlength: String(ANGEBOT_NOTE_LIMIT),
+    },
+    dataset: { role: 'angebot-note-input' },
+  });
+  const noteSection = createEl('div', {
+    className: 'observation-section observation-section--notes d-flex flex-column gap-2',
+    children: [noteLabel, noteInput],
+  });
+
+  overlayContent.append(todaySection, addSection, noteSection);
   overlayPanel.append(overlayHeader, overlayContent);
   overlay.appendChild(overlayPanel);
 
@@ -623,6 +661,8 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
       modulesContent,
       modulesEmpty,
       topList,
+      noteInput,
+      noteSection,
       catalogButton,
       createButton,
       closeButton,
