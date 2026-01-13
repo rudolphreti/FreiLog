@@ -1980,9 +1980,11 @@ const rebuildChildButton = ({
   child,
   isAbsent,
   observationsByChild,
+  note,
   readOnly = false,
 }) => {
   const count = getObservationCount(observationsByChild, child);
+  const hasNote = typeof note === 'string' && note.trim().length > 0;
   const badge = isAbsent
     ? createEl('span', {
         className: 'badge text-bg-light text-secondary observation-absent-badge',
@@ -1996,6 +1998,16 @@ const rebuildChildButton = ({
           text: `${count}`,
         })
       : null;
+  const noteIcon = hasNote
+    ? createEl('span', {
+        className: 'observation-note-icon',
+        text: '📝',
+        attrs: {
+          title: 'Notizen vorhanden',
+          'aria-label': 'Notizen vorhanden',
+        },
+      })
+    : null;
   return createEl('button', {
     className:
       `btn observation-child-button${isAbsent ? ' is-absent' : ' btn-outline-primary'}`,
@@ -2009,11 +2021,13 @@ const rebuildChildButton = ({
     children: badge
       ? [
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+          noteIcon,
           countBadge,
           badge,
         ].filter(Boolean)
       : [
           createEl('span', { className: 'fw-semibold observation-child-label', text: child }),
+          noteIcon,
           countBadge,
         ].filter(Boolean),
   });
@@ -2796,11 +2810,16 @@ export const buildObservationsSection = ({
   });
   children.forEach((child) => {
     const isAbsent = absentSet.has(child);
+    const note =
+      observationNotes && typeof observationNotes[child] === 'string'
+        ? observationNotes[child]
+        : '';
     list.appendChild(
       rebuildChildButton({
         child,
         isAbsent,
         observationsByChild: observations,
+        note,
         readOnly: isReadOnly,
       }),
     );
@@ -3074,6 +3093,10 @@ export const buildObservationsSection = ({
           child,
           isAbsent: absentSetNext.has(child),
           observationsByChild: nextObservations,
+          note:
+            nextObservationNotes && typeof nextObservationNotes[child] === 'string'
+              ? nextObservationNotes[child]
+              : '',
           readOnly: isReadOnly,
         }),
       ),
