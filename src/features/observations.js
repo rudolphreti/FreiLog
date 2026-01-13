@@ -757,16 +757,6 @@ export const bindObservations = ({
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
-  const persistObservationNote = debounce((child, value) => {
-    if (!child) {
-      return;
-    }
-    updateEntry(getDate(), {
-      observationNotes: {
-        [child]: value,
-      },
-    });
-  }, 250);
   let longPressTimer = null;
   let suppressNextClick = false;
   let templateLongPressTimer = null;
@@ -824,6 +814,57 @@ export const bindObservations = ({
       }
     };
     attemptOpen();
+  };
+  const persistObservationNoteValue = (child, value) => {
+    if (!child || isReadOnly) {
+      return;
+    }
+    const entry = getEntry(getDate());
+    const currentValue =
+      entry?.observationNotes && typeof entry.observationNotes[child] === 'string'
+        ? entry.observationNotes[child]
+        : '';
+    if (currentValue === value) {
+      return;
+    }
+    updateEntry(getDate(), {
+      observationNotes: {
+        [child]: value,
+      },
+    });
+  };
+  const persistObservationNote = (panel) => {
+    if (!panel) {
+      return;
+    }
+    if (panel.dataset.absent === 'true') {
+      return;
+    }
+    const noteInput = panel.querySelector('[data-role="observation-note-input"]');
+    if (!isTextAreaElement(noteInput)) {
+      return;
+    }
+    const child = getDetailChild(panel);
+    if (!child) {
+      return;
+    }
+    persistObservationNoteValue(child, noteInput.value);
+  };
+  const getDetailPanel = (child) => {
+    if (!child) {
+      return null;
+    }
+    const safeChildSelector =
+      typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+        ? CSS.escape(child)
+        : child;
+    return overlayContent.querySelector(`[data-child="${safeChildSelector}"]`);
+  };
+  const persistActiveNote = () => {
+    if (!activeChild) {
+      return;
+    }
+    persistObservationNote(getDetailPanel(activeChild));
   };
 
   if (templatesOverlay) {
@@ -985,6 +1026,9 @@ export const bindObservations = ({
     if (!child) {
       return false;
     }
+    if (activeChild && activeChild !== child) {
+      persistActiveNote();
+    }
     closeDrawerIfOpen();
     const activePanel = setOverlayState(child);
     if (!activePanel) {
@@ -1013,6 +1057,7 @@ export const bindObservations = ({
     if (!isOverlayOpen) {
       return;
     }
+    persistActiveNote();
     closeTemplateOverlay();
     closeCreateOverlay();
     isOverlayOpen = false;
@@ -1366,8 +1411,17 @@ export const bindObservations = ({
     }
     const panel = target.closest('[data-child]');
     markNoteEditing(panel);
-    const child = getDetailChild(target);
-    persistObservationNote(child, target.value);
+  };
+  const handleOverlayFocusOut = (event) => {
+    const target = event.target;
+    if (!isTextAreaElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-note-input') {
+      return;
+    }
+    const panel = target.closest('[data-child]');
+    persistObservationNote(panel);
   };
 
   const handleListClick = (event) => {
@@ -2012,6 +2066,7 @@ export const bindObservations = ({
 
   overlayContent.addEventListener('click', handleOverlayClick);
   overlayContent.addEventListener('input', handleOverlayInput);
+  overlayContent.addEventListener('focusout', handleOverlayFocusOut);
   list.addEventListener('click', handleListClick);
   list.addEventListener('pointerdown', handleListPointerDown);
   list.addEventListener('pointerup', handleListPointerEnd);
