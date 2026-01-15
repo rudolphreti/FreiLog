@@ -161,64 +161,11 @@ export const buildDrawerShell = () => {
   };
 };
 
-const buildAccordionItem = ({
-  id,
-  title,
-  defaultOpen,
-  contentNode,
-  accordionId,
-}) => {
-  const item = createEl('div', { className: 'accordion-item' });
-  const headerId = `${id}-heading`;
-  const collapseId = `${id}-collapse`;
-
-  const header = createEl('h2', { className: 'accordion-header', attrs: { id: headerId } });
-  const button = createEl('button', {
-    className: `accordion-button${defaultOpen ? '' : ' collapsed'}`,
-    text: title,
-    attrs: {
-      type: 'button',
-      'data-bs-toggle': 'collapse',
-      'data-bs-target': `#${collapseId}`,
-      'aria-expanded': defaultOpen ? 'true' : 'false',
-      'aria-controls': collapseId,
-    },
-  });
-  header.append(button);
-
-  const collapse = createEl('div', {
-    className: `accordion-collapse collapse${defaultOpen ? ' show' : ''}`,
-    attrs: {
-      id: collapseId,
-      'aria-labelledby': headerId,
-      'data-bs-parent': `#${accordionId}`,
-    },
-  });
-
-  const body = createEl('div', { className: 'accordion-body', children: [contentNode] });
-  collapse.append(body);
-
-  item.append(header, collapse);
-
-  return {
-    element: item,
-    refs: {
-      toggleButton: button,
-      collapse,
-    },
-  };
-};
-
 export const buildDrawerContent = ({
-  drawerSections,
-  angebotSection,
   showExport = false,
   showDummy = true,
   showWeekly = false,
 }) => {
-  const accordionId = 'drawerAccordion';
-  const accordion = createEl('div', { className: 'accordion', attrs: { id: accordionId } });
-
   const actionsList = createEl('div', { className: 'd-flex flex-column gap-2' });
   const actionButton = (text, icon, attrs = {}) =>
     createEl('button', {
@@ -246,29 +193,10 @@ export const buildDrawerContent = ({
     .filter(Boolean)
     .forEach((node) => actionsList.append(node));
 
-  const actionsSectionItem = buildAccordionItem({
-    id: 'actions',
-    title: 'Daten',
-    defaultOpen: Boolean(drawerSections?.actions),
-    contentNode: actionsList,
-    accordionId,
-  });
-
-  const offersContent =
-    angebotSection ||
-    createEl('p', {
-      className: 'text-muted mb-0',
-      text: 'Platzhalter für spätere Funktionen.',
-    });
-  const offersSectionItem = buildAccordionItem({
-    id: 'angebote',
-    title: 'Angebote',
-    defaultOpen: Boolean(drawerSections?.angebote),
-    contentNode: offersContent,
-    accordionId,
-  });
-
   const settingsContent = createEl('div', { className: 'd-flex flex-column gap-2' });
+  const angebotManageButton = actionButton(`${UI_LABELS.angebotManage}...`, '🛠️', {
+    'data-role': 'angebot-manage-open',
+  });
   const classButton = actionButton(UI_LABELS.classSettings, '🎒', {
     'data-role': 'class-settings',
   });
@@ -281,24 +209,34 @@ export const buildDrawerContent = ({
   const observationCatalogButton = actionButton('Beobachtungen...', '👀', {
     'data-role': 'observation-catalog-settings',
   });
-  settingsContent.append(classButton, freeDaysButton, timetableButton, observationCatalogButton);
-
-  const settingsSectionItem = buildAccordionItem({
-    id: 'einstellungen',
-    title: 'Einstellungen',
-    defaultOpen: Boolean(drawerSections?.einstellungen),
-    contentNode: settingsContent,
-    accordionId,
-  });
-
-  accordion.append(
-    actionsSectionItem.element,
-    offersSectionItem.element,
-    settingsSectionItem.element,
+  settingsContent.append(
+    angebotManageButton,
+    classButton,
+    freeDaysButton,
+    timetableButton,
+    observationCatalogButton,
   );
 
+  const buildSection = (title, contentNode) => {
+    const titleEl = createEl('h3', {
+      className: 'h6 text-uppercase text-muted mb-1',
+      text: title,
+    });
+    const body = createEl('div', {
+      className: 'd-flex flex-column gap-2',
+      children: [contentNode],
+    });
+    return createEl('section', {
+      className: 'd-flex flex-column gap-2',
+      children: [titleEl, body],
+    });
+  };
+
+  const actionsSection = buildSection('Daten', actionsList);
+  const settingsSection = buildSection('Einstellungen', settingsContent);
+
   return {
-    nodes: [accordion],
+    nodes: [actionsSection, settingsSection],
     refs: {
       actions: {
         weeklyTableButton,
@@ -308,15 +246,16 @@ export const buildDrawerContent = ({
         importInput,
       },
       settings: {
+        angebotManageButton,
         classButton,
         freeDaysButton,
         timetableButton,
         observationCatalogButton,
       },
       sections: {
-        actions: actionsSectionItem,
-        angebote: offersSectionItem,
-        einstellungen: settingsSectionItem,
+        actions: null,
+        angebote: null,
+        einstellungen: null,
       },
     },
   };
@@ -429,12 +368,6 @@ export const buildAngebotSection = ({
       createEl('span', { text: `${UI_LABELS.angebotToday}...` }),
     ],
   });
-  const manageButton = createEl('button', {
-    className: 'btn btn-outline-secondary d-inline-flex align-items-center gap-2',
-    attrs: { type: 'button' },
-    dataset: { role: 'angebot-manage-open' },
-    children: [createEl('span', { text: '🛠️' }), createEl('span', { text: 'Verwalten...' })],
-  });
 
   const infoTitle = createEl('p', {
     className: 'text-muted small mb-1',
@@ -496,7 +429,7 @@ export const buildAngebotSection = ({
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [openButton, manageButton, infoTitle, modulesContainer],
+    children: [openButton, infoTitle, modulesContainer],
   });
 
   if (readOnly) {
@@ -525,7 +458,6 @@ export const buildAngebotSection = ({
     refs: {
       selectedList: modulesContainer,
       openButton,
-      manageButton,
     },
   };
 };
@@ -2649,10 +2581,16 @@ const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly }) => {
   });
 };
 
-export const buildMainTabsSection = ({ observationsSection, entlassungSection }) => {
+export const buildMainTabsSection = ({
+  angebotSection,
+  observationsSection,
+  entlassungSection,
+}) => {
   const tabsId = 'main-tabs';
+  const angebotTabId = 'main-angebot-tab';
   const observationsTabId = 'main-observations-tab';
   const entlassungTabId = 'main-entlassung-tab';
+  const angebotPaneId = 'main-angebot-pane';
   const observationsPaneId = 'main-observations-pane';
   const entlassungPaneId = 'main-entlassung-pane';
 
@@ -2660,6 +2598,30 @@ export const buildMainTabsSection = ({ observationsSection, entlassungSection })
     className: 'nav nav-tabs',
     attrs: { id: tabsId, role: 'tablist' },
     children: [
+      createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [
+          createEl('button', {
+            className: 'nav-link',
+            attrs: {
+              id: angebotTabId,
+              type: 'button',
+              role: 'tab',
+              'data-bs-toggle': 'tab',
+              'data-bs-target': `#${angebotPaneId}`,
+              'aria-controls': angebotPaneId,
+              'aria-label': `${UI_LABELS.angebotToday}`,
+              'aria-selected': 'false',
+              title: UI_LABELS.angebotToday,
+            },
+            children: [
+              createEl('span', { text: '🤸' }),
+              createEl('span', { className: 'ms-1', text: UI_LABELS.angebotToday }),
+            ],
+          }),
+        ],
+      }),
       createEl('li', {
         className: 'nav-item',
         attrs: { role: 'presentation' },
@@ -2705,9 +2667,19 @@ export const buildMainTabsSection = ({ observationsSection, entlassungSection })
     ],
   });
 
+  const angebotPane = createEl('div', {
+    className: 'tab-pane fade pt-3',
+    attrs: {
+      id: angebotPaneId,
+      role: 'tabpanel',
+      'aria-labelledby': angebotTabId,
+    },
+    children: [angebotSection],
+  });
   const tabContent = createEl('div', {
     className: 'tab-content',
     children: [
+      angebotPane,
       createEl('div', {
         className: 'tab-pane fade show active pt-3',
         attrs: {
@@ -2734,6 +2706,9 @@ export const buildMainTabsSection = ({ observationsSection, entlassungSection })
       className: 'd-flex flex-column gap-2',
       children: [tabList, tabContent],
     }),
+    refs: {
+      angebotPane,
+    },
   };
 };
 

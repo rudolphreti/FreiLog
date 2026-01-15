@@ -192,7 +192,6 @@ const closeDrawer = () => {
 const renderDrawerContent = (
   state,
   drawerBody,
-  angebotSection,
   preservedScrollTop,
   options = {},
 ) => {
@@ -202,10 +201,7 @@ const renderDrawerContent = (
 
   const scrollTop =
     typeof preservedScrollTop === 'number' ? preservedScrollTop : drawerBody.scrollTop;
-  const drawerSections = state?.ui?.drawer?.sections || {};
   const content = buildDrawerContent({
-    drawerSections,
-    angebotSection: angebotSection?.element,
     ...options,
   });
 
@@ -442,7 +438,6 @@ export const renderApp = (root, state) => {
   const drawerContentRefs = renderDrawerContent(
     state,
     drawerShell.refs.body,
-    angebotSection,
     preservedUi.drawerScrollTop,
     {
       showExport: hasData,
@@ -458,6 +453,7 @@ export const renderApp = (root, state) => {
     const contentWrap = document.createElement('div');
     contentWrap.className = 'container d-flex flex-column gap-3';
     const mainTabs = buildMainTabsSection({
+      angebotSection: angebotSection.element,
       observationsSection: observationsSection.element,
       entlassungSection: entlassungSection.element,
     });
@@ -535,7 +531,7 @@ export const renderApp = (root, state) => {
     });
     angebotCatalogBinding = bindAngebotCatalog({
       openButton: angebotSection.refs.openButton,
-      manageOpenButton: angebotSection.refs.manageButton,
+      manageOpenButton: settingsActions?.angebotManageButton,
       overlay: angebotOverlayView.element,
       catalogOverlay: angebotCatalogView.element,
       manageOverlay: angebotManageOverlayView.element,
@@ -597,6 +593,7 @@ export const renderApp = (root, state) => {
       observationsView: observationsSection,
       entlassungView: entlassungSection,
       mainTabsEl: mainTabs.element,
+      mainTabsView: mainTabs,
     };
     if (!angebotOpenListenerAttached) {
       window.addEventListener('freilog:angebot-open', () => {
@@ -613,6 +610,9 @@ export const renderApp = (root, state) => {
   appShell.headerEl = header.element;
   bindDateEntry(header.refs.dateInput);
 
+  if (appShell.mainTabsView?.refs?.angebotPane) {
+    appShell.mainTabsView.refs.angebotPane.replaceChildren(angebotSection.element);
+  }
   appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
 
   appShell.observationsView.update({
@@ -649,6 +649,8 @@ export const renderApp = (root, state) => {
     entlassungBinding.updateDate(selectedDate);
   }
 
+  const actions = drawerContentRefs?.actions;
+  const settingsActions = drawerContentRefs?.settings;
   if (angebotCatalogBinding) {
     angebotCatalogBinding.update({
       date: selectedDate,
@@ -662,11 +664,10 @@ export const renderApp = (root, state) => {
       savedFilters: savedAngebotFilters,
       readOnly: isReadOnlyDay,
       openButton: angebotSection.refs.openButton,
-      manageOpenButton: angebotSection.refs.manageButton,
+      manageOpenButton: settingsActions?.angebotManageButton,
     });
   }
 
-  const actions = drawerContentRefs?.actions;
   bindImportExport({
     exportButton: header.refs.exportButton,
     importButton: header.refs.importButton,
@@ -677,7 +678,6 @@ export const renderApp = (root, state) => {
     importButton: actions?.importButton,
     fileInput: actions?.importInput,
   });
-  const settingsActions = drawerContentRefs?.settings;
   if (observationCatalogBinding) {
     observationCatalogBinding.update({
       catalog: observationCatalog,
