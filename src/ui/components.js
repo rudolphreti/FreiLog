@@ -177,7 +177,7 @@ export const buildDrawerContent = ({
   const weeklyTableButton = showWeekly ? actionButton(`${UI_LABELS.weeklyTable}...`, '📅') : null;
   const exportButton = showExport ? actionButton('DB Exportieren...', '⬇️') : null;
   const importButton = actionButton('DB importieren...', '⬆️');
-  const dummyDataButton = showDummy ? actionButton('Dummy-Daten laden', '🧪') : null;
+  const dummyDataButton = showDummy ? actionButton('Dummy-Daten laden...', '🧪') : null;
   const importInput = createEl('input', {
     attrs: { type: 'file', accept: 'application/json' },
     className: 'd-none',
@@ -197,24 +197,24 @@ export const buildDrawerContent = ({
   const angebotManageButton = actionButton(`${UI_LABELS.angebotManage}...`, '🛠️', {
     'data-role': 'angebot-manage-open',
   });
-  const classButton = actionButton(UI_LABELS.classSettings, '🎒', {
+  const classButton = actionButton(`${UI_LABELS.classSettings}...`, '🎒', {
     'data-role': 'class-settings',
   });
-  const freeDaysButton = actionButton(UI_LABELS.freeDays, '🏖️', {
+  const freeDaysButton = actionButton(`${UI_LABELS.freeDays}...`, '🏖️', {
     'data-role': 'free-days-settings',
   });
-  const timetableButton = actionButton(UI_LABELS.timetable, '🗓️', {
+  const timetableButton = actionButton(`${UI_LABELS.timetable}...`, '🗓️', {
     'data-role': 'timetable-settings',
   });
   const observationCatalogButton = actionButton('Beobachtungen...', '👀', {
     'data-role': 'observation-catalog-settings',
   });
   settingsContent.append(
+    observationCatalogButton,
     angebotManageButton,
     classButton,
     freeDaysButton,
     timetableButton,
-    observationCatalogButton,
   );
 
   const buildSection = (title, contentNode) => {
@@ -2815,10 +2815,7 @@ export const buildObservationsSection = ({
       'btn btn-outline-primary d-inline-flex align-items-center gap-2 observation-multi-button',
     attrs: { type: 'button', disabled: isReadOnly ? 'true' : null },
     dataset: { role: 'observation-multi-open' },
-    children: [
-      createEl('span', { text: '👀' }),
-      createEl('span', { text: 'Eine Beobachtung für viele Kindern...' }),
-    ],
+    children: [createEl('span', { text: '👀→👥' })],
   });
 
   const list = createEl('div', {

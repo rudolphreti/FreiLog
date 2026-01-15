@@ -5,7 +5,7 @@ export const UI_LABELS = {
   angebotCreate: 'Erstelle Angebot',
   angebotToday: 'Heutige Angebote',
   angebotAdd: 'Angebote hinzufügen',
-  angebotManage: 'Angebote verwalten',
+  angebotManage: 'Angebote',
   weeklyTable: 'Tabelle',
   classSettings: 'Meine Klasse',
   freeDays: 'Freie Tage',
