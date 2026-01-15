@@ -2657,7 +2657,7 @@ export const buildMainTabsSection = ({
               'aria-selected': 'false',
               title: UI_LABELS.angebotToday,
             },
-            text: '🤸',
+            text: '📋',
           }),
         ],
       }),
