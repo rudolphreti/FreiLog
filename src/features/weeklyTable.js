@@ -487,6 +487,8 @@ const buildCellContent = ({
   onEditCell,
   isFreeDay,
   isAbsent,
+  editLabel,
+  editPayload,
 }) => {
   const wrapper = createEl('div', { className: 'weekly-table__cell-content' });
   if (content) {
@@ -496,24 +498,35 @@ const buildCellContent = ({
   const canEdit =
     isEditMode &&
     typeof onEditCell === 'function' &&
-    child &&
     dateKey &&
     !isFreeDay &&
-    !isAbsent;
+    !isAbsent &&
+    (editPayload || child);
   if (canEdit) {
     wrapper.classList.add('weekly-table__cell-content--editable');
+    const label = editLabel || child;
+    const payload =
+      editPayload ||
+      (child
+        ? {
+            child,
+            dateKey,
+          }
+        : null);
     const editButton = createEl('button', {
       className: 'btn btn-light btn-sm weekly-table__edit-button',
       attrs: {
         type: 'button',
-        'aria-label': `Bearbeiten: ${child} – ${displayDate || dateKey}`,
+        'aria-label': `Bearbeiten: ${label} – ${displayDate || dateKey}`,
       },
       text: '✎',
     });
     editButton.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      onEditCell({ child, dateKey });
+      if (payload) {
+        onEditCell(payload);
+      }
     });
     wrapper.append(editButton);
   }
@@ -646,6 +659,11 @@ const buildWeeklyTable = ({
             isEditMode,
             onEditCell,
             isFreeDay: Boolean(freeInfo),
+            editLabel: 'Angebote',
+            editPayload: {
+              type: 'offers',
+              dateKey: item.dateKey,
+            },
           }),
         ],
       }),
@@ -712,6 +730,11 @@ const buildWeeklyTable = ({
               onEditCell,
               isFreeDay: Boolean(freeInfo),
               isAbsent,
+              editPayload: {
+                type: 'observations',
+                child,
+                dateKey: item.dateKey,
+              },
             }),
           ],
         }),
@@ -1181,17 +1204,27 @@ export const createWeeklyTableView = ({
       getGroupsForLabel,
       observationGroups: currentObservationGroups,
       onEditCell: ({ child, dateKey }) => {
-        if (!child || !dateKey) {
+        if (!dateKey) {
           return;
         }
         close();
         const safeDate = dateKey;
         setSelectedDate(safeDate);
 
+        if (child) {
+          window.setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent('freilog:observation-open', {
+                detail: { child, focusNote: true },
+              }),
+            );
+          }, 120);
+          return;
+        }
         window.setTimeout(() => {
           window.dispatchEvent(
-            new CustomEvent('freilog:observation-open', {
-              detail: { child, focusNote: true },
+            new CustomEvent('freilog:angebot-open', {
+              detail: { dateKey },
             }),
           );
         }, 120);

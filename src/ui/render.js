@@ -167,6 +167,8 @@ let angebotEditOverlay = null;
 let angebotManageOverlayView = null;
 let angebotDetailOverlayView = null;
 let angebotDeleteConfirmView = null;
+let angebotOpenButtonRef = null;
+let angebotOpenListenerAttached = false;
 let observationCatalogOverlayView = null;
 let observationCatalogBinding = null;
 let observationCatalogCreateOverlay = null;
@@ -287,6 +289,7 @@ export const renderApp = (root, state) => {
     angebotModules,
     angebotNote,
   });
+  angebotOpenButtonRef = angebotSection.refs.openButton || null;
   const entlassungInfo = getEntlassungForDate(
     classProfile?.entlassung,
     selectedDate,
@@ -595,6 +598,14 @@ export const renderApp = (root, state) => {
       entlassungView: entlassungSection,
       mainTabsEl: mainTabs.element,
     };
+    if (!angebotOpenListenerAttached) {
+      window.addEventListener('freilog:angebot-open', () => {
+        if (angebotOpenButtonRef instanceof HTMLElement && !angebotOpenButtonRef.disabled) {
+          angebotOpenButtonRef.click();
+        }
+      });
+      angebotOpenListenerAttached = true;
+    }
     return;
   }
 
@@ -708,6 +719,7 @@ export const renderApp = (root, state) => {
   }
 
   appShell.angebotEl = angebotSection.element;
+  angebotOpenButtonRef = angebotSection.refs.openButton || null;
   angebotBinding = bindAngebot({
     selectedList: angebotSection.refs.selectedList,
     date: selectedDate,
