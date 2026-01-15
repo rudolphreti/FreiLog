@@ -2603,30 +2603,6 @@ export const buildMainTabsSection = ({
         attrs: { role: 'presentation' },
         children: [
           createEl('button', {
-            className: 'nav-link',
-            attrs: {
-              id: angebotTabId,
-              type: 'button',
-              role: 'tab',
-              'data-bs-toggle': 'tab',
-              'data-bs-target': `#${angebotPaneId}`,
-              'aria-controls': angebotPaneId,
-              'aria-label': `${UI_LABELS.angebotToday}`,
-              'aria-selected': 'false',
-              title: UI_LABELS.angebotToday,
-            },
-            children: [
-              createEl('span', { text: '🤸' }),
-              createEl('span', { className: 'ms-1', text: UI_LABELS.angebotToday }),
-            ],
-          }),
-        ],
-      }),
-      createEl('li', {
-        className: 'nav-item',
-        attrs: { role: 'presentation' },
-        children: [
-          createEl('button', {
             className: 'nav-link active',
             attrs: {
               id: observationsTabId,
@@ -2664,6 +2640,27 @@ export const buildMainTabsSection = ({
           }),
         ],
       }),
+      createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [
+          createEl('button', {
+            className: 'nav-link',
+            attrs: {
+              id: angebotTabId,
+              type: 'button',
+              role: 'tab',
+              'data-bs-toggle': 'tab',
+              'data-bs-target': `#${angebotPaneId}`,
+              'aria-controls': angebotPaneId,
+              'aria-label': `${UI_LABELS.angebotToday}`,
+              'aria-selected': 'false',
+              title: UI_LABELS.angebotToday,
+            },
+            text: '🤸',
+          }),
+        ],
+      }),
     ],
   });
 
@@ -2679,7 +2676,6 @@ export const buildMainTabsSection = ({
   const tabContent = createEl('div', {
     className: 'tab-content',
     children: [
-      angebotPane,
       createEl('div', {
         className: 'tab-pane fade show active pt-3',
         attrs: {
@@ -2698,6 +2694,7 @@ export const buildMainTabsSection = ({
         },
         children: [entlassungSection],
       }),
+      angebotPane,
     ],
   });
 
