@@ -646,68 +646,6 @@ body {
   flex-wrap: wrap;
 }
 
-.weekly-table__print-summary {
-  display: none;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1rem;
-  background: #ffffff;
-}
-
-.weekly-table__print-header {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
-}
-
-.weekly-table__print-meta {
-  margin: 0 0 1rem;
-  display: grid;
-  gap: 0.25rem;
-}
-
-.weekly-table__print-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 1rem;
-}
-
-.weekly-table__print-day {
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 0.75rem 1rem;
-}
-
-.weekly-table__print-day-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-.weekly-table__print-day-body {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.weekly-table__print-block {
-  display: grid;
-  gap: 0.4rem;
-}
-
-.weekly-table__print-list {
-  margin: 0;
-  padding-left: 1.25rem;
-}
-
-.weekly-table__print-child + .weekly-table__print-child {
-  margin-top: 0.5rem;
-}
-
 .class-settings-overlay {
   position: fixed;
   inset: 0;
@@ -1114,60 +1052,6 @@ body.child-detail-overlay-open {
 
 .weekly-table-overlay-open {
   overflow: hidden;
-}
-
-@media print {
-  body * {
-    visibility: hidden;
-  }
-
-  .weekly-table-overlay,
-  .weekly-table-overlay * {
-    visibility: visible;
-  }
-
-  .weekly-table-overlay {
-    position: static;
-    inset: auto;
-    background: #ffffff;
-    padding: 0;
-  }
-
-  .weekly-table-overlay__panel {
-    width: 100%;
-    max-width: none;
-    height: auto;
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  .weekly-table-overlay__header {
-    position: static;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 1rem 0 0.75rem;
-  }
-
-  .weekly-table-overlay__content {
-    overflow: visible;
-    padding: 0.75rem 0 0;
-  }
-
-  .weekly-table__container {
-    display: none;
-  }
-
-  .weekly-table__print-summary {
-    display: block;
-  }
-
-  .weekly-table__pdf {
-    display: none !important;
-  }
-
-  .weekly-table-overlay__close,
-  .weekly-table-filter-overlay {
-    display: none !important;
-  }
 }
 
 .class-settings-overlay-open {
