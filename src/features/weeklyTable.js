@@ -920,9 +920,10 @@ export const createWeeklyTableView = ({
     className: 'weekly-table__info-row d-flex align-items-center justify-content-between gap-2 flex-wrap',
     children: [infoText, pdfButton],
   });
+  const printSummary = createEl('div', { className: 'weekly-table__print-summary' });
   const tableContainer = createEl('div', { className: 'weekly-table__container' });
 
-  content.append(infoRow, tableContainer);
+  content.append(infoRow, printSummary, tableContainer);
   panel.append(header, content);
   overlay.append(panel, filterOverlay);
 
@@ -1130,73 +1131,43 @@ export const createWeeklyTableView = ({
     childSelectGroup.select.value = selectedChild;
   };
 
-  const renderInfo = () => {
-    clearElement(infoText);
+  const getInfoLabel = () => {
     if (selectedTimeFilter === 'day') {
       if (!selectedDay) {
-        infoText.append(
-          createEl('span', {
-            className: 'text-muted',
-            text: 'Kein Tag mit Daten vorhanden.',
-          }),
-        );
-        return;
+        return { text: 'Kein Tag mit Daten vorhanden.', muted: true };
       }
-      infoText.append(
-        createEl('span', {
-          text: formatDisplayDate(selectedDay),
-        }),
-      );
-      return;
+      return { text: formatDisplayDate(selectedDay), muted: false };
     }
     if (selectedTimeFilter === 'month') {
       if (!selectedMonth) {
-        infoText.append(
-          createEl('span', {
-            className: 'text-muted',
-            text: 'Kein Monat mit Daten vorhanden.',
-          }),
-        );
-        return;
+        return { text: 'Kein Monat mit Daten vorhanden.', muted: true };
       }
-      infoText.append(
-        createEl('span', {
-          text: formatMonthLabel(selectedMonth),
-        }),
-      );
-      return;
+      return { text: formatMonthLabel(selectedMonth), muted: false };
     }
     if (selectedTimeFilter === 'year') {
       if (!selectedYear) {
-        infoText.append(
-          createEl('span', {
-            className: 'text-muted',
-            text: 'Kein Schuljahr mit Daten vorhanden.',
-          }),
-        );
-        return;
+        return { text: 'Kein Schuljahr mit Daten vorhanden.', muted: true };
       }
-      infoText.append(
-        createEl('span', {
-          text: selectedYear,
-        }),
-      );
-      return;
+      return { text: selectedYear, muted: false };
     }
 
     const week = findSelectedWeek();
     if (!week) {
-      infoText.append(
-        createEl('span', {
-          className: 'text-muted',
-          text: 'Keine Wochen mit Daten vorhanden.',
-        }),
-      );
-      return;
+      return { text: 'Keine Wochen mit Daten vorhanden.', muted: true };
     }
+    return {
+      text: `${week.label} · ${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)}`,
+      muted: false,
+    };
+  };
+
+  const renderInfo = () => {
+    clearElement(infoText);
+    const info = getInfoLabel();
     infoText.append(
       createEl('span', {
-        text: `${week.label} · ${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)}`,
+        className: info.muted ? 'text-muted' : '',
+        text: info.text,
       }),
     );
   };
@@ -1338,6 +1309,230 @@ export const createWeeklyTableView = ({
     tableGroups.forEach((group) => tableContainer.append(group));
   };
 
+  const renderPrintSummary = () => {
+    clearElement(printSummary);
+    const info = getInfoLabel();
+    const visibleChildren =
+      selectedChild && selectedChild !== 'all'
+        ? [selectedChild]
+        : currentChildren;
+    const sortedChildren = [...visibleChildren].sort((a, b) => a.localeCompare(b, 'de'));
+    const showOffers = typeFilters?.offers !== false;
+    const showObservations = typeFilters?.observations !== false;
+    const showAbsence = typeFilters?.absence !== false;
+    const timeFilterLabels = {
+      day: 'Tag',
+      week: 'Woche',
+      month: 'Monat',
+      year: 'Jahr',
+    };
+    const activeTypes = [
+      showObservations ? 'Beobachtungen' : null,
+      showOffers ? 'Angebote' : null,
+      showAbsence ? 'Abwesenheit' : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+    const activeFreeDays = [
+      freeDayFilters.holidays ? 'Ferien' : null,
+      freeDayFilters.weekend ? 'Wochenenden' : null,
+    ]
+      .filter(Boolean)
+      .join(', ');
+
+    const header = createEl('div', { className: 'weekly-table__print-header' });
+    header.append(
+      createEl('h2', { className: 'h4 mb-1', text: UI_LABELS.weeklyTable }),
+      createEl('div', { className: 'fw-semibold', text: info.text }),
+    );
+    if (info.muted) {
+      header.lastChild.classList.add('text-muted');
+    }
+
+    const metaList = createEl('ul', { className: 'weekly-table__print-meta list-unstyled' });
+    metaList.append(
+      createEl('li', {
+        text: `Zeitraum: ${timeFilterLabels[selectedTimeFilter] || 'Woche'}`,
+      }),
+      createEl('li', {
+        text: `Kind: ${selectedChild && selectedChild !== 'all' ? selectedChild : 'Alle Kinder'}`,
+      }),
+      createEl('li', {
+        text: `Art: ${activeTypes || 'Keine'}`,
+      }),
+    );
+    if (activeFreeDays) {
+      metaList.append(
+        createEl('li', {
+          text: `Freie Tage: ${activeFreeDays}`,
+        }),
+      );
+    }
+
+    printSummary.append(header, metaList);
+
+    const weekGroups = [];
+    const addWeekGroup = (week, visibleDateKeys, includeHeading) => {
+      const days = getVisibleWeekDays(week, visibleDateKeys, currentFreeDays, freeDayFilters);
+      if (!days.length) {
+        return;
+      }
+      weekGroups.push({
+        heading: includeHeading
+          ? `${week.label} (${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)})`
+          : null,
+        days,
+      });
+    };
+
+    if (selectedTimeFilter === 'day') {
+      const week = selectedDay ? findWeekForDate(selectedDay) : null;
+      if (week) {
+        addWeekGroup(week, [selectedDay], false);
+      }
+    } else if (selectedTimeFilter === 'month') {
+      const weeks = selectedMonth ? getWeeksForMonth(selectedMonth) : [];
+      weeks.forEach((week) => {
+        const visible = getVisibleWeekDays(week, null, currentFreeDays, freeDayFilters)
+          .map((day) => day.dateKey)
+          .filter((dateKey) => getMonthKey(dateKey) === selectedMonth);
+        if (visible.length) {
+          addWeekGroup(week, visible, true);
+        }
+      });
+    } else if (selectedTimeFilter === 'year') {
+      const year = findSelectedYear();
+      if (year && year.weeks.length) {
+        year.weeks.forEach((week) => {
+          addWeekGroup(week, null, true);
+        });
+      }
+    } else {
+      const week = findSelectedWeek();
+      if (week) {
+        addWeekGroup(week, null, false);
+      }
+    }
+
+    if (!weekGroups.length) {
+      printSummary.append(
+        createEl('div', {
+          className: 'text-muted',
+          text: 'Keine Daten für den gewählten Zeitraum vorhanden.',
+        }),
+      );
+      return;
+    }
+
+    weekGroups.forEach((group) => {
+      const groupEl = createEl('section', { className: 'weekly-table__print-group' });
+      if (group.heading) {
+        groupEl.append(
+          createEl('h3', { className: 'h6 text-uppercase text-muted', text: group.heading }),
+        );
+      }
+      group.days.forEach((day) => {
+        const dayEntry = normalizeDayEntry(
+          currentDays,
+          day.dateKey,
+          currentTimetableSchedule,
+          currentTimetableLessons,
+        );
+        const daySection = createEl('section', { className: 'weekly-table__print-day' });
+        const dayTitle = createEl('div', {
+          className: 'weekly-table__print-day-title',
+          text: `${day.label} · ${day.displayDate}`,
+        });
+        if (day.holidayLabel) {
+          dayTitle.append(
+            createEl('span', {
+              className: 'badge weekly-table__holiday-badge',
+              text: day.holidayLabel,
+            }),
+          );
+        }
+        daySection.append(dayTitle);
+
+        const detailWrapper = createEl('div', { className: 'weekly-table__print-day-body' });
+        let hasContent = false;
+
+        if (showOffers) {
+          const offersBlock = createEl('div', { className: 'weekly-table__print-block' });
+          offersBlock.append(createEl('div', { className: 'fw-semibold', text: 'Angebote' }));
+          const offersList = createEl('ul', { className: 'weekly-table__print-list' });
+          const offers = dayEntry.angebote;
+          if (offers.length) {
+            offers.forEach((offer) => {
+              offersList.append(createEl('li', { text: offer }));
+            });
+            hasContent = true;
+          } else {
+            offersList.append(
+              createEl('li', { className: 'text-muted', text: 'Keine Angebote' }),
+            );
+          }
+          if (dayEntry.angebotNotes) {
+            offersList.append(
+              createEl('li', { text: `Notiz: ${dayEntry.angebotNotes}` }),
+            );
+            hasContent = true;
+          }
+          offersBlock.append(offersList);
+          detailWrapper.append(offersBlock);
+        }
+
+        if (showObservations || showAbsence) {
+          const childBlock = createEl('div', { className: 'weekly-table__print-block' });
+          childBlock.append(createEl('div', { className: 'fw-semibold', text: 'Kinder' }));
+          const childList = createEl('div', { className: 'weekly-table__print-children' });
+          let hasChildData = false;
+          sortedChildren.forEach((child) => {
+            const obs = showObservations ? dayEntry.observations[child] || [] : [];
+            const note = showObservations ? dayEntry.observationNotes?.[child] || '' : '';
+            const isAbsent = showAbsence && dayEntry.absentChildren.includes(child);
+            if (!obs.length && !note && !isAbsent) {
+              return;
+            }
+            hasChildData = true;
+            hasContent = true;
+            const childEntry = createEl('div', { className: 'weekly-table__print-child' });
+            childEntry.append(createEl('div', { className: 'fw-semibold', text: child }));
+            const items = createEl('ul', { className: 'weekly-table__print-list' });
+            if (isAbsent) {
+              items.append(createEl('li', { text: 'Abwesend' }));
+            }
+            obs.forEach((item) => items.append(createEl('li', { text: item })));
+            if (note) {
+              items.append(createEl('li', { text: `Notiz: ${note}` }));
+            }
+            childEntry.append(items);
+            childList.append(childEntry);
+          });
+          if (!hasChildData) {
+            childList.append(
+              createEl('div', {
+                className: 'text-muted',
+                text: 'Keine Einträge für Kinder.',
+              }),
+            );
+          }
+          childBlock.append(childList);
+          detailWrapper.append(childBlock);
+        }
+
+        if (!hasContent) {
+          detailWrapper.append(
+            createEl('div', { className: 'text-muted', text: 'Keine Einträge.' }),
+          );
+        }
+
+        daySection.append(detailWrapper);
+        groupEl.append(daySection);
+      });
+      printSummary.append(groupEl);
+    });
+  };
+
   const render = () => {
     selectableDateKeys = getSelectableDateKeys();
     schoolYears = getSchoolWeeks(buildDaysIndex(selectableDateKeys, currentDays));
@@ -1360,6 +1555,7 @@ export const createWeeklyTableView = ({
     monthSelectGroup.wrapper.classList.toggle('d-none', !showMonthControls);
     renderInfo();
     renderTable();
+    renderPrintSummary();
   };
 
   timeSelectGroup.select.addEventListener('change', (event) => {
@@ -1392,6 +1588,7 @@ export const createWeeklyTableView = ({
   childSelectGroup.select.addEventListener('change', (event) => {
     selectedChild = event.target.value || 'all';
     renderTable();
+    renderPrintSummary();
   });
 
   typeFilterGroup.inputs.forEach((input, key) => {
@@ -1401,6 +1598,7 @@ export const createWeeklyTableView = ({
         [key]: input.checked,
       };
       renderTable();
+      renderPrintSummary();
     });
   });
 
