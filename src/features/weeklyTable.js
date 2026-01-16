@@ -1520,7 +1520,7 @@ export const createWeeklyTableView = ({
     const groupsHtml = weekGroups.length
       ? weekGroups
           .map((group) => {
-            const daysHtml = group.days
+            const rows = group.days
               .map((day) => {
                 const dayEntry = normalizeDayEntry(
                   currentDays,
@@ -1528,63 +1528,78 @@ export const createWeeklyTableView = ({
                   currentTimetableSchedule,
                   currentTimetableLessons,
                 );
-                const dayTitle = `${escapeHtml(day.label)} · ${escapeHtml(day.displayDate)}`;
                 const holidayBadge = day.holidayLabel
-                  ? `<span class="badge">${escapeHtml(day.holidayLabel)}</span>`
+                  ? ` <span class="badge">${escapeHtml(day.holidayLabel)}</span>`
                   : '';
+                const dateCell = `${escapeHtml(day.label)} · ${escapeHtml(day.displayDate)}${holidayBadge}`;
 
-                const blocks = [];
+                const offerLines = [];
                 if (showOffers) {
-                  const offers = dayEntry.angebote || [];
-                  const offersItems = offers.length
-                    ? offers.map((offer) => `<li>${escapeHtml(offer)}</li>`).join('')
-                    : '<li class="muted">Keine Angebote</li>';
-                  const noteItem = dayEntry.angebotNotes
-                    ? `<li>Notiz: ${escapeHtml(dayEntry.angebotNotes)}</li>`
-                    : '';
-                  blocks.push(
-                    `<div class="block"><div class="label">Angebote</div><ul>${offersItems}${noteItem}</ul></div>`,
-                  );
+                  if (dayEntry.angebote?.length) {
+                    offerLines.push(
+                      ...dayEntry.angebote.map((offer) => escapeHtml(offer)),
+                    );
+                  } else {
+                    offerLines.push('<span class="muted">Keine Angebote</span>');
+                  }
+                  if (dayEntry.angebotNotes) {
+                    offerLines.push(
+                      `Notiz: ${escapeHtml(dayEntry.angebotNotes)}`,
+                    );
+                  }
                 }
+                const offersCell = showOffers
+                  ? `<ul>${offerLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                  : '<span class="muted">–</span>';
 
-                if (showObservations || showAbsence) {
-                  const childEntries = sortedChildren
-                    .map((child) => {
-                      const obs = showObservations ? dayEntry.observations[child] || [] : [];
-                      const note = showObservations ? dayEntry.observationNotes?.[child] || '' : '';
-                      const isAbsent = showAbsence && dayEntry.absentChildren.includes(child);
-                      if (!obs.length && !note && !isAbsent) {
-                        return '';
-                      }
-                      const items = [
-                        isAbsent ? '<li>Abwesend</li>' : '',
-                        ...obs.map((item) => `<li>${escapeHtml(item)}</li>`),
-                        note ? `<li>Notiz: ${escapeHtml(note)}</li>` : '',
-                      ]
-                        .filter(Boolean)
-                        .join('');
-                      return `<div class="child"><div class="label">${escapeHtml(child)}</div><ul>${items}</ul></div>`;
-                    })
-                    .filter(Boolean)
-                    .join('');
-                  blocks.push(
-                    `<div class="block"><div class="label">Kinder</div>${childEntries || '<div class="muted">Keine Einträge für Kinder.</div>'}</div>`,
-                  );
+                const observationLines = [];
+                if (showObservations) {
+                  sortedChildren.forEach((child) => {
+                    const obs = dayEntry.observations[child] || [];
+                    const note = dayEntry.observationNotes?.[child] || '';
+                    if (!obs.length && !note) {
+                      return;
+                    }
+                    const parts = [];
+                    if (obs.length) {
+                      parts.push(obs.map((item) => escapeHtml(item)).join(', '));
+                    }
+                    if (note) {
+                      parts.push(`Notiz: ${escapeHtml(note)}`);
+                    }
+                    observationLines.push(
+                      `<strong>${escapeHtml(child)}:</strong> ${parts.join(' · ')}`,
+                    );
+                  });
                 }
+                const observationsCell = showObservations
+                  ? observationLines.length
+                    ? `<ul>${observationLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                    : '<span class="muted">Keine Beobachtungen</span>'
+                  : '<span class="muted">–</span>';
 
-                if (!blocks.length) {
-                  blocks.push('<div class="muted">Keine Einträge.</div>');
-                }
+                const absenceLines = showAbsence
+                  ? dayEntry.absentChildren.map((child) => escapeHtml(child))
+                  : [];
+                const absenceCell = showAbsence
+                  ? absenceLines.length
+                    ? `<ul>${absenceLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                    : '<span class="muted">Keine Abwesenheit</span>'
+                  : '<span class="muted">–</span>';
 
-                return `<section class="day"><div class="day-title">${dayTitle}${holidayBadge}</div><div class="day-body">${blocks.join(
-                  '',
-                )}</div></section>`;
+                return `<tr>
+                  <td>${dateCell}</td>
+                  <td>${offersCell}</td>
+                  <td>${observationsCell}</td>
+                  <td>${absenceCell}</td>
+                </tr>`;
               })
               .join('');
             const heading = group.heading
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
-            return `<section class="group">${heading}${daysHtml}</section>`;
+            const tableHead = `<thead><tr><th>Tag</th><th>Angebote</th><th>Beobachtungen</th><th>Abwesenheit</th></tr></thead>`;
+            return `<section class="group">${heading}<table>${tableHead}<tbody>${rows}</tbody></table></section>`;
           })
           .join('')
       : '<div class="muted">Keine Daten für den gewählten Zeitraum vorhanden.</div>';
@@ -1604,14 +1619,11 @@ export const createWeeklyTableView = ({
       .muted { color: #64748b; }
       .meta { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 4px; }
       .group { margin-bottom: 16px; }
-      .day { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; margin-bottom: 12px; }
-      .day-title { font-weight: 600; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 12px; }
-      .day-body { display: grid; gap: 12px; }
-      .block { display: grid; gap: 6px; }
-      .label { font-weight: 600; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      th, td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; text-align: left; }
+      th { background: #f1f5f9; font-weight: 600; }
       ul { margin: 0; padding-left: 18px; }
-      .child + .child { margin-top: 8px; }
       @media print {
         body { padding: 12px; }
       }
