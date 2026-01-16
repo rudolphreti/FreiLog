@@ -1473,6 +1473,16 @@ export const createWeeklyTableView = ({
     if (activeFreeDays) {
       metaItems.push(`Freie Tage: ${activeFreeDays}`);
     }
+    const legendItems = [
+      showObservations
+        ? `<span class="legend-item"><span class="dot dot-observations"></span> Beobachtungen</span>`
+        : null,
+      showOffers
+        ? `<span class="legend-item"><span class="dot dot-offers"></span> Angebote</span>`
+        : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
 
     const weekGroups = [];
     const addWeekGroup = (week, visibleDateKeys, includeHeading) => {
@@ -1549,7 +1559,9 @@ export const createWeeklyTableView = ({
                   }
                 }
                 const offersCell = showOffers
-                  ? `<ul>${offerLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                  ? `<div class="cell-lines">${offerLines
+                      .map((line) => `<div class="line">${line}</div>`)
+                      .join('')}</div>`
                   : '<span class="muted">–</span>';
 
                 const observationLines = [];
@@ -1574,7 +1586,9 @@ export const createWeeklyTableView = ({
                 }
                 const observationsCell = showObservations
                   ? observationLines.length
-                    ? `<ul>${observationLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                    ? `<div class="cell-lines">${observationLines
+                        .map((line) => `<div class="line">${line}</div>`)
+                        .join('')}</div>`
                     : '<span class="muted">Keine Beobachtungen</span>'
                   : '<span class="muted">–</span>';
 
@@ -1583,7 +1597,9 @@ export const createWeeklyTableView = ({
                   : [];
                 const absenceCell = showAbsence
                   ? absenceLines.length
-                    ? `<ul>${absenceLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+                    ? `<div class="cell-lines">${absenceLines
+                        .map((line) => `<div class="line">${line}</div>`)
+                        .join('')}</div>`
                     : '<span class="muted">Keine Abwesenheit</span>'
                   : '<span class="muted">–</span>';
 
@@ -1617,13 +1633,19 @@ export const createWeeklyTableView = ({
       h2 { font-size: 16px; margin: 0 0 12px; }
       h3 { font-size: 13px; margin: 16px 0 8px; text-transform: uppercase; color: #475569; }
       .muted { color: #64748b; }
-      .meta { margin: 0 0 16px; padding: 0; list-style: none; display: grid; gap: 4px; }
+      .meta { margin: 0 0 16px; display: grid; gap: 4px; }
+      .legend { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 12px; }
+      .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+      .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+      .dot-observations { background: #2563eb; }
+      .dot-offers { background: #f59e0b; }
       .group { margin-bottom: 16px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 12px; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
       th, td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; text-align: left; }
       th { background: #f1f5f9; font-weight: 600; }
-      ul { margin: 0; padding-left: 18px; }
+      .cell-lines { display: grid; gap: 4px; }
+      .line { margin: 0; }
       @media print {
         body { padding: 12px; }
       }
@@ -1632,9 +1654,10 @@ export const createWeeklyTableView = ({
   <body>
     <h1>${escapeHtml(UI_LABELS.weeklyTable)}</h1>
     <h2 class="${info.muted ? 'muted' : ''}">${escapeHtml(info.text)}</h2>
-    <ul class="meta">
-      ${metaItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
-    </ul>
+    <div class="meta">
+      ${metaItems.map((item) => `<div>${escapeHtml(item)}</div>`).join('')}
+    </div>
+    ${legendItems ? `<div class="legend">${legendItems}</div>` : ''}
     ${groupsHtml}
   </body>
 </html>`;
