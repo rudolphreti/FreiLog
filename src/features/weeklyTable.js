@@ -1641,17 +1641,27 @@ export const createWeeklyTableView = ({
   };
 
   pdfButton.addEventListener('click', () => {
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
-    if (!printWindow) {
+    const html = buildPrintHtml();
+    const iframe = createEl('iframe', {
+      className: 'd-none',
+      attrs: { title: 'PDF Print' },
+    });
+    document.body.append(iframe);
+    const frameDoc = iframe.contentWindow?.document;
+    if (!frameDoc) {
+      iframe.remove();
       return;
     }
-    const html = buildPrintHtml();
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    frameDoc.open();
+    frameDoc.write(html);
+    frameDoc.close();
+    const printFrame = () => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      window.setTimeout(() => iframe.remove(), 1000);
+    };
+    iframe.onload = printFrame;
+    window.setTimeout(printFrame, 500);
   });
 
   const update = ({
