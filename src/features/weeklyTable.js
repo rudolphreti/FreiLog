@@ -911,9 +911,18 @@ export const createWeeklyTableView = ({
   filterOverlay.append(filterPanel);
 
   const infoText = createEl('div', { className: 'text-muted small' });
+  const pdfButton = createEl('button', {
+    className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2 weekly-table__pdf',
+    attrs: { type: 'button' },
+    children: [createEl('span', { text: '📄' }), createEl('span', { text: 'Generuj PDF...' })],
+  });
+  const infoRow = createEl('div', {
+    className: 'weekly-table__info-row d-flex align-items-center justify-content-between gap-2 flex-wrap',
+    children: [infoText, pdfButton],
+  });
   const tableContainer = createEl('div', { className: 'weekly-table__container' });
 
-  content.append(infoText, tableContainer);
+  content.append(infoRow, tableContainer);
   panel.append(header, content);
   overlay.append(panel, filterOverlay);
 
@@ -1446,6 +1455,10 @@ export const createWeeklyTableView = ({
     if (event.target === filterOverlay) {
       closeFilterOverlay();
     }
+  });
+
+  pdfButton.addEventListener('click', () => {
+    window.print();
   });
 
   const update = ({

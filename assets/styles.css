@@ -638,6 +638,14 @@ body {
   overflow: auto;
 }
 
+.weekly-table__info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .class-settings-overlay {
   position: fixed;
   inset: 0;
@@ -1044,6 +1052,52 @@ body.child-detail-overlay-open {
 
 .weekly-table-overlay-open {
   overflow: hidden;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .weekly-table-overlay,
+  .weekly-table-overlay * {
+    visibility: visible;
+  }
+
+  .weekly-table-overlay {
+    position: static;
+    inset: auto;
+    background: #ffffff;
+    padding: 0;
+  }
+
+  .weekly-table-overlay__panel {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .weekly-table-overlay__header {
+    position: static;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 1rem 0 0.75rem;
+  }
+
+  .weekly-table-overlay__content {
+    overflow: visible;
+    padding: 0.75rem 0 0;
+  }
+
+  .weekly-table__container {
+    overflow: visible;
+  }
+
+  .weekly-table-overlay__close,
+  .weekly-table-filter-overlay {
+    display: none !important;
+  }
 }
 
 .class-settings-overlay-open {
