@@ -1561,6 +1561,43 @@ export const createWeeklyTableView = ({
       .filter(Boolean)
       .join(' ');
 
+    const buildPdfGroupDots = (groups, groupConfig) => {
+      const normalized = Array.isArray(groups) ? groups.filter(Boolean) : [];
+      if (!normalized.length) {
+        return '';
+      }
+      const maxDots = 3;
+      const showOverflow = normalized.length > maxDots;
+      const visible = showOverflow ? normalized.slice(0, maxDots - 1) : normalized;
+      const dots = visible
+        .map((group) => {
+          const color = groupConfig?.[group]?.color || '#6c757d';
+          return `<span class="pdf-group-dot" style="--group-color: ${color};"></span>`;
+        })
+        .join('');
+      const overflow = showOverflow
+        ? `<span class="pdf-group-dot pdf-group-dot--overflow">+</span>`
+        : '';
+      return `<span class="pdf-group-dots">${dots}${overflow}</span>`;
+    };
+
+    const buildPdfOfferLine = (offer) => {
+      const groups = angebotGroupMap.get(normalizeAngebotKey(offer)) || [];
+      const dots = buildPdfGroupDots(normalizeAngebotGroups(groups), currentAngebotGroups);
+      return `<span class="pdf-item">${dots}<span class="pdf-item-text">${escapeHtml(
+        offer,
+      )}</span></span>`;
+    };
+
+    const buildPdfObservationLine = (item, isLast) => {
+      const groups = observationGroupMap.get(normalizeObservationKey(item)) || [];
+      const dots = buildPdfGroupDots(getOrderedObservationGroups(groups), currentObservationGroups);
+      const textValue = isLast ? item : `${item},`;
+      return `<span class="pdf-item">${dots}<span class="pdf-item-text">${escapeHtml(
+        textValue,
+      )}</span></span>`;
+    };
+
     const weekGroups = [];
     const addWeekGroup = (week, visibleDateKeys, includeHeading) => {
       const days = getVisibleWeekDays(week, visibleDateKeys, currentFreeDays, freeDayFilters);
@@ -1606,14 +1643,14 @@ export const createWeeklyTableView = ({
 
     const buildOfferCell = (dayEntry) => {
       if (!showOffers) {
-        return '<span class="muted">–</span>';
-      }
-      const lines = [];
-      if (dayEntry.angebote?.length) {
-        lines.push(...dayEntry.angebote.map((offer) => escapeHtml(offer)));
-      } else {
-        lines.push('<span class="muted">Keine Angebote</span>');
-      }
+      return '<span class="muted">–</span>';
+    }
+    const lines = [];
+    if (dayEntry.angebote?.length) {
+      lines.push(...dayEntry.angebote.map((offer) => buildPdfOfferLine(offer)));
+    } else {
+      lines.push('<span class="muted">Keine Angebote</span>');
+    }
       if (dayEntry.angebotNotes) {
         lines.push(`Notiz: ${escapeHtml(dayEntry.angebotNotes)}`);
       }
@@ -1632,7 +1669,11 @@ export const createWeeklyTableView = ({
       }
       if (showObservations) {
         if (obs.length) {
-          lines.push(obs.map((item) => escapeHtml(item)).join(', '));
+          lines.push(
+            obs
+              .map((item, index) => buildPdfObservationLine(item, index === obs.length - 1))
+              .join(' '),
+          );
         }
         if (note) {
           lines.push(`Notiz: ${escapeHtml(note)}`);
@@ -1720,10 +1761,10 @@ export const createWeeklyTableView = ({
     <title>${escapeHtml(UI_LABELS.weeklyTable)} – PDF</title>
     <style>
       * { box-sizing: border-box; }
-      body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #0f172a; }
-      h1 { font-size: 20px; margin: 0 0 4px; }
-      h2 { font-size: 16px; margin: 0 0 12px; }
-      h3 { font-size: 13px; margin: 16px 0 8px; text-transform: uppercase; color: #475569; }
+      body { font-family: Arial, sans-serif; margin: 0; padding: 24px; color: #0f172a; font-size: 12px; }
+      h1 { font-size: 18px; margin: 0 0 4px; }
+      h2 { font-size: 14px; margin: 0 0 12px; }
+      h3 { font-size: 12px; margin: 16px 0 8px; text-transform: uppercase; color: #475569; }
       .muted { color: #64748b; }
       .meta { margin: 0 0 16px; display: grid; gap: 4px; }
       .legend { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 12px; }
@@ -1731,16 +1772,21 @@ export const createWeeklyTableView = ({
       .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
       .dot-observations { background: #2563eb; }
       .dot-offers { background: #f59e0b; }
+      .pdf-item { display: inline-flex; align-items: center; gap: 4px; }
+      .pdf-item-text { display: inline-block; }
+      .pdf-group-dots { display: inline-flex; align-items: center; gap: 3px; }
+      .pdf-group-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--group-color, #6c757d); display: inline-block; }
+      .pdf-group-dot--overflow { background: #e2e8f0; color: #475569; font-size: 9px; line-height: 1; text-align: center; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
       .group { margin-bottom: 16px; }
-      .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 12px; }
+      .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 10px; }
       .badge-absence { background: #fee2e2; color: #991b1b; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
-      th, td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; text-align: left; }
+      th, td { border: 1px solid #e2e8f0; padding: 6px; vertical-align: top; text-align: left; font-size: 11px; }
       th { background: #f1f5f9; font-weight: 600; }
-      th:first-child { width: 140px; }
+      th:first-child { width: 130px; }
       .day-header { display: grid; gap: 4px; }
       .day-title { font-weight: 600; }
-      .day-date { color: #64748b; font-size: 12px; }
+      .day-date { color: #64748b; font-size: 11px; }
       .cell-lines { display: grid; gap: 4px; }
       .line { margin: 0; }
       .cell-free-day { background: #f8fafc; }
