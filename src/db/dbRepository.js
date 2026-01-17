@@ -74,6 +74,7 @@ const normalizeObservationList = (value) => {
 };
 
 const createEmptyClassProfile = () => ({
+  teacherName: '',
   name: '',
   badge: '',
   motto: '',
@@ -100,6 +101,9 @@ const ensureClassProfileDraft = (data) => {
   }
   if (typeof data.classProfile.name !== 'string') {
     data.classProfile.name = '';
+  }
+  if (typeof data.classProfile.teacherName !== 'string') {
+    data.classProfile.teacherName = '';
   }
   if (typeof data.classProfile.badge !== 'string') {
     data.classProfile.badge = '';
@@ -548,6 +552,7 @@ export const getClassProfile = () => {
   });
 
   return {
+    teacherName: typeof profile.teacherName === 'string' ? profile.teacherName : '',
     name: typeof profile.name === 'string' ? profile.name : '',
     badge: typeof profile.badge === 'string' ? profile.badge : '',
     motto: typeof profile.motto === 'string' ? profile.motto : '',
@@ -557,6 +562,7 @@ export const getClassProfile = () => {
 };
 
 export const saveClassProfileFields = ({
+  teacherName,
   name,
   badge,
   motto,
@@ -564,6 +570,9 @@ export const saveClassProfileFields = ({
 } = {}) => {
   updateAppData((data) => {
     ensureClassProfileDraft(data);
+    if (teacherName !== undefined) {
+      data.classProfile.teacherName = normalizeInlineText(teacherName);
+    }
     if (name !== undefined) {
       data.classProfile.name = normalizeInlineText(name);
     }

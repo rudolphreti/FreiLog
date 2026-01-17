@@ -49,6 +49,7 @@ const createEmptyEntlassung = () => ({
 });
 
 const DEFAULT_CLASS_PROFILE = {
+  teacherName: '',
   name: '',
   badge: '',
   motto: '',
@@ -275,6 +276,12 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
   const fallback = isPlainObject(fallbackProfile) ? fallbackProfile : DEFAULT_CLASS_PROFILE;
   const baseProfile = { ...DEFAULT_CLASS_PROFILE, ...fallback };
 
+  const teacherName =
+    typeof source.teacherName === 'string' && source.teacherName.trim()
+      ? source.teacherName.trim()
+      : typeof baseProfile.teacherName === 'string'
+        ? baseProfile.teacherName.trim()
+        : '';
   const name =
     typeof source.name === 'string' && source.name.trim()
       ? source.name.trim()
@@ -313,6 +320,7 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
   );
 
   return {
+    teacherName,
     name,
     badge,
     motto,

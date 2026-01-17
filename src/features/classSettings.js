@@ -230,6 +230,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     attrs: { id: accordionId },
   });
 
+  const teacherNameInput = createEl('input', {
+    className: 'form-control',
+    attrs: { type: 'text', id: 'class-teacher-name', placeholder: 'z. B. Frau Müller' },
+  });
   const nameInput = createEl('input', {
     className: 'form-control',
     attrs: { type: 'text', id: 'class-name', placeholder: 'z. B. Sonnengruppe' },
@@ -250,6 +254,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const generalContent = createEl('div', {
     className: 'd-flex flex-column gap-3',
     children: [
+      createFormGroup({ id: 'class-teacher-name', label: 'Meine Name', control: teacherNameInput }),
       createFormGroup({ id: 'class-name', label: 'Klassenname', control: nameInput }),
       createFormGroup({ id: 'class-badge', label: 'Klassenschild', control: badgeInput }),
       createFormGroup({ id: 'class-motto', label: 'Klassenmotto', control: mottoInput }),
@@ -709,6 +714,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   overlay.append(panel, childDetailOverlay, deleteChildConfirmDialog, entlassungConfirmDialog);
 
   const updateProfileInputs = (nextProfile = {}) => {
+    const nextTeacherName =
+      typeof nextProfile.teacherName === 'string' ? nextProfile.teacherName : '';
     const nextName = typeof nextProfile.name === 'string' ? nextProfile.name : '';
     const nextBadge = typeof nextProfile.badge === 'string' ? nextProfile.badge : '';
     const nextMotto = typeof nextProfile.motto === 'string' ? nextProfile.motto : '';
@@ -716,6 +723,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
     const isActive = (input) => document.activeElement === input;
 
+    if (!isActive(teacherNameInput) && teacherNameInput.value !== nextTeacherName) {
+      teacherNameInput.value = nextTeacherName;
+    }
     if (!isActive(nameInput) && nameInput.value !== nextName) {
       nameInput.value = nextName;
     }
@@ -732,6 +742,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
   const persistProfile = debounce(() => {
     saveClassProfileFields({
+      teacherName: teacherNameInput.value,
       name: nameInput.value,
       badge: badgeInput.value,
       motto: mottoInput.value,
@@ -1454,6 +1465,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     renderChildPills();
   };
 
+  teacherNameInput.addEventListener('input', persistProfile);
   nameInput.addEventListener('input', persistProfile);
   badgeInput.addEventListener('input', persistProfile);
   mottoInput.addEventListener('input', persistProfile);

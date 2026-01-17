@@ -384,6 +384,7 @@ export const renderApp = (root, state) => {
       freeDays,
       timetableSchedule,
       timetableLessons,
+      classProfile,
     });
   } else {
     weeklyTableViewBinding.update({
@@ -396,6 +397,7 @@ export const renderApp = (root, state) => {
       freeDays,
       timetableSchedule,
       timetableLessons,
+      classProfile,
     });
   }
 

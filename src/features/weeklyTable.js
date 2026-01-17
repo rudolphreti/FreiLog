@@ -870,6 +870,7 @@ export const createWeeklyTableView = ({
   freeDays = [],
   timetableSchedule = {},
   timetableLessons = [],
+  classProfile = {},
 } = {}) => {
   let schoolYears = getSchoolWeeks(days);
   let selectedYear = schoolYears.length ? schoolYears[schoolYears.length - 1].label : null;
@@ -883,6 +884,7 @@ export const createWeeklyTableView = ({
   let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
   let currentTimetableSchedule = timetableSchedule || {};
   let currentTimetableLessons = Array.isArray(timetableLessons) ? [...timetableLessons] : [];
+  let currentClassProfile = classProfile || {};
   let angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
   let isEditMode = false;
@@ -1514,6 +1516,24 @@ export const createWeeklyTableView = ({
 
   const buildPrintHtml = () => {
     const info = getInfoLabel();
+    const teacherName =
+      typeof currentClassProfile.teacherName === 'string'
+        ? currentClassProfile.teacherName
+        : '';
+    const className =
+      typeof currentClassProfile.name === 'string' ? currentClassProfile.name : '';
+    const metaItems = [
+      { label: 'Meine Name', value: teacherName || '—' },
+      { label: 'Klassenname', value: className || '—' },
+    ];
+    const metaHtml = `<div class="meta">${metaItems
+      .map(
+        (item) =>
+          `<div><span class="muted">${escapeHtml(item.label)}:</span> ${escapeHtml(
+            item.value,
+          )}</div>`,
+      )
+      .join('')}</div>`;
     const visibleChildren =
       selectedChild && selectedChild !== 'all'
         ? [selectedChild]
@@ -1793,6 +1813,7 @@ export const createWeeklyTableView = ({
   <body>
     <h1>${escapeHtml(UI_LABELS.weeklyTable)}</h1>
     <h2 class="${info.muted ? 'muted' : ''}">${escapeHtml(info.text)}</h2>
+    ${metaHtml}
     
     ${groupsHtml}
   </body>
@@ -1841,6 +1862,7 @@ export const createWeeklyTableView = ({
     freeDays: nextFreeDays = [],
     timetableSchedule: nextTimetableSchedule = {},
     timetableLessons: nextTimetableLessons = [],
+    classProfile: nextClassProfile = {},
   } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
@@ -1853,6 +1875,7 @@ export const createWeeklyTableView = ({
     currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
     currentTimetableSchedule = nextTimetableSchedule || {};
     currentTimetableLessons = Array.isArray(nextTimetableLessons) ? [...nextTimetableLessons] : [];
+    currentClassProfile = nextClassProfile || {};
     angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     selectableDateKeys = getSelectableDateKeys();
