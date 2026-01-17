@@ -1522,44 +1522,6 @@ export const createWeeklyTableView = ({
     const showOffers = typeFilters?.offers !== false;
     const showObservations = typeFilters?.observations !== false;
     const showAbsence = typeFilters?.absence !== false;
-    const timeFilterLabels = {
-      day: 'Tag',
-      week: 'Woche',
-      month: 'Monat',
-      year: 'Jahr',
-    };
-    const activeTypes = [
-      showObservations ? 'Beobachtungen' : null,
-      showOffers ? 'Angebote' : null,
-      showAbsence ? 'Abwesenheit' : null,
-    ]
-      .filter(Boolean)
-      .join(', ');
-    const activeFreeDays = [
-      freeDayFilters.holidays ? 'Ferien' : null,
-      freeDayFilters.weekend ? 'Wochenenden' : null,
-    ]
-      .filter(Boolean)
-      .join(', ');
-
-    const metaItems = [
-      `Zeitraum: ${timeFilterLabels[selectedTimeFilter] || 'Woche'}`,
-      `Kind: ${selectedChild && selectedChild !== 'all' ? selectedChild : 'Alle Kinder'}`,
-      `Art: ${activeTypes || 'Keine'}`,
-    ];
-    if (activeFreeDays) {
-      metaItems.push(`Freie Tage: ${activeFreeDays}`);
-    }
-    const legendItems = [
-      showObservations
-        ? `<span class="legend-item"><span class="dot dot-observations"></span> Beobachtungen</span>`
-        : null,
-      showOffers
-        ? `<span class="legend-item"><span class="dot dot-offers"></span> Angebote</span>`
-        : null,
-    ]
-      .filter(Boolean)
-      .join(' ');
 
     const buildPdfGroupDots = (groups, groupConfig) => {
       const normalized = Array.isArray(groups) ? groups.filter(Boolean) : [];
@@ -1774,7 +1736,7 @@ export const createWeeklyTableView = ({
             const heading = group.heading
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
-            const tableHead = `<thead><tr><th>Kind</th>${headerCells}</tr></thead>`;
+            const tableHead = `<thead><tr><th></th>${headerCells}</tr></thead>`;
             const rows = `${offerRow}${childRows}`;
             return `<section class="group">${heading}<table>${tableHead}<tbody>${rows}</tbody></table></section>`;
           })
@@ -1831,10 +1793,7 @@ export const createWeeklyTableView = ({
   <body>
     <h1>${escapeHtml(UI_LABELS.weeklyTable)}</h1>
     <h2 class="${info.muted ? 'muted' : ''}">${escapeHtml(info.text)}</h2>
-    <div class="meta">
-      ${metaItems.map((item) => `<div>${escapeHtml(item)}</div>`).join('')}
-    </div>
-    ${legendItems ? `<div class="legend">${legendItems}</div>` : ''}
+    
     ${groupsHtml}
   </body>
 </html>`;
