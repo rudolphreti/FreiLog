@@ -1643,14 +1643,39 @@ export const createWeeklyTableView = ({
 
     const buildOfferCell = (dayEntry) => {
       if (!showOffers) {
-      return '<span class="muted">–</span>';
-    }
-    const lines = [];
-    if (dayEntry.angebote?.length) {
-      lines.push(...dayEntry.angebote.map((offer) => buildPdfOfferLine(offer)));
-    } else {
-      lines.push('<span class="muted">Keine Angebote</span>');
-    }
+        return '<span class="muted">–</span>';
+      }
+      const lines = [];
+      const modules = Array.isArray(dayEntry.freizeitModules) ? dayEntry.freizeitModules : [];
+      const assignments =
+        dayEntry.angebotModules && typeof dayEntry.angebotModules === 'object'
+          ? dayEntry.angebotModules
+          : {};
+
+      if (modules.length) {
+        modules.forEach((module) => {
+          const moduleOffers = Array.isArray(assignments[module.id])
+            ? assignments[module.id]
+            : [];
+          if (!moduleOffers.length) {
+            return;
+          }
+          const label =
+            module.descriptor || module.periodLabel || module.tabLabel || 'Freizeit';
+          const offers = moduleOffers.map((offer) => buildPdfOfferLine(offer)).join(' ');
+          lines.push(
+            `<span class="pdf-module-line"><span class="pdf-module-label">${escapeHtml(
+              label,
+            )}</span><span class="pdf-module-offers">${offers}</span></span>`,
+          );
+        });
+      } else if (dayEntry.angebote?.length) {
+        lines.push(...dayEntry.angebote.map((offer) => buildPdfOfferLine(offer)));
+      }
+
+      if (!lines.length) {
+        lines.push('<span class="muted">Keine Angebote</span>');
+      }
       if (dayEntry.angebotNotes) {
         lines.push(`Notiz: ${escapeHtml(dayEntry.angebotNotes)}`);
       }
@@ -1721,28 +1746,31 @@ export const createWeeklyTableView = ({
                     .join('')}
                 </tr>`
               : '';
-            const childRows = sortedChildren
-              .map((child) => {
-                const cells = group.days
-                  .map((day) => {
-                    const dayEntry = normalizeDayEntry(
-                      currentDays,
-                      day.dateKey,
-                      currentTimetableSchedule,
-                      currentTimetableLessons,
-                    );
-                    const cellClasses = [
-                      day.freeInfo ? 'cell-free-day' : '',
-                      dayEntry.absentChildren.includes(child) ? 'cell-absent' : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ');
-                    return `<td class="${cellClasses}">${buildChildCell(dayEntry, child)}</td>`;
-                  })
-                  .join('');
-                return `<tr><th>${escapeHtml(child)}</th>${cells}</tr>`;
-              })
-              .join('');
+            const childRows =
+              showObservations || showAbsence
+                ? sortedChildren
+                    .map((child) => {
+                      const cells = group.days
+                        .map((day) => {
+                          const dayEntry = normalizeDayEntry(
+                            currentDays,
+                            day.dateKey,
+                            currentTimetableSchedule,
+                            currentTimetableLessons,
+                          );
+                          const cellClasses = [
+                            day.freeInfo ? 'cell-free-day' : '',
+                            dayEntry.absentChildren.includes(child) ? 'cell-absent' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ');
+                          return `<td class="${cellClasses}">${buildChildCell(dayEntry, child)}</td>`;
+                        })
+                        .join('');
+                      return `<tr><th>${escapeHtml(child)}</th>${cells}</tr>`;
+                    })
+                    .join('')
+                : '';
             const heading = group.heading
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
@@ -1777,6 +1805,9 @@ export const createWeeklyTableView = ({
       .pdf-group-dots { display: inline-flex; align-items: center; gap: 3px; }
       .pdf-group-dot { color: var(--group-color, #6c757d); font-size: 11px; line-height: 1; display: inline-flex; align-items: center; }
       .pdf-group-dot--overflow { color: #475569; font-size: 9px; font-weight: 600; }
+      .pdf-module-line { display: grid; gap: 2px; }
+      .pdf-module-label { font-weight: 600; color: #334155; display: inline-flex; }
+      .pdf-module-offers { display: inline-flex; flex-wrap: wrap; gap: 4px; }
       .group { margin-bottom: 16px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 10px; }
       .badge-absence { background: #fee2e2; color: #991b1b; }
