@@ -1527,94 +1527,109 @@ export const createWeeklyTableView = ({
       }
     }
 
+    const buildOfferCell = (dayEntry) => {
+      if (!showOffers) {
+        return '<span class="muted">–</span>';
+      }
+      const lines = [];
+      if (dayEntry.angebote?.length) {
+        lines.push(...dayEntry.angebote.map((offer) => escapeHtml(offer)));
+      } else {
+        lines.push('<span class="muted">Keine Angebote</span>');
+      }
+      if (dayEntry.angebotNotes) {
+        lines.push(`Notiz: ${escapeHtml(dayEntry.angebotNotes)}`);
+      }
+      return `<div class="cell-lines">${lines
+        .map((line) => `<div class="line">${line}</div>`)
+        .join('')}</div>`;
+    };
+
+    const buildChildCell = (dayEntry, child) => {
+      const lines = [];
+      const obs = dayEntry.observations[child] || [];
+      const note = dayEntry.observationNotes?.[child] || '';
+      const isAbsent = dayEntry.absentChildren.includes(child);
+      if (showAbsence && isAbsent) {
+        lines.push('<span class="badge badge-absence">Abwesend</span>');
+      }
+      if (showObservations) {
+        if (obs.length) {
+          lines.push(obs.map((item) => escapeHtml(item)).join(', '));
+        }
+        if (note) {
+          lines.push(`Notiz: ${escapeHtml(note)}`);
+        }
+      }
+      if (!lines.length) {
+        return '<span class="muted">—</span>';
+      }
+      return `<div class="cell-lines">${lines
+        .map((line) => `<div class="line">${line}</div>`)
+        .join('')}</div>`;
+    };
+
     const groupsHtml = weekGroups.length
       ? weekGroups
           .map((group) => {
-            const rows = group.days
+            const headerCells = group.days
               .map((day) => {
-                const dayEntry = normalizeDayEntry(
-                  currentDays,
-                  day.dateKey,
-                  currentTimetableSchedule,
-                  currentTimetableLessons,
-                );
                 const holidayBadge = day.holidayLabel
-                  ? ` <span class="badge">${escapeHtml(day.holidayLabel)}</span>`
+                  ? `<span class="badge">${escapeHtml(day.holidayLabel)}</span>`
                   : '';
-                const dateCell = `${escapeHtml(day.label)} · ${escapeHtml(day.displayDate)}${holidayBadge}`;
-
-                const offerLines = [];
-                if (showOffers) {
-                  if (dayEntry.angebote?.length) {
-                    offerLines.push(
-                      ...dayEntry.angebote.map((offer) => escapeHtml(offer)),
+                const dayHeader = `<div class="day-header">
+                  <div class="day-title">${escapeHtml(day.label)}</div>
+                  <div class="day-date">${escapeHtml(day.displayDate)}</div>
+                  ${holidayBadge}
+                </div>`;
+                const dayClasses = day.freeInfo ? 'cell-free-day' : '';
+                return `<th class="${dayClasses}">${dayHeader}</th>`;
+              })
+              .join('');
+            const offerRow = showOffers
+              ? `<tr class="offers-row">
+                  <th>Angebote</th>
+                  ${group.days
+                    .map((day) => {
+                      const dayEntry = normalizeDayEntry(
+                        currentDays,
+                        day.dateKey,
+                        currentTimetableSchedule,
+                        currentTimetableLessons,
+                      );
+                      const cellClasses = day.freeInfo ? 'cell-free-day' : '';
+                      return `<td class="${cellClasses}">${buildOfferCell(dayEntry)}</td>`;
+                    })
+                    .join('')}
+                </tr>`
+              : '';
+            const childRows = sortedChildren
+              .map((child) => {
+                const cells = group.days
+                  .map((day) => {
+                    const dayEntry = normalizeDayEntry(
+                      currentDays,
+                      day.dateKey,
+                      currentTimetableSchedule,
+                      currentTimetableLessons,
                     );
-                  } else {
-                    offerLines.push('<span class="muted">Keine Angebote</span>');
-                  }
-                  if (dayEntry.angebotNotes) {
-                    offerLines.push(
-                      `Notiz: ${escapeHtml(dayEntry.angebotNotes)}`,
-                    );
-                  }
-                }
-                const offersCell = showOffers
-                  ? `<div class="cell-lines">${offerLines
-                      .map((line) => `<div class="line">${line}</div>`)
-                      .join('')}</div>`
-                  : '<span class="muted">–</span>';
-
-                const observationLines = [];
-                if (showObservations) {
-                  sortedChildren.forEach((child) => {
-                    const obs = dayEntry.observations[child] || [];
-                    const note = dayEntry.observationNotes?.[child] || '';
-                    if (!obs.length && !note) {
-                      return;
-                    }
-                    const parts = [];
-                    if (obs.length) {
-                      parts.push(obs.map((item) => escapeHtml(item)).join(', '));
-                    }
-                    if (note) {
-                      parts.push(`Notiz: ${escapeHtml(note)}`);
-                    }
-                    observationLines.push(
-                      `<strong>${escapeHtml(child)}:</strong> ${parts.join(' · ')}`,
-                    );
-                  });
-                }
-                const observationsCell = showObservations
-                  ? observationLines.length
-                    ? `<div class="cell-lines">${observationLines
-                        .map((line) => `<div class="line">${line}</div>`)
-                        .join('')}</div>`
-                    : '<span class="muted">Keine Beobachtungen</span>'
-                  : '<span class="muted">–</span>';
-
-                const absenceLines = showAbsence
-                  ? dayEntry.absentChildren.map((child) => escapeHtml(child))
-                  : [];
-                const absenceCell = showAbsence
-                  ? absenceLines.length
-                    ? `<div class="cell-lines">${absenceLines
-                        .map((line) => `<div class="line">${line}</div>`)
-                        .join('')}</div>`
-                    : '<span class="muted">Keine Abwesenheit</span>'
-                  : '<span class="muted">–</span>';
-
-                return `<tr>
-                  <td>${dateCell}</td>
-                  <td>${offersCell}</td>
-                  <td>${observationsCell}</td>
-                  <td>${absenceCell}</td>
-                </tr>`;
+                    const cellClasses = [
+                      day.freeInfo ? 'cell-free-day' : '',
+                      dayEntry.absentChildren.includes(child) ? 'cell-absent' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ');
+                    return `<td class="${cellClasses}">${buildChildCell(dayEntry, child)}</td>`;
+                  })
+                  .join('');
+                return `<tr><th>${escapeHtml(child)}</th>${cells}</tr>`;
               })
               .join('');
             const heading = group.heading
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
-            const tableHead = `<thead><tr><th>Tag</th><th>Angebote</th><th>Beobachtungen</th><th>Abwesenheit</th></tr></thead>`;
+            const tableHead = `<thead><tr><th>Kind</th>${headerCells}</tr></thead>`;
+            const rows = `${offerRow}${childRows}`;
             return `<section class="group">${heading}<table>${tableHead}<tbody>${rows}</tbody></table></section>`;
           })
           .join('')
@@ -1641,11 +1656,19 @@ export const createWeeklyTableView = ({
       .dot-offers { background: #f59e0b; }
       .group { margin-bottom: 16px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 12px; }
-      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+      .badge-absence { background: #fee2e2; color: #991b1b; }
+      table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
       th, td { border: 1px solid #e2e8f0; padding: 8px; vertical-align: top; text-align: left; }
       th { background: #f1f5f9; font-weight: 600; }
+      th:first-child { width: 140px; }
+      .day-header { display: grid; gap: 4px; }
+      .day-title { font-weight: 600; }
+      .day-date { color: #64748b; font-size: 12px; }
       .cell-lines { display: grid; gap: 4px; }
       .line { margin: 0; }
+      .cell-free-day { background: #f8fafc; }
+      .cell-absent { background: #fff1f2; }
+      .offers-row th { background: #f8fafc; }
       @media print {
         body { padding: 12px; }
       }
