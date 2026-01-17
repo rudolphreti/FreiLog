@@ -377,6 +377,8 @@ export const renderApp = (root, state) => {
     weeklyTableViewBinding = createWeeklyTableView({
       days: weeklyDays,
       children: sortedChildren,
+      angebotCatalog,
+      angebotGroups,
       observationCatalog,
       observationGroups,
       freeDays,
@@ -387,6 +389,8 @@ export const renderApp = (root, state) => {
     weeklyTableViewBinding.update({
       days: weeklyDays,
       children: sortedChildren,
+      angebotCatalog,
+      angebotGroups,
       observationCatalog,
       observationGroups,
       freeDays,

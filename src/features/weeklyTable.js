@@ -9,6 +9,11 @@ import {
   normalizeObservationGroups,
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
+import {
+  buildAngebotCatalogGroupMap,
+  normalizeAngebotGroups,
+  normalizeAngebotKey,
+} from '../utils/angebotCatalog.js';
 import { setSelectedDate } from '../state/store.js';
 import { getFreeDayInfo, isSummerBreakEntry, isWeekend } from '../utils/freeDays.js';
 import { UI_LABELS } from '../ui/labels.js';
@@ -285,7 +290,43 @@ const getMonthRange = (monthKey) => {
   return { startYmd, endYmd };
 };
 
-const buildPillList = (values) => {
+const buildOfferGroupDots = (groups, angebotGroups) => {
+  const normalized = normalizeAngebotGroups(groups);
+  if (!normalized.length) {
+    return null;
+  }
+
+  const maxDots = 3;
+  const showOverflow = normalized.length > maxDots;
+  const visible = showOverflow ? normalized.slice(0, maxDots - 1) : normalized;
+
+  const wrapper = createEl('span', { className: 'observation-group-dots' });
+
+  visible.forEach((group) => {
+    const color =
+      angebotGroups && angebotGroups[group]?.color ? angebotGroups[group].color : '#6c757d';
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot',
+        attrs: { style: `--group-color: ${color};`, 'aria-hidden': 'true' },
+      }),
+    );
+  });
+
+  if (showOverflow) {
+    wrapper.appendChild(
+      createEl('span', {
+        className: 'observation-group-dot observation-group-dot--overflow',
+        text: '+',
+        attrs: { 'aria-hidden': 'true' },
+      }),
+    );
+  }
+
+  return wrapper;
+};
+
+const buildPillList = (values, { getGroupsForLabel, angebotGroups } = {}) => {
   const list = createEl('div', {
     className: 'weekly-table__pill-list',
   });
@@ -299,17 +340,28 @@ const buildPillList = (values) => {
     return list;
   }
   values.forEach((value) => {
+    const groupDots =
+      typeof getGroupsForLabel === 'function'
+        ? buildOfferGroupDots(getGroupsForLabel(value), angebotGroups)
+        : null;
     list.append(
       createEl('span', {
         className: 'badge rounded-pill text-bg-secondary weekly-table__pill',
-        text: value,
+        children: groupDots
+          ? [groupDots, createEl('span', { className: 'weekly-table__pill-label', text: value })]
+          : [createEl('span', { className: 'weekly-table__pill-label', text: value })],
       }),
     );
   });
   return list;
 };
 
-const buildModuleOfferList = (modules, assignments, extras = []) => {
+const buildModuleOfferList = (
+  modules,
+  assignments,
+  extras = [],
+  { getGroupsForLabel, angebotGroups } = {},
+) => {
   const container = createEl('div', { className: 'weekly-table__module-list' });
   const safeModules = Array.isArray(modules) ? modules : [];
   const safeAssignments =
@@ -317,7 +369,10 @@ const buildModuleOfferList = (modules, assignments, extras = []) => {
 
   if (!safeModules.length) {
     container.append(
-      buildPillList(flattenModuleAssignments(safeAssignments, extras)),
+      buildPillList(flattenModuleAssignments(safeAssignments, extras), {
+        getGroupsForLabel,
+        angebotGroups,
+      }),
     );
     return container;
   }
@@ -336,7 +391,7 @@ const buildModuleOfferList = (modules, assignments, extras = []) => {
         className: 'text-muted small weekly-table__module-label',
         text: label,
       }),
-      buildPillList(moduleOffers),
+      buildPillList(moduleOffers, { getGroupsForLabel, angebotGroups }),
     );
     container.append(moduleWrapper);
   });
@@ -350,9 +405,18 @@ const buildOfferNote = (note) =>
     text: note,
   });
 
-const buildOfferCell = ({ modules, assignments, extras, note }) => {
+const buildOfferCell = ({
+  modules,
+  assignments,
+  extras,
+  note,
+  getGroupsForLabel,
+  angebotGroups,
+}) => {
   const container = createEl('div', { className: 'weekly-table__offer-cell' });
-  container.append(buildModuleOfferList(modules, assignments, extras));
+  container.append(
+    buildModuleOfferList(modules, assignments, extras, { getGroupsForLabel, angebotGroups }),
+  );
   if (note) {
     container.append(buildOfferNote(note));
   }
@@ -652,6 +716,8 @@ const buildWeeklyTable = ({
                   assignments: dayEntry.angebotModules,
                   extras: dayEntry.angebote,
                   note: dayEntry.angebotNotes,
+                  getGroupsForLabel: getAngebotGroupsForLabel,
+                  angebotGroups: currentAngebotGroups,
                 })
               : null,
             dateKey: item.dateKey,
@@ -795,6 +861,8 @@ const buildTypeFilterGroup = ({ id, label, options }) => {
 export const createWeeklyTableView = ({
   days = {},
   children = [],
+  angebotCatalog = [],
+  angebotGroups = {},
   observationCatalog = [],
   observationGroups = {},
   freeDays = [],
@@ -806,11 +874,14 @@ export const createWeeklyTableView = ({
   let selectedWeekId = selectedYear ? getLatestWeekForYear(schoolYears, selectedYear)?.id : null;
   let currentDays = days || {};
   let currentChildren = Array.isArray(children) ? [...children] : [];
+  let currentAngebotCatalog = Array.isArray(angebotCatalog) ? [...angebotCatalog] : [];
+  let currentAngebotGroups = angebotGroups || {};
   let currentObservationCatalog = Array.isArray(observationCatalog) ? [...observationCatalog] : [];
   let currentObservationGroups = observationGroups || {};
   let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
   let currentTimetableSchedule = timetableSchedule || {};
   let currentTimetableLessons = Array.isArray(timetableLessons) ? [...timetableLessons] : [];
+  let angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
   let isEditMode = false;
   let selectedTimeFilter = 'week';
@@ -831,6 +902,8 @@ export const createWeeklyTableView = ({
     working: true,
     holidays: true,
   };
+  const getAngebotGroupsForLabel = (label) =>
+    angebotGroupMap.get(normalizeAngebotKey(label)) || [];
   const getGroupsForLabel = (label) =>
     observationGroupMap.get(normalizeObservationKey(label)) || [];
 
@@ -1713,6 +1786,8 @@ export const createWeeklyTableView = ({
   const update = ({
     days: nextDays = {},
     children: nextChildren = [],
+    angebotCatalog: nextAngebotCatalog = [],
+    angebotGroups: nextAngebotGroups = {},
     observationCatalog: nextObservationCatalog = [],
     observationGroups: nextObservationGroups = {},
     freeDays: nextFreeDays = [],
@@ -1721,6 +1796,8 @@ export const createWeeklyTableView = ({
   } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
+    currentAngebotCatalog = Array.isArray(nextAngebotCatalog) ? [...nextAngebotCatalog] : [];
+    currentAngebotGroups = nextAngebotGroups || {};
     currentObservationCatalog = Array.isArray(nextObservationCatalog)
       ? [...nextObservationCatalog]
       : [];
@@ -1728,6 +1805,7 @@ export const createWeeklyTableView = ({
     currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
     currentTimetableSchedule = nextTimetableSchedule || {};
     currentTimetableLessons = Array.isArray(nextTimetableLessons) ? [...nextTimetableLessons] : [];
+    angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     selectableDateKeys = getSelectableDateKeys();
     schoolYears = getSchoolWeeks(buildDaysIndex(selectableDateKeys, currentDays));

@@ -862,6 +862,17 @@ body.child-detail-overlay-open {
 
 .weekly-table__pill {
   font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.weekly-table__pill .observation-group-dots {
+  margin-right: 0;
+}
+
+.weekly-table__pill-label {
+  line-height: 1.2;
 }
 
 .weekly-table__observation-list {
