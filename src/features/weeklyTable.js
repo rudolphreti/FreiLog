@@ -1824,13 +1824,21 @@ export const createWeeklyTableView = ({
     frameDoc.open();
     frameDoc.write(html);
     frameDoc.close();
+    let hasPrinted = false;
+    let fallbackTimeout = null;
     const printFrame = () => {
+      if (hasPrinted) return;
+      hasPrinted = true;
+      if (fallbackTimeout) {
+        window.clearTimeout(fallbackTimeout);
+        fallbackTimeout = null;
+      }
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
       window.setTimeout(() => iframe.remove(), 1000);
     };
     iframe.onload = printFrame;
-    window.setTimeout(printFrame, 500);
+    fallbackTimeout = window.setTimeout(printFrame, 500);
   });
 
   const update = ({
