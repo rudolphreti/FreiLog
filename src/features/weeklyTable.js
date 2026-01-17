@@ -1523,8 +1523,8 @@ export const createWeeklyTableView = ({
     const className =
       typeof currentClassProfile.name === 'string' ? currentClassProfile.name : '';
     const metaItems = [
-      { label: 'Meine Name', value: teacherName || '—' },
-      { label: 'Klassenname', value: className || '—' },
+      { label: 'Name', value: teacherName || '—' },
+      { label: 'Klasse', value: className || '—' },
     ];
     const metaHtml = `<div class="meta">${metaItems
       .map(
