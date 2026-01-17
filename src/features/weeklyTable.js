@@ -603,6 +603,8 @@ const buildWeeklyTable = ({
   days,
   children,
   getGroupsForLabel,
+  getAngebotGroupsForLabel,
+  angebotGroups,
   observationGroups,
   onEditCell,
   onOpenFilters,
@@ -717,7 +719,7 @@ const buildWeeklyTable = ({
                   extras: dayEntry.angebote,
                   note: dayEntry.angebotNotes,
                   getGroupsForLabel: getAngebotGroupsForLabel,
-                  angebotGroups: currentAngebotGroups,
+                  angebotGroups,
                 })
               : null,
             dateKey: item.dateKey,
@@ -1254,6 +1256,8 @@ export const createWeeklyTableView = ({
       days: currentDays,
       children: visibleChildren,
       getGroupsForLabel,
+      getAngebotGroupsForLabel,
+      angebotGroups: currentAngebotGroups,
       observationGroups: currentObservationGroups,
       onEditCell: ({ child, dateKey }) => {
         if (!dateKey) {
