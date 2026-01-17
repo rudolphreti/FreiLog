@@ -1572,7 +1572,7 @@ export const createWeeklyTableView = ({
       const dots = visible
         .map((group) => {
           const color = groupConfig?.[group]?.color || '#6c757d';
-          return `<span class="pdf-group-dot" style="--group-color: ${color};"></span>`;
+          return `<span class="pdf-group-dot" style="--group-color: ${color};">•</span>`;
         })
         .join('');
       const overflow = showOverflow
@@ -1775,8 +1775,8 @@ export const createWeeklyTableView = ({
       .pdf-item { display: inline-flex; align-items: center; gap: 4px; }
       .pdf-item-text { display: inline-block; }
       .pdf-group-dots { display: inline-flex; align-items: center; gap: 3px; }
-      .pdf-group-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--group-color, #6c757d); display: inline-block; }
-      .pdf-group-dot--overflow { background: #e2e8f0; color: #475569; font-size: 9px; line-height: 1; text-align: center; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; }
+      .pdf-group-dot { color: var(--group-color, #6c757d); font-size: 11px; line-height: 1; display: inline-flex; align-items: center; }
+      .pdf-group-dot--overflow { color: #475569; font-size: 9px; font-weight: 600; }
       .group { margin-bottom: 16px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 10px; }
       .badge-absence { background: #fee2e2; color: #991b1b; }
