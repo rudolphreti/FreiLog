@@ -989,7 +989,7 @@ export const createWeeklyTableView = ({
   const pdfButton = createEl('button', {
     className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2 weekly-table__pdf',
     attrs: { type: 'button' },
-    children: [createEl('span', { text: '📄' }), createEl('span', { text: 'Generuj PDF...' })],
+    children: [createEl('span', { text: '🖨️' }), createEl('span', { text: 'Drucken...' })],
   });
   const infoRow = createEl('div', {
     className: 'weekly-table__info-row d-flex align-items-center justify-content-between gap-2 flex-wrap',

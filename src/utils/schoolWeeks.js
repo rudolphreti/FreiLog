@@ -124,11 +124,13 @@ export const getSchoolWeeks = (daysByDate) => {
     const weeks = Array.from(year.weeks.values()).sort(
       (a, b) => a.startDate.getTime() - b.startDate.getTime(),
     );
+    const startYearShort = String(year.startYear).slice(-2);
+    const endYearShort = String(year.startYear + 1).slice(-2);
     weeks.forEach((week, index) => {
       const diffMs = week.startDate.getTime() - year.firstWeekStart.getTime();
       const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
       week.number = diffWeeks + 1;
-      week.label = `${week.number}/${year.label}`;
+      week.label = `${week.number}/${startYearShort}-${endYearShort}`;
     });
     year.weeks = weeks;
   });
@@ -151,6 +153,6 @@ export const formatDisplayDate = (ymd) => {
   }
   const day = pad(date.getUTCDate());
   const month = pad(date.getUTCMonth() + 1);
-  const year = date.getUTCFullYear();
+  const year = String(date.getUTCFullYear()).slice(-2);
   return `${day}.${month}.${year}`;
 };
