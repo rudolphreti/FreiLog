@@ -19,63 +19,16 @@ const isSeparator = (ch) => SEPARATORS.includes(ch);
 const COURSE_ICON_OPTIONS = [
   '🎨',
   '🎵',
-  '🎼',
-  '🎤',
   '🎭',
-  '🎬',
-  '🎹',
-  '🥁',
-  '🎷',
-  '🎺',
-  '🎻',
+  '⚽',
+  '🤸',
   '📚',
-  '📖',
-  '✏️',
-  '🖍️',
   '🧩',
   '🧪',
-  '🔬',
-  '🧮',
-  '🧵',
-  '🧶',
-  '🪡',
-  '🖌️',
-  '🧑‍🍳',
-  '🍳',
-  '🥪',
-  '🏃',
-  '🤸',
-  '⚽',
-  '🏀',
-  '🏈',
-  '🏐',
-  '🏓',
-  '🥋',
-  '🏊',
-  '🚴',
+  '🎯',
   '🧘',
-  '🧗',
-  '🎯',
-  '🎲',
-  '♟️',
-  '🧠',
-  '💡',
-  '🤖',
-  '💻',
-  '⌨️',
-  '🧑‍🔬',
-  '🌍',
-  '🧭',
-  '🌱',
-  '🪴',
-  '🧑‍🌾',
-  '🎯',
-  '🧸',
-  '🚸',
-  '🎈',
-  '🪁',
-  '🏕️',
-  '🧳',
+  '🎤',
+  '🧵',
 ];
 
 const normalizeNameInput = (value) => {
@@ -1136,7 +1089,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         className: 'form-control form-control-sm',
         attrs: {
           type: 'text',
-          placeholder: 'Icon auswählen',
+          placeholder: 'Emoji auswählen',
           list: `${iconInputId}-list`,
           'aria-label': 'Kurs-Icon',
         },
@@ -1155,7 +1108,18 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         ),
       });
 
-      const iconPicker = createEl('div', {
+      const pickerToggle = createEl('button', {
+        className: 'btn btn-outline-secondary btn-sm align-self-start',
+        attrs: { type: 'button', 'aria-expanded': 'false' },
+        text: 'Emoji-Picker öffnen',
+      });
+      const pickerPanel = createEl('div', {
+        className: 'course-emoji-picker-panel d-none',
+      });
+      const emojiPicker = createEl('unicode-emoji-picker', {
+        className: 'course-emoji-picker',
+      });
+      const fallbackPicker = createEl('div', {
         className: 'd-flex flex-wrap gap-1',
         children: COURSE_ICON_OPTIONS.map((icon) => {
           const button = createEl('button', {
@@ -1170,6 +1134,47 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           });
           return button;
         }),
+      });
+      pickerPanel.append(emojiPicker, fallbackPicker);
+
+      const extractEmoji = (event) => {
+        if (!event) {
+          return '';
+        }
+        const detail = event.detail || {};
+        if (typeof detail === 'string') {
+          return detail;
+        }
+        return (
+          detail.emoji ||
+          detail.unicode ||
+          detail.char ||
+          detail.symbol ||
+          detail.value ||
+          event.target?.value ||
+          ''
+        );
+      };
+
+      const handleEmojiPick = (event) => {
+        const emoji = extractEmoji(event);
+        if (!emoji) {
+          return;
+        }
+        coursesState[index] = { ...course, icon: emoji };
+        persistCourses();
+        renderCourses();
+      };
+
+      emojiPicker.addEventListener('emoji-click', handleEmojiPick);
+      emojiPicker.addEventListener('emoji-selected', handleEmojiPick);
+      emojiPicker.addEventListener('change', handleEmojiPick);
+
+      pickerToggle.addEventListener('click', () => {
+        const isOpen = !pickerPanel.classList.contains('d-none');
+        pickerPanel.classList.toggle('d-none', isOpen);
+        pickerToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+        pickerToggle.textContent = isOpen ? 'Emoji-Picker öffnen' : 'Emoji-Picker schließen';
       });
 
       const daySelect = createEl('select', {
@@ -1250,7 +1255,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             label: 'Icon',
             control: createEl('div', {
               className: 'd-flex flex-column gap-2',
-              children: [iconInput, iconDatalist, iconPicker],
+              children: [iconInput, iconDatalist, pickerToggle, pickerPanel],
             }),
           }),
           createFormGroup({

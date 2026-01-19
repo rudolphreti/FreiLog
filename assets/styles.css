@@ -2038,3 +2038,18 @@ body.observation-overlay-open {
 .entlassung-panel .entlassung-slot .badge {
   font-weight: 500;
 }
+
+.course-emoji-picker-panel {
+  max-height: 260px;
+  overflow: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 0.5rem;
+  background: #fff;
+}
+
+.course-emoji-picker {
+  display: block;
+  width: 100%;
+  min-height: 260px;
+}
