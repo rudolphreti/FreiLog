@@ -227,6 +227,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let deleteChildConfirmationLabel = '';
   let entlassungState = normalizeEntlassung({}, []);
   let coursesState = normalizeCourses([], []);
+  let emojiPickerReady = false;
+  let emojiPickerPromise = null;
   const entlassungRegularErrors = {};
   const entlassungSpecialErrors = {};
 
@@ -1046,6 +1048,22 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     coursesList.replaceChildren();
     emptyCourses.classList.toggle('d-none', coursesState.length > 0);
 
+    if (!emojiPickerReady && window.customElements?.get('unicode-emoji-picker')) {
+      emojiPickerReady = true;
+    }
+    if (!emojiPickerReady && window.customElements?.whenDefined && !emojiPickerPromise) {
+      emojiPickerPromise = window.customElements
+        .whenDefined('unicode-emoji-picker')
+        .then(() => {
+          emojiPickerReady = true;
+          emojiPickerPromise = null;
+          renderCourses();
+        })
+        .catch(() => {
+          emojiPickerPromise = null;
+        });
+    }
+
     coursesState.forEach((course, index) => {
       const nameValue = typeof course?.name === 'string' ? course.name : '';
       const iconValue = typeof course?.icon === 'string' ? course.icon : '';
@@ -1119,6 +1137,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       const emojiPicker = createEl('unicode-emoji-picker', {
         className: 'course-emoji-picker',
       });
+      if (!emojiPickerReady) {
+        emojiPicker.classList.add('d-none');
+      }
+      const emojiPickerHint = createEl('div', {
+        className: `text-muted small${emojiPickerReady ? ' d-none' : ''}`,
+        text: 'Emoji-Picker lädt…',
+      });
       const fallbackPicker = createEl('div', {
         className: 'd-flex flex-wrap gap-1',
         children: COURSE_ICON_OPTIONS.map((icon) => {
@@ -1135,7 +1160,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
           return button;
         }),
       });
-      pickerPanel.append(emojiPicker, fallbackPicker);
+      pickerPanel.append(emojiPicker, emojiPickerHint, fallbackPicker);
 
       const extractEmoji = (event) => {
         if (!event) {
