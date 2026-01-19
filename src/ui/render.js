@@ -35,6 +35,7 @@ import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
 import { bindDummyDataLoader } from '../features/dummyData.js';
 import { createTimetableSettingsView } from '../features/timetableSettings.js';
+import { createGeldsammlungenView } from '../features/geldsammlungen.js';
 import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
@@ -174,6 +175,7 @@ let observationCatalogBinding = null;
 let observationCatalogCreateOverlay = null;
 let observationCatalogEditOverlay = null;
 let observationDeleteConfirmView = null;
+let geldsammlungenView = null;
 
 const closeDrawer = () => {
   const closeButton = drawerShell?.refs?.closeButton;
@@ -249,6 +251,7 @@ export const renderApp = (root, state) => {
   const timetableLessons = db.timetableLessons || [];
   const timetableSchedule = db.timetableSchedule || {};
   const timetableSubjectColors = db.timetableSubjectColors || {};
+  const geldsammlungen = db.geldsammlungen || [];
   const savedAngebotFilters = state?.ui?.overlay?.savedAngebotFilters;
   const savedObsFilters = state?.ui?.overlay?.savedObsFilters;
   const weeklyDays = db.days || {};
@@ -437,6 +440,18 @@ export const renderApp = (root, state) => {
     });
   }
 
+  if (!geldsammlungenView) {
+    geldsammlungenView = createGeldsammlungenView({
+      geldsammlungen,
+      children: sortedChildren,
+    });
+  } else {
+    geldsammlungenView.update({
+      geldsammlungen,
+      children: sortedChildren,
+    });
+  }
+
   if (!drawerShell) {
     drawerShell = buildDrawerShell();
   }
@@ -472,6 +487,7 @@ export const renderApp = (root, state) => {
       classSettingsView.element,
       freeDaysSettingsView.element,
       timetableSettingsView.element,
+      geldsammlungenView.element,
       angebotOverlayView.element,
       angebotCatalogView.element,
       angebotManageOverlayView.element,
@@ -528,6 +544,12 @@ export const renderApp = (root, state) => {
       settingsActions.timetableButton.addEventListener('click', () => {
         closeDrawer();
         timetableSettingsView.open();
+      });
+    }
+    if (geldsammlungenView && settingsActions?.geldsammlungenButton) {
+      settingsActions.geldsammlungenButton.addEventListener('click', () => {
+        closeDrawer();
+        geldsammlungenView.open();
       });
     }
     angebotBinding = bindAngebot({
@@ -721,6 +743,12 @@ export const renderApp = (root, state) => {
     settingsActions.timetableButton.addEventListener('click', () => {
       closeDrawer();
       timetableSettingsView.open();
+    });
+  }
+  if (geldsammlungenView && settingsActions?.geldsammlungenButton) {
+    settingsActions.geldsammlungenButton.addEventListener('click', () => {
+      closeDrawer();
+      geldsammlungenView.open();
     });
   }
 

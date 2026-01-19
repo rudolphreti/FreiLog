@@ -209,12 +209,16 @@ export const buildDrawerContent = ({
   const observationCatalogButton = actionButton('Beobachtungen...', '👀', {
     'data-role': 'observation-catalog-settings',
   });
+  const geldsammlungenButton = actionButton(`${UI_LABELS.geldsammlungen}...`, '💶', {
+    'data-role': 'geldsammlungen-settings',
+  });
   settingsContent.append(
     observationCatalogButton,
     angebotManageButton,
     classButton,
     freeDaysButton,
     timetableButton,
+    geldsammlungenButton,
   );
 
   const buildSection = (title, contentNode) => {
@@ -251,6 +255,7 @@ export const buildDrawerContent = ({
         freeDaysButton,
         timetableButton,
         observationCatalogButton,
+        geldsammlungenButton,
       },
       sections: {
         actions: null,

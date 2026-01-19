@@ -34,8 +34,9 @@ import {
   normalizeModuleAssignments,
   normalizeAngebotListForModules,
 } from '../utils/angebotModules.js';
+import { normalizeGeldsammlungen } from '../utils/geldsammlungen.js';
 
-export const SCHEMA_VERSION = 9;
+export const SCHEMA_VERSION = 10;
 
 const createEmptyEntlassung = () => ({
   regular: {
@@ -885,6 +886,7 @@ export const createEmptyAppData = () => ({
   ),
   timetableLessons: cloneTimetableLessons(DEFAULT_TIMETABLE_LESSONS),
   timetableSchedule: cloneTimetableSchedule(DEFAULT_TIMETABLE_SCHEDULE),
+  geldsammlungen: [],
   days: {},
   angebotStats: {},
   observationStats: {},
@@ -968,6 +970,12 @@ export const normalizeAppData = (source, fallback = {}) => {
     base.observationGroups,
     fallbackData.observationGroups,
   );
+  const geldsammlungen = normalizeGeldsammlungen(
+    Array.isArray(base.geldsammlungen)
+      ? base.geldsammlungen
+      : fallbackData.geldsammlungen,
+    children,
+  );
 
   const exportMode =
     typeof base.settings?.exportMode === 'string'
@@ -1005,6 +1013,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     timetableSubjectColors,
     timetableLessons,
     timetableSchedule,
+    geldsammlungen,
     days,
     angebotStats: buildAngebotStats(days),
     observationStats: buildObservationStats(days),

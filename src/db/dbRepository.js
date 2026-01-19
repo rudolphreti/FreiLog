@@ -39,6 +39,7 @@ import {
   normalizeAngebotListForModules,
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
+import { normalizeGeldsammlungen } from '../utils/geldsammlungen.js';
 
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
@@ -682,6 +683,11 @@ export const getFreeDays = () => {
   return Array.isArray(data?.freeDays) ? data.freeDays : [];
 };
 
+export const getGeldsammlungen = () => {
+  const data = getState().db?.geldsammlungen;
+  return Array.isArray(data) ? data : [];
+};
+
 export const saveFreeDays = (rows = []) => {
   const normalized = normalizeFreeDays(rows);
   updateAppData((data) => {
@@ -689,6 +695,13 @@ export const saveFreeDays = (rows = []) => {
       data.settings = {};
     }
     data.settings.freeDays = normalized;
+  });
+};
+
+export const saveGeldsammlungen = (rows = []) => {
+  updateAppData((data) => {
+    const childrenList = Array.isArray(data.children) ? data.children : [];
+    data.geldsammlungen = normalizeGeldsammlungen(rows, childrenList);
   });
 };
 

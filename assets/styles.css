@@ -1184,6 +1184,69 @@ body.child-detail-overlay-open {
   -webkit-overflow-scrolling: touch;
 }
 
+.geldsammlungen-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1060;
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.geldsammlungen-overlay.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.geldsammlungen-overlay__panel {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fb;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.geldsammlungen-overlay__header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: calc(1rem + env(safe-area-inset-top)) 1.25rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.geldsammlungen-overlay__content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.25rem;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom));
+  -webkit-overflow-scrolling: touch;
+}
+
+.geldsammlungen-overlay-open {
+  overflow: hidden;
+}
+
+.geldsammlung-child-button {
+  gap: 0.35rem;
+}
+
+.geldsammlung-child-button .badge {
+  font-weight: 500;
+}
+
 .timetable-select {
   min-width: 180px;
 }

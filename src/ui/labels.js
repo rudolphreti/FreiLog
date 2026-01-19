@@ -10,4 +10,5 @@ export const UI_LABELS = {
   classSettings: 'Meine Klasse',
   freeDays: 'Freie Tage',
   timetable: 'Stundenplan',
+  geldsammlungen: 'Geldsammlungen',
 };
