@@ -1362,6 +1362,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
   };
 
+  let pendingCoursesState = null;
+
+  const applyCoursesState = (nextCoursesState) => {
+    coursesState = nextCoursesState;
+    renderCourses();
+  };
+
   const renderCourses = () => {
     const previousScrollTop = content.scrollTop;
     const childrenList = getAvailableChildren();
@@ -1403,6 +1410,17 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
     content.scrollTop = previousScrollTop;
   };
+
+  coursesList.addEventListener('focusout', (event) => {
+    if (!pendingCoursesState) {
+      return;
+    }
+    if (coursesList.contains(event.relatedTarget)) {
+      return;
+    }
+    applyCoursesState(pendingCoursesState);
+    pendingCoursesState = null;
+  });
 
   const renderEntlassung = () => {
     const previousScrollTop = content.scrollTop;
@@ -2132,11 +2150,18 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
     syncRows(nextProfile, nextChildren);
-    coursesState = normalizeCourses(nextProfile.courses, getAvailableChildren()).map((course) => ({
-      ...course,
-      id: createCourseId(),
-    }));
-    renderCourses();
+    const nextCoursesState = normalizeCourses(nextProfile.courses, getAvailableChildren()).map(
+      (course) => ({
+        ...course,
+        id: createCourseId(),
+      }),
+    );
+    if (coursesList.contains(document.activeElement)) {
+      pendingCoursesState = nextCoursesState;
+    } else {
+      applyCoursesState(nextCoursesState);
+      pendingCoursesState = null;
+    }
     entlassungState = normalizeEntlassung(nextProfile.entlassung, getAvailableChildren());
     renderEntlassung();
   };

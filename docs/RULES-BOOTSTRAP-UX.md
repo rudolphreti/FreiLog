@@ -12,3 +12,4 @@ CUD behavior:
   - refresh the page,
   - cause visual flicker or layout jumps.
 - CUD must be handled smoothly with local state updates and targeted DOM changes only.
+- Never re-render or replace focused inputs while the user types; preserve focus to avoid hiding the mobile keyboard.
