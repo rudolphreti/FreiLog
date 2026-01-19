@@ -1306,6 +1306,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
     courseCardRefs.set(course.id, {
       element: card,
+      emojiPicker,
+      emojiPickerHint,
     });
 
     return card;
@@ -1361,6 +1363,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   };
 
   const renderCourses = () => {
+    const previousScrollTop = content.scrollTop;
     const childrenList = getAvailableChildren();
     coursesState = normalizeCourses(coursesState, childrenList).map((course) => ({
       ...course,
@@ -1379,7 +1382,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         .then(() => {
           emojiPickerReady = true;
           emojiPickerPromise = null;
-          renderCourses();
+          courseCardRefs.forEach(({ emojiPicker, emojiPickerHint }) => {
+            emojiPicker?.classList.remove('d-none');
+            emojiPickerHint?.classList.add('d-none');
+          });
         })
         .catch(() => {
           emojiPickerPromise = null;
@@ -1389,6 +1395,13 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     coursesState.forEach((course) => {
       coursesList.append(buildCourseCard(course, childrenList));
     });
+    if (emojiPickerReady) {
+      courseCardRefs.forEach(({ emojiPicker, emojiPickerHint }) => {
+        emojiPicker?.classList.remove('d-none');
+        emojiPickerHint?.classList.add('d-none');
+      });
+    }
+    content.scrollTop = previousScrollTop;
   };
 
   const renderEntlassung = () => {
