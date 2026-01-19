@@ -19,16 +19,63 @@ const isSeparator = (ch) => SEPARATORS.includes(ch);
 const COURSE_ICON_OPTIONS = [
   '🎨',
   '🎵',
-  '⚽',
-  '🤸',
-  '📚',
-  '🧩',
-  '🎭',
-  '🎯',
-  '🧪',
-  '🧵',
+  '🎼',
   '🎤',
+  '🎭',
+  '🎬',
+  '🎹',
+  '🥁',
+  '🎷',
+  '🎺',
+  '🎻',
+  '📚',
+  '📖',
+  '✏️',
+  '🖍️',
+  '🧩',
+  '🧪',
+  '🔬',
+  '🧮',
+  '🧵',
+  '🧶',
+  '🪡',
+  '🖌️',
+  '🧑‍🍳',
+  '🍳',
+  '🥪',
+  '🏃',
+  '🤸',
+  '⚽',
+  '🏀',
+  '🏈',
+  '🏐',
+  '🏓',
+  '🥋',
+  '🏊',
+  '🚴',
   '🧘',
+  '🧗',
+  '🎯',
+  '🎲',
+  '♟️',
+  '🧠',
+  '💡',
+  '🤖',
+  '💻',
+  '⌨️',
+  '🧑‍🔬',
+  '🌍',
+  '🧭',
+  '🌱',
+  '🪴',
+  '🧑‍🌾',
+  '🎯',
+  '🧸',
+  '🚸',
+  '🎈',
+  '🪁',
+  '🏕️',
+  '🧳',
 ];
 
 const normalizeNameInput = (value) => {
@@ -1084,21 +1131,45 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         renderCourses();
       });
 
-      const iconSelect = createEl('select', {
-        className: 'form-select form-select-sm',
-        attrs: { 'aria-label': 'Kurs-Icon' },
+      const iconInputId = `course-icon-${index}`;
+      const iconInput = createEl('input', {
+        className: 'form-control form-control-sm',
+        attrs: {
+          type: 'text',
+          placeholder: 'Icon auswählen',
+          list: `${iconInputId}-list`,
+          'aria-label': 'Kurs-Icon',
+        },
       });
-      iconSelect.append(
-        createEl('option', { attrs: { value: '' }, text: 'Icon auswählen' }),
-        ...COURSE_ICON_OPTIONS.map((icon) =>
-          createEl('option', { attrs: { value: icon }, text: icon }),
-        ),
-      );
-      iconSelect.value = COURSE_ICON_OPTIONS.includes(iconValue) ? iconValue : '';
-      iconSelect.addEventListener('change', (event) => {
-        coursesState[index] = { ...course, icon: event.target.value };
+      iconInput.value = iconValue;
+      iconInput.addEventListener('change', (event) => {
+        coursesState[index] = { ...course, icon: event.target.value.trim() };
         persistCourses();
         renderCourses();
+      });
+
+      const iconDatalist = createEl('datalist', {
+        attrs: { id: `${iconInputId}-list` },
+        children: COURSE_ICON_OPTIONS.map((icon) =>
+          createEl('option', { attrs: { value: icon } }),
+        ),
+      });
+
+      const iconPicker = createEl('div', {
+        className: 'd-flex flex-wrap gap-1',
+        children: COURSE_ICON_OPTIONS.map((icon) => {
+          const button = createEl('button', {
+            className: 'btn btn-outline-secondary btn-sm',
+            attrs: { type: 'button', 'aria-label': `Icon ${icon}` },
+            text: icon,
+          });
+          button.addEventListener('click', () => {
+            coursesState[index] = { ...course, icon };
+            persistCourses();
+            renderCourses();
+          });
+          return button;
+        }),
       });
 
       const daySelect = createEl('select', {
@@ -1175,9 +1246,12 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
             control: nameInput,
           }),
           createFormGroup({
-            id: `course-icon-${index}`,
+            id: iconInputId,
             label: 'Icon',
-            control: iconSelect,
+            control: createEl('div', {
+              className: 'd-flex flex-column gap-2',
+              children: [iconInput, iconDatalist, iconPicker],
+            }),
           }),
           createFormGroup({
             id: `course-day-${index}`,
