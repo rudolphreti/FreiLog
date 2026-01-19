@@ -1048,12 +1048,12 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     coursesList.replaceChildren();
     emptyCourses.classList.toggle('d-none', coursesState.length > 0);
 
-    if (!emojiPickerReady && window.customElements?.get('unicode-emoji-picker')) {
+    if (!emojiPickerReady && window.customElements?.get('emoji-picker')) {
       emojiPickerReady = true;
     }
     if (!emojiPickerReady && window.customElements?.whenDefined && !emojiPickerPromise) {
       emojiPickerPromise = window.customElements
-        .whenDefined('unicode-emoji-picker')
+        .whenDefined('emoji-picker')
         .then(() => {
           emojiPickerReady = true;
           emojiPickerPromise = null;
@@ -1134,7 +1134,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       const pickerPanel = createEl('div', {
         className: 'course-emoji-picker-panel d-none',
       });
-      const emojiPicker = createEl('unicode-emoji-picker', {
+      const emojiPicker = createEl('emoji-picker', {
         className: 'course-emoji-picker',
       });
       if (!emojiPickerReady) {
