@@ -1,5 +1,10 @@
-import { saveClassChildren, saveClassEntlassung, saveClassProfileFields } from '../db/dbRepository.js';
-import { normalizeChildName, normalizeEntlassung } from '../db/dbSchema.js';
+import {
+  saveClassChildren,
+  saveClassCourses,
+  saveClassEntlassung,
+  saveClassProfileFields,
+} from '../db/dbRepository.js';
+import { normalizeChildName, normalizeCourses, normalizeEntlassung } from '../db/dbSchema.js';
 import { createEl } from '../ui/dom.js';
 import { UI_LABELS } from '../ui/labels.js';
 import { todayYmd } from '../utils/date.js';
@@ -10,6 +15,21 @@ const SEPARATORS = [' ', '-', '\u2010', "'", '’', 'ʼ', '.'];
 const isLatinLetter = (ch) => /\p{Letter}/u.test(ch) && /\p{Script=Latin}/u.test(ch);
 const isCombiningMark = (ch) => /\p{M}/u.test(ch);
 const isSeparator = (ch) => SEPARATORS.includes(ch);
+
+const COURSE_ICON_OPTIONS = [
+  '🎨',
+  '🎵',
+  '⚽',
+  '🤸',
+  '📚',
+  '🧩',
+  '🎭',
+  '🎯',
+  '🧪',
+  '🧵',
+  '🎤',
+  '🧘',
+];
 
 const normalizeNameInput = (value) => {
   if (typeof value !== 'string') {
@@ -206,6 +226,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let deleteChildConfirmationTarget = '';
   let deleteChildConfirmationLabel = '';
   let entlassungState = normalizeEntlassung({}, []);
+  let coursesState = normalizeCourses([], []);
   const entlassungRegularErrors = {};
   const entlassungSpecialErrors = {};
 
@@ -350,6 +371,42 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     id: 'class-children',
     title: 'Kinderliste',
     content: childrenContent,
+    accordionId,
+  });
+
+  const addCourseButton = createEl('button', {
+    className: 'btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2',
+    attrs: { type: 'button' },
+    children: [
+      createEl('span', { text: '＋' }),
+      createEl('span', { text: 'Neuen Kurs hinzufügen' }),
+    ],
+  });
+  const coursesHeader = createEl('div', {
+    className: 'd-flex justify-content-between align-items-center gap-2',
+    children: [createEl('h4', { className: 'h6 mb-0 text-muted', text: 'Kurse' }), addCourseButton],
+  });
+  const coursesList = createEl('div', {
+    className: 'd-flex flex-column gap-3',
+    dataset: { role: 'course-list' },
+  });
+  const emptyCourses = createEl('div', {
+    className: 'text-muted small ps-1',
+    dataset: { role: 'course-empty' },
+    text: 'Noch keine Kurse angelegt.',
+  });
+  const courseHint = createEl('div', {
+    className: 'text-muted small',
+    text: 'Kurse erscheinen später in der Entlassung beim jeweiligen Kind.',
+  });
+  const coursesContent = createEl('div', {
+    className: 'd-flex flex-column gap-3',
+    children: [coursesHeader, coursesList, emptyCourses, courseHint],
+  });
+  const coursesItem = buildAccordionItem({
+    id: 'class-courses',
+    title: 'Kurse',
+    content: coursesContent,
     accordionId,
   });
 
@@ -706,6 +763,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   accordion.append(
     generalItem.element,
     childrenItem.element,
+    coursesItem.element,
     entlassungItem.element,
     cautionItem.element,
   );
@@ -929,6 +987,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     saveClassEntlassung(entlassungState);
   }, 200);
 
+  const persistCourses = debounce(() => {
+    saveClassCourses(coursesState);
+  }, 200);
+
   const setRegularError = (dayKey, message) => {
     if (!message) {
       delete entlassungRegularErrors[dayKey];
@@ -975,6 +1037,180 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         return -1;
       }
       return timeA.localeCompare(timeB);
+    });
+  };
+
+  const renderCourses = () => {
+    const childrenList = getAvailableChildren();
+    coursesState = normalizeCourses(coursesState, childrenList);
+    coursesList.replaceChildren();
+    emptyCourses.classList.toggle('d-none', coursesState.length > 0);
+
+    coursesState.forEach((course, index) => {
+      const nameValue = typeof course?.name === 'string' ? course.name : '';
+      const iconValue = typeof course?.icon === 'string' ? course.icon : '';
+      const dayValue = typeof course?.day === 'string' ? course.day : '';
+      const timeValue = typeof course?.time === 'string' ? course.time : '';
+      const selectedChildren = Array.isArray(course?.children) ? course.children : [];
+      const isValidCourse = Boolean(nameValue && iconValue && dayValue);
+
+      const removeButton = createEl('button', {
+        className: 'btn btn-outline-danger btn-sm',
+        attrs: { type: 'button' },
+        text: 'Entfernen',
+      });
+      removeButton.addEventListener('click', () => {
+        coursesState.splice(index, 1);
+        persistCourses();
+        renderCourses();
+      });
+
+      const headerRow = createEl('div', {
+        className: 'd-flex justify-content-between align-items-center gap-2',
+        children: [
+          createEl('div', { className: 'fw-semibold', text: nameValue || 'Kurs' }),
+          removeButton,
+        ],
+      });
+
+      const nameInput = createEl('input', {
+        className: 'form-control form-control-sm',
+        attrs: { type: 'text', placeholder: 'z. B. Musik' },
+      });
+      nameInput.value = nameValue;
+      nameInput.addEventListener('change', (event) => {
+        coursesState[index] = { ...course, name: event.target.value };
+        persistCourses();
+        renderCourses();
+      });
+
+      const iconSelect = createEl('select', {
+        className: 'form-select form-select-sm',
+        attrs: { 'aria-label': 'Kurs-Icon' },
+      });
+      iconSelect.append(
+        createEl('option', { attrs: { value: '' }, text: 'Icon auswählen' }),
+        ...COURSE_ICON_OPTIONS.map((icon) =>
+          createEl('option', { attrs: { value: icon }, text: icon }),
+        ),
+      );
+      iconSelect.value = COURSE_ICON_OPTIONS.includes(iconValue) ? iconValue : '';
+      iconSelect.addEventListener('change', (event) => {
+        coursesState[index] = { ...course, icon: event.target.value };
+        persistCourses();
+        renderCourses();
+      });
+
+      const daySelect = createEl('select', {
+        className: 'form-select form-select-sm',
+        attrs: { 'aria-label': 'Wochentag' },
+      });
+      daySelect.append(
+        createEl('option', { attrs: { value: '' }, text: 'Wochentag auswählen' }),
+        ...TIMETABLE_DAY_ORDER.map(({ key, label }) =>
+          createEl('option', { attrs: { value: key }, text: label }),
+        ),
+      );
+      daySelect.value = dayValue;
+      daySelect.addEventListener('change', (event) => {
+        coursesState[index] = { ...course, day: event.target.value };
+        persistCourses();
+        renderCourses();
+      });
+
+      const timeInput = createEl('input', {
+        className: 'form-control form-control-sm',
+        attrs: { type: 'time', step: '300', 'aria-label': 'Kurszeit (optional)' },
+      });
+      timeInput.value = timeValue;
+      timeInput.addEventListener('change', (event) => {
+        coursesState[index] = { ...course, time: event.target.value };
+        persistCourses();
+        renderCourses();
+      });
+
+      const validationText = createEl('div', {
+        className: `text-danger small${isValidCourse ? ' d-none' : ''}`,
+        text: 'Bitte Name, Icon und Wochentag auswählen.',
+      });
+
+      const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+      if (childrenList.length) {
+        childrenList.forEach((child) => {
+          const isSelected = selectedChildren.includes(child);
+          const childButton = createEl('button', {
+            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
+            attrs: {
+              type: 'button',
+              'aria-pressed': isSelected ? 'true' : 'false',
+              disabled: isValidCourse ? null : 'true',
+            },
+            text: child,
+          });
+          childButton.addEventListener('click', () => {
+            const nextChildren = isSelected
+              ? selectedChildren.filter((name) => name !== child)
+              : [...selectedChildren, child];
+            coursesState[index] = { ...course, children: nextChildren };
+            persistCourses();
+            renderCourses();
+          });
+          childList.append(childButton);
+        });
+      } else {
+        childList.append(
+          createEl('span', {
+            className: 'text-muted small',
+            text: 'Noch keine Kinder hinzugefügt.',
+          }),
+        );
+      }
+
+      const fields = createEl('div', {
+        className: 'd-flex flex-column gap-2',
+        children: [
+          createFormGroup({
+            id: `course-name-${index}`,
+            label: 'Name',
+            control: nameInput,
+          }),
+          createFormGroup({
+            id: `course-icon-${index}`,
+            label: 'Icon',
+            control: iconSelect,
+          }),
+          createFormGroup({
+            id: `course-day-${index}`,
+            label: 'Wochentag',
+            control: daySelect,
+          }),
+          createFormGroup({
+            id: `course-time-${index}`,
+            label: 'Uhrzeit (optional)',
+            control: timeInput,
+          }),
+          validationText,
+          createEl('div', {
+            className: 'd-flex flex-column gap-2',
+            children: [
+              createEl('div', { className: 'text-muted small', text: 'Kinder' }),
+              childList,
+            ],
+          }),
+        ],
+      });
+
+      const card = createEl('div', {
+        className: 'card border-0 shadow-sm',
+        children: [
+          createEl('div', {
+            className: 'card-body d-flex flex-column gap-2',
+            children: [headerRow, fields],
+          }),
+        ],
+      });
+
+      coursesList.append(card);
     });
   };
 
@@ -1623,6 +1859,17 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   addRowButton.addEventListener('click', () => {
     openChildDetailOverlay();
   });
+  addCourseButton.addEventListener('click', () => {
+    coursesState.push({
+      name: '',
+      icon: '',
+      day: '',
+      time: '',
+      children: [],
+    });
+    persistCourses();
+    renderCourses();
+  });
 
   const open = () => {
     overlay.classList.add('is-open');
@@ -1692,6 +1939,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
     syncRows(nextProfile, nextChildren);
+    coursesState = normalizeCourses(nextProfile.courses, getAvailableChildren());
+    renderCourses();
     entlassungState = normalizeEntlassung(nextProfile.entlassung, getAvailableChildren());
     renderEntlassung();
   };

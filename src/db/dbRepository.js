@@ -1,6 +1,7 @@
 import {
   ensureUniqueSortedStrings,
   normalizeChildName,
+  normalizeCourses,
   normalizeEntlassung,
   normalizeAppData,
   sanitizeDaysByDate,
@@ -81,6 +82,7 @@ const createEmptyClassProfile = () => ({
   motto: '',
   notes: '',
   childrenNotes: {},
+  courses: [],
   entlassung: {
     regular: {
       monday: [],
@@ -114,6 +116,9 @@ const ensureClassProfileDraft = (data) => {
   }
   if (typeof data.classProfile.notes !== 'string') {
     data.classProfile.notes = '';
+  }
+  if (!Array.isArray(data.classProfile.courses)) {
+    data.classProfile.courses = [];
   }
   if (!data.classProfile.entlassung || typeof data.classProfile.entlassung !== 'object') {
     data.classProfile.entlassung = createEmptyClassProfile().entlassung;
@@ -597,6 +602,14 @@ export const saveClassEntlassung = (entlassung) => {
   });
 };
 
+export const saveClassCourses = (courses) => {
+  updateAppData((data) => {
+    ensureClassProfileDraft(data);
+    const childrenList = Array.isArray(data.children) ? data.children : [];
+    data.classProfile.courses = normalizeCourses(courses, childrenList);
+  });
+};
+
 export const saveClassChildren = (rows = []) => {
   const entries = Array.isArray(rows) ? rows : [];
   const renameMap = new Map();
@@ -645,11 +658,24 @@ export const saveClassChildren = (rows = []) => {
       });
     }
 
+    if (Array.isArray(data.classProfile.courses)) {
+      data.classProfile.courses = data.classProfile.courses.map((course) => {
+        if (!course || typeof course !== 'object') {
+          return course;
+        }
+        const nextChildren = Array.isArray(course.children)
+          ? course.children.map((child) => renameMap.get(child) || child)
+          : course.children;
+        return { ...course, children: nextChildren };
+      });
+    }
+
     data.children = normalizedChildren;
     data.classProfile.childrenNotes = {};
     normalizedChildren.forEach((child) => {
       data.classProfile.childrenNotes[child] = mergedNotes[child] || '';
     });
+    data.classProfile.courses = normalizeCourses(data.classProfile.courses, normalizedChildren);
   });
 };
 

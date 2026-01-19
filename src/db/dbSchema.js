@@ -36,7 +36,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeGeldsammlungen } from '../utils/geldsammlungen.js';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 const createEmptyEntlassung = () => ({
   regular: {
@@ -57,6 +57,7 @@ const DEFAULT_CLASS_PROFILE = {
   notes: '',
   childrenNotes: {},
   entlassung: createEmptyEntlassung(),
+  courses: [],
 };
 
 export const DEFAULT_SAVED_ANGEBOT_FILTERS = {
@@ -230,6 +231,52 @@ const normalizeEntlassungSlots = (value, allowedSet) => {
   return result;
 };
 
+export const normalizeCourses = (value, childrenList = [], fallbackCourses = []) => {
+  const source = Array.isArray(value)
+    ? value
+    : Array.isArray(fallbackCourses)
+      ? fallbackCourses
+      : [];
+  const allowedSet = Array.isArray(childrenList)
+    ? new Set(childrenList.map((child) => normalizeChildName(child)).filter(Boolean))
+    : null;
+  const allowedDays = new Set(TIMETABLE_DAY_ORDER.map(({ key }) => key));
+  const result = [];
+
+  source.forEach((entry) => {
+    if (!isPlainObject(entry)) {
+      return;
+    }
+    const name = typeof entry.name === 'string' ? entry.name.trim() : '';
+    const icon = typeof entry.icon === 'string' ? entry.icon.trim() : '';
+    const day = allowedDays.has(entry.day) ? entry.day : '';
+    const time = normalizeEntlassungTime(entry.time);
+    const children = [];
+    const childList = Array.isArray(entry.children) ? entry.children : [];
+    childList.forEach((child) => {
+      const normalizedChild = normalizeChildName(child);
+      if (!normalizedChild) {
+        return;
+      }
+      if (allowedSet && !allowedSet.has(normalizedChild)) {
+        return;
+      }
+      if (!children.includes(normalizedChild)) {
+        children.push(normalizedChild);
+      }
+    });
+    result.push({
+      name,
+      icon,
+      day,
+      time,
+      children,
+    });
+  });
+
+  return result;
+};
+
 export const normalizeEntlassung = (value, childrenList = [], fallbackEntlassung = null) => {
   const source = isPlainObject(value) ? value : {};
   const fallback = isPlainObject(fallbackEntlassung)
@@ -319,6 +366,7 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
     childrenList,
     baseProfile.entlassung,
   );
+  const courses = normalizeCourses(source.courses, childrenList, baseProfile.courses);
 
   return {
     teacherName,
@@ -328,6 +376,7 @@ const normalizeClassProfile = (value, childrenList = [], fallbackProfile = {}) =
     notes,
     childrenNotes: mergedNotes,
     entlassung,
+    courses,
   };
 };
 

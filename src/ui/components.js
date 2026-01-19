@@ -2500,6 +2500,7 @@ const buildEntlassungChildButton = ({
   isEntlassen,
   isAbsent,
   readOnly,
+  courseIcons = [],
 }) => {
   const statusBadge = isEntlassen
     ? createEl('span', {
@@ -2514,6 +2515,15 @@ const buildEntlassungChildButton = ({
         text: 'Abwesend',
       })
     : null;
+  const courseIconGroup =
+    Array.isArray(courseIcons) && courseIcons.length
+      ? createEl('span', {
+          className: 'entlassung-course-icons',
+          children: courseIcons.map((icon) =>
+            createEl('span', { className: 'entlassung-course-icon', text: icon }),
+          ),
+        })
+      : null;
   return createEl('button', {
     className:
       `btn btn-sm rounded-pill d-inline-flex align-items-center gap-2 entlassung-child-button ${
@@ -2532,13 +2542,14 @@ const buildEntlassungChildButton = ({
     },
     children: [
       createEl('span', { className: 'fw-semibold', text: child }),
+      courseIconGroup,
       statusBadge,
       absentBadge,
     ].filter(Boolean),
   });
 };
 
-const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly }) => {
+const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly, courseIconsByChild }) => {
   if (!slots.length) {
     return [];
   }
@@ -2552,12 +2563,15 @@ const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly }) => {
       children.forEach((child) => {
         const isAbsent = absentSet.has(child);
         const isEntlassen = statusSet.has(child) && !isAbsent;
+        const courseIcons =
+          courseIconsByChild instanceof Map ? courseIconsByChild.get(child) : null;
         childList.appendChild(
           buildEntlassungChildButton({
             child,
             isEntlassen,
             isAbsent,
             readOnly,
+            courseIcons,
           }),
         );
       });
@@ -2719,6 +2733,7 @@ export const buildEntlassungSection = ({
   slots,
   absentChildren,
   statusSet,
+  courseIconsByChild,
   readOnly = false,
   freeDayInfo = null,
 }) => {
@@ -2744,6 +2759,7 @@ export const buildEntlassungSection = ({
     nextSlots,
     nextAbsentChildren,
     nextStatusSet,
+    nextCourseIconsByChild,
     nextReadOnly = false,
     nextFreeDayInfo = null,
   }) => {
@@ -2751,6 +2767,8 @@ export const buildEntlassungSection = ({
     const safeSlots = Array.isArray(nextSlots) ? nextSlots : [];
     const absentSet = new Set(nextAbsentChildren || []);
     const status = nextStatusSet instanceof Set ? nextStatusSet : new Set();
+    const courseIcons =
+      nextCourseIconsByChild instanceof Map ? nextCourseIconsByChild : courseIconsByChild;
 
     const dayLabel = nextFreeDayInfo?.label || 'Schulfrei';
     if (nextReadOnly) {
@@ -2767,6 +2785,7 @@ export const buildEntlassungSection = ({
         absentSet,
         statusSet: status,
         readOnly: nextReadOnly,
+        courseIconsByChild: courseIcons,
       }),
     );
   };
@@ -2776,6 +2795,7 @@ export const buildEntlassungSection = ({
     nextSlots: slots,
     nextAbsentChildren: absentChildren,
     nextStatusSet: statusSet,
+    nextCourseIconsByChild: courseIconsByChild,
     nextReadOnly: readOnly,
     nextFreeDayInfo: freeDayInfo,
   });

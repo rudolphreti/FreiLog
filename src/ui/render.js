@@ -21,7 +21,7 @@ import {
   buildObservationEditOverlay,
 } from './components.js';
 import { UI_LABELS } from './labels.js';
-import { normalizeEntlassung } from '../db/dbSchema.js';
+import { normalizeCourses, normalizeEntlassung } from '../db/dbSchema.js';
 import { getTimetableDayKey } from '../utils/angebotModules.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
@@ -149,6 +149,32 @@ const getEntlassungForDate = (entlassung, selectedDate, children) => {
     label: 'Ordentliche Entlassung',
     slots,
   };
+};
+
+const getCourseIconsForDate = (courses, selectedDate, children) => {
+  const normalized = normalizeCourses(courses, children);
+  const dayKey = getTimetableDayKey(selectedDate);
+  if (!dayKey) {
+    return new Map();
+  }
+  const result = new Map();
+  normalized.forEach((course) => {
+    if (!course || course.day !== dayKey || !course.icon || !course.name) {
+      return;
+    }
+    const childList = Array.isArray(course.children) ? course.children : [];
+    childList.forEach((child) => {
+      if (!result.has(child)) {
+        result.set(child, new Set());
+      }
+      result.get(child).add(course.icon);
+    });
+  });
+  const output = new Map();
+  result.forEach((icons, child) => {
+    output.set(child, Array.from(icons));
+  });
+  return output;
 };
 
 let drawerShell = null;
@@ -295,6 +321,11 @@ export const renderApp = (root, state) => {
     sortedChildren,
   );
   const entlassungStatus = getEntlassungStatus(selectedDate);
+  const courseIconsByChild = getCourseIconsForDate(
+    classProfile?.courses,
+    selectedDate,
+    sortedChildren,
+  );
   const observationsSection = appShell?.observationsView
     ? appShell.observationsView
     : buildObservationsSection({
@@ -317,6 +348,7 @@ export const renderApp = (root, state) => {
         slots: entlassungInfo.slots,
         absentChildren,
         statusSet: entlassungStatus,
+        courseIconsByChild,
         readOnly: isReadOnlyDay,
         freeDayInfo,
       });
@@ -662,6 +694,7 @@ export const renderApp = (root, state) => {
       nextSlots: entlassungInfo.slots,
       nextAbsentChildren: absentChildren,
       nextStatusSet: entlassungStatus,
+      nextCourseIconsByChild: courseIconsByChild,
       nextReadOnly: isReadOnlyDay,
       nextFreeDayInfo: freeDayInfo,
     });

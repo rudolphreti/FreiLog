@@ -2025,6 +2025,16 @@ body.observation-overlay-open {
   gap: 0.35rem;
 }
 
+.entlassung-panel .entlassung-course-icons {
+  display: inline-flex;
+  gap: 0.2rem;
+}
+
+.entlassung-panel .entlassung-course-icon {
+  font-size: 0.95em;
+  line-height: 1;
+}
+
 .entlassung-panel .entlassung-slot .badge {
   font-weight: 500;
 }
