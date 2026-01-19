@@ -229,6 +229,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let coursesState = normalizeCourses([], []);
   let emojiPickerReady = false;
   let emojiPickerPromise = null;
+  let courseIdCounter = 0;
+  const courseCardRefs = new Map();
   const entlassungRegularErrors = {};
   const entlassungSpecialErrors = {};
 
@@ -990,8 +992,292 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   }, 200);
 
   const persistCourses = debounce(() => {
-    saveClassCourses(coursesState);
+    const normalized = coursesState.map(({ id, ...course }) => course);
+    saveClassCourses(normalized);
   }, 200);
+
+  const createCourseId = () => {
+    const id = `course-${courseIdCounter}`;
+    courseIdCounter += 1;
+    return id;
+  };
+
+  const buildCourseCard = (course, childrenList) => {
+    const nameValue = typeof course?.name === 'string' ? course.name : '';
+    const iconValue = typeof course?.icon === 'string' ? course.icon : '';
+    const dayValue = typeof course?.day === 'string' ? course.day : '';
+    const timeValue = typeof course?.time === 'string' ? course.time : '';
+    const selectedChildren = Array.isArray(course?.children) ? course.children : [];
+
+    const removeButton = createEl('button', {
+      className: 'btn btn-outline-danger btn-sm',
+      attrs: { type: 'button' },
+      text: 'Entfernen',
+    });
+
+    const headerTitle = createEl('div', { className: 'fw-semibold', text: nameValue || 'Kurs' });
+    const headerRow = createEl('div', {
+      className: 'd-flex justify-content-between align-items-center gap-2',
+      children: [headerTitle, removeButton],
+    });
+
+    const nameInput = createEl('input', {
+      className: 'form-control form-control-sm',
+      attrs: { type: 'text', placeholder: 'z. B. Musik' },
+    });
+    nameInput.value = nameValue;
+
+    const iconValueLabel = createEl('span', {
+      className: 'badge text-bg-light border text-secondary',
+      text: iconValue || '—',
+    });
+    const pickerToggle = createEl('button', {
+      className: 'btn btn-outline-secondary btn-sm align-self-start',
+      attrs: { type: 'button', 'aria-expanded': 'false' },
+      text: 'Icon auswählen…',
+    });
+    const pickerPanel = createEl('div', {
+      className: 'course-emoji-picker-panel d-none',
+    });
+    const emojiPicker = createEl('emoji-picker', {
+      className: 'course-emoji-picker',
+    });
+    if (!emojiPickerReady) {
+      emojiPicker.classList.add('d-none');
+    }
+    const emojiPickerHint = createEl('div', {
+      className: `text-muted small${emojiPickerReady ? ' d-none' : ''}`,
+      text: 'Emoji-Picker lädt…',
+    });
+    const fallbackPicker = createEl('div', {
+      className: 'd-flex flex-wrap gap-1',
+      children: COURSE_ICON_OPTIONS.map((icon) => {
+        const button = createEl('button', {
+          className: 'btn btn-outline-secondary btn-sm',
+          attrs: { type: 'button', 'aria-label': `Icon ${icon}` },
+          text: icon,
+        });
+        button.addEventListener('click', () => {
+          course.icon = icon;
+          iconValueLabel.textContent = icon;
+          updateValidity();
+          persistCourses();
+          closePicker();
+        });
+        return button;
+      }),
+    });
+    pickerPanel.append(emojiPicker, emojiPickerHint, fallbackPicker);
+
+    const daySelect = createEl('select', {
+      className: 'form-select form-select-sm',
+      attrs: { 'aria-label': 'Wochentag' },
+    });
+    daySelect.append(
+      createEl('option', { attrs: { value: '' }, text: 'Wochentag auswählen' }),
+      ...TIMETABLE_DAY_ORDER.map(({ key, label }) =>
+        createEl('option', { attrs: { value: key }, text: label }),
+      ),
+    );
+    daySelect.value = dayValue;
+
+    const timeInput = createEl('input', {
+      className: 'form-control form-control-sm',
+      attrs: { type: 'time', step: '300', 'aria-label': 'Kurszeit (optional)' },
+    });
+    timeInput.value = timeValue;
+
+    const validationText = createEl('div', {
+      className: 'text-danger small',
+      text: 'Bitte Name, Icon und Wochentag auswählen.',
+    });
+
+    const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
+    const childButtonRefs = new Map();
+
+    const updateChildButtons = (enabled) => {
+      childButtonRefs.forEach((button) => {
+        button.disabled = !enabled;
+      });
+    };
+
+    const updateValidity = () => {
+      const isValidCourse = Boolean(course.name && course.icon && course.day);
+      validationText.classList.toggle('d-none', isValidCourse);
+      updateChildButtons(isValidCourse);
+    };
+
+    const closePicker = () => {
+      pickerPanel.classList.add('d-none');
+      pickerToggle.setAttribute('aria-expanded', 'false');
+    };
+
+    const extractEmoji = (event) => {
+      if (!event) {
+        return '';
+      }
+      const detail = event.detail || {};
+      if (typeof detail === 'string') {
+        return detail;
+      }
+      return (
+        detail.emoji ||
+        detail.unicode ||
+        detail.char ||
+        detail.symbol ||
+        detail.value ||
+        event.target?.value ||
+        ''
+      );
+    };
+
+    const handleEmojiPick = (event) => {
+      const emoji = extractEmoji(event);
+      if (!emoji) {
+        return;
+      }
+      course.icon = emoji;
+      iconValueLabel.textContent = emoji;
+      updateValidity();
+      persistCourses();
+      closePicker();
+    };
+
+    emojiPicker.addEventListener('emoji-click', handleEmojiPick);
+    emojiPicker.addEventListener('emoji-selected', handleEmojiPick);
+    emojiPicker.addEventListener('change', handleEmojiPick);
+
+    pickerToggle.addEventListener('click', () => {
+      const isOpen = !pickerPanel.classList.contains('d-none');
+      pickerPanel.classList.toggle('d-none', isOpen);
+      pickerToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    });
+
+    nameInput.addEventListener('input', (event) => {
+      course.name = event.target.value;
+      headerTitle.textContent = course.name || 'Kurs';
+      updateValidity();
+      persistCourses();
+    });
+
+    daySelect.addEventListener('change', (event) => {
+      course.day = event.target.value;
+      updateValidity();
+      persistCourses();
+    });
+
+    timeInput.addEventListener('change', (event) => {
+      course.time = event.target.value;
+      persistCourses();
+    });
+
+    if (childrenList.length) {
+      childrenList.forEach((child) => {
+        const isSelected = selectedChildren.includes(child);
+        const childButton = createEl('button', {
+          className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
+          attrs: {
+            type: 'button',
+            'aria-pressed': isSelected ? 'true' : 'false',
+          },
+          text: child,
+        });
+        childButton.addEventListener('click', () => {
+          const currentSelection = Array.isArray(course.children) ? course.children : [];
+          const nextSelected = currentSelection.includes(child);
+          const nextChildren = nextSelected
+            ? currentSelection.filter((name) => name !== child)
+            : [...currentSelection, child];
+          course.children = nextChildren;
+          childButton.classList.toggle('btn-primary', !nextSelected);
+          childButton.classList.toggle('btn-outline-secondary', nextSelected);
+          childButton.setAttribute('aria-pressed', nextSelected ? 'false' : 'true');
+          persistCourses();
+        });
+        childButtonRefs.set(child, childButton);
+        childList.append(childButton);
+      });
+    } else {
+      childList.append(
+        createEl('span', {
+          className: 'text-muted small',
+          text: 'Noch keine Kinder hinzugefügt.',
+        }),
+      );
+    }
+
+    const fields = createEl('div', {
+      className: 'd-flex flex-column gap-2',
+      children: [
+        createFormGroup({
+          id: `course-name-${course.id}`,
+          label: 'Name',
+          control: nameInput,
+        }),
+        createFormGroup({
+          id: `course-icon-${course.id}`,
+          label: 'Icon',
+          control: createEl('div', {
+            className: 'd-flex flex-column gap-2',
+            children: [
+              createEl('div', {
+                className: 'd-flex align-items-center gap-2',
+                children: [iconValueLabel, pickerToggle],
+              }),
+              pickerPanel,
+            ],
+          }),
+        }),
+        createFormGroup({
+          id: `course-day-${course.id}`,
+          label: 'Wochentag',
+          control: daySelect,
+        }),
+        createFormGroup({
+          id: `course-time-${course.id}`,
+          label: 'Uhrzeit (optional)',
+          control: timeInput,
+        }),
+        validationText,
+        createEl('div', {
+          className: 'd-flex flex-column gap-2',
+          children: [
+            createEl('div', { className: 'text-muted small', text: 'Kinder' }),
+            childList,
+          ],
+        }),
+      ],
+    });
+
+    const card = createEl('div', {
+      className: 'card border-0 shadow-sm',
+      children: [
+        createEl('div', {
+          className: 'card-body d-flex flex-column gap-2',
+          children: [headerRow, fields],
+        }),
+      ],
+    });
+
+    removeButton.addEventListener('click', () => {
+      const index = coursesState.findIndex((entry) => entry.id === course.id);
+      if (index !== -1) {
+        coursesState.splice(index, 1);
+      }
+      card.remove();
+      courseCardRefs.delete(course.id);
+      emptyCourses.classList.toggle('d-none', coursesState.length > 0);
+      persistCourses();
+    });
+
+    updateValidity();
+
+    courseCardRefs.set(course.id, {
+      element: card,
+    });
+
+    return card;
+  };
 
   const setRegularError = (dayKey, message) => {
     if (!message) {
@@ -1044,8 +1330,12 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
 
   const renderCourses = () => {
     const childrenList = getAvailableChildren();
-    coursesState = normalizeCourses(coursesState, childrenList);
+    coursesState = normalizeCourses(coursesState, childrenList).map((course) => ({
+      ...course,
+      id: createCourseId(),
+    }));
     coursesList.replaceChildren();
+    courseCardRefs.clear();
     emptyCourses.classList.toggle('d-none', coursesState.length > 0);
 
     if (!emojiPickerReady && window.customElements?.get('emoji-picker')) {
@@ -1064,257 +1354,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
         });
     }
 
-    coursesState.forEach((course, index) => {
-      const nameValue = typeof course?.name === 'string' ? course.name : '';
-      const iconValue = typeof course?.icon === 'string' ? course.icon : '';
-      const dayValue = typeof course?.day === 'string' ? course.day : '';
-      const timeValue = typeof course?.time === 'string' ? course.time : '';
-      const selectedChildren = Array.isArray(course?.children) ? course.children : [];
-      const isValidCourse = Boolean(nameValue && iconValue && dayValue);
-
-      const removeButton = createEl('button', {
-        className: 'btn btn-outline-danger btn-sm',
-        attrs: { type: 'button' },
-        text: 'Entfernen',
-      });
-      removeButton.addEventListener('click', () => {
-        coursesState.splice(index, 1);
-        persistCourses();
-        renderCourses();
-      });
-
-      const headerRow = createEl('div', {
-        className: 'd-flex justify-content-between align-items-center gap-2',
-        children: [
-          createEl('div', { className: 'fw-semibold', text: nameValue || 'Kurs' }),
-          removeButton,
-        ],
-      });
-
-      const nameInput = createEl('input', {
-        className: 'form-control form-control-sm',
-        attrs: { type: 'text', placeholder: 'z. B. Musik' },
-      });
-      nameInput.value = nameValue;
-      nameInput.addEventListener('change', (event) => {
-        coursesState[index] = { ...course, name: event.target.value };
-        persistCourses();
-        renderCourses();
-      });
-
-      const iconInputId = `course-icon-${index}`;
-      const iconInput = createEl('input', {
-        className: 'form-control form-control-sm',
-        attrs: {
-          type: 'text',
-          placeholder: 'Emoji auswählen',
-          list: `${iconInputId}-list`,
-          'aria-label': 'Kurs-Icon',
-        },
-      });
-      iconInput.value = iconValue;
-      iconInput.addEventListener('change', (event) => {
-        coursesState[index] = { ...course, icon: event.target.value.trim() };
-        persistCourses();
-        renderCourses();
-      });
-
-      const iconDatalist = createEl('datalist', {
-        attrs: { id: `${iconInputId}-list` },
-        children: COURSE_ICON_OPTIONS.map((icon) =>
-          createEl('option', { attrs: { value: icon } }),
-        ),
-      });
-
-      const pickerToggle = createEl('button', {
-        className: 'btn btn-outline-secondary btn-sm align-self-start',
-        attrs: { type: 'button', 'aria-expanded': 'false' },
-        text: 'Emoji-Picker öffnen',
-      });
-      const pickerPanel = createEl('div', {
-        className: 'course-emoji-picker-panel d-none',
-      });
-      const emojiPicker = createEl('emoji-picker', {
-        className: 'course-emoji-picker',
-      });
-      if (!emojiPickerReady) {
-        emojiPicker.classList.add('d-none');
-      }
-      const emojiPickerHint = createEl('div', {
-        className: `text-muted small${emojiPickerReady ? ' d-none' : ''}`,
-        text: 'Emoji-Picker lädt…',
-      });
-      const fallbackPicker = createEl('div', {
-        className: 'd-flex flex-wrap gap-1',
-        children: COURSE_ICON_OPTIONS.map((icon) => {
-          const button = createEl('button', {
-            className: 'btn btn-outline-secondary btn-sm',
-            attrs: { type: 'button', 'aria-label': `Icon ${icon}` },
-            text: icon,
-          });
-          button.addEventListener('click', () => {
-            coursesState[index] = { ...course, icon };
-            persistCourses();
-            renderCourses();
-          });
-          return button;
-        }),
-      });
-      pickerPanel.append(emojiPicker, emojiPickerHint, fallbackPicker);
-
-      const extractEmoji = (event) => {
-        if (!event) {
-          return '';
-        }
-        const detail = event.detail || {};
-        if (typeof detail === 'string') {
-          return detail;
-        }
-        return (
-          detail.emoji ||
-          detail.unicode ||
-          detail.char ||
-          detail.symbol ||
-          detail.value ||
-          event.target?.value ||
-          ''
-        );
-      };
-
-      const handleEmojiPick = (event) => {
-        const emoji = extractEmoji(event);
-        if (!emoji) {
-          return;
-        }
-        coursesState[index] = { ...course, icon: emoji };
-        persistCourses();
-        renderCourses();
-      };
-
-      emojiPicker.addEventListener('emoji-click', handleEmojiPick);
-      emojiPicker.addEventListener('emoji-selected', handleEmojiPick);
-      emojiPicker.addEventListener('change', handleEmojiPick);
-
-      pickerToggle.addEventListener('click', () => {
-        const isOpen = !pickerPanel.classList.contains('d-none');
-        pickerPanel.classList.toggle('d-none', isOpen);
-        pickerToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-        pickerToggle.textContent = isOpen ? 'Emoji-Picker öffnen' : 'Emoji-Picker schließen';
-      });
-
-      const daySelect = createEl('select', {
-        className: 'form-select form-select-sm',
-        attrs: { 'aria-label': 'Wochentag' },
-      });
-      daySelect.append(
-        createEl('option', { attrs: { value: '' }, text: 'Wochentag auswählen' }),
-        ...TIMETABLE_DAY_ORDER.map(({ key, label }) =>
-          createEl('option', { attrs: { value: key }, text: label }),
-        ),
-      );
-      daySelect.value = dayValue;
-      daySelect.addEventListener('change', (event) => {
-        coursesState[index] = { ...course, day: event.target.value };
-        persistCourses();
-        renderCourses();
-      });
-
-      const timeInput = createEl('input', {
-        className: 'form-control form-control-sm',
-        attrs: { type: 'time', step: '300', 'aria-label': 'Kurszeit (optional)' },
-      });
-      timeInput.value = timeValue;
-      timeInput.addEventListener('change', (event) => {
-        coursesState[index] = { ...course, time: event.target.value };
-        persistCourses();
-        renderCourses();
-      });
-
-      const validationText = createEl('div', {
-        className: `text-danger small${isValidCourse ? ' d-none' : ''}`,
-        text: 'Bitte Name, Icon und Wochentag auswählen.',
-      });
-
-      const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
-      if (childrenList.length) {
-        childrenList.forEach((child) => {
-          const isSelected = selectedChildren.includes(child);
-          const childButton = createEl('button', {
-            className: `btn btn-sm ${isSelected ? 'btn-primary' : 'btn-outline-secondary'}`,
-            attrs: {
-              type: 'button',
-              'aria-pressed': isSelected ? 'true' : 'false',
-              disabled: isValidCourse ? null : 'true',
-            },
-            text: child,
-          });
-          childButton.addEventListener('click', () => {
-            const nextChildren = isSelected
-              ? selectedChildren.filter((name) => name !== child)
-              : [...selectedChildren, child];
-            coursesState[index] = { ...course, children: nextChildren };
-            persistCourses();
-            renderCourses();
-          });
-          childList.append(childButton);
-        });
-      } else {
-        childList.append(
-          createEl('span', {
-            className: 'text-muted small',
-            text: 'Noch keine Kinder hinzugefügt.',
-          }),
-        );
-      }
-
-      const fields = createEl('div', {
-        className: 'd-flex flex-column gap-2',
-        children: [
-          createFormGroup({
-            id: `course-name-${index}`,
-            label: 'Name',
-            control: nameInput,
-          }),
-          createFormGroup({
-            id: iconInputId,
-            label: 'Icon',
-            control: createEl('div', {
-              className: 'd-flex flex-column gap-2',
-              children: [iconInput, iconDatalist, pickerToggle, pickerPanel],
-            }),
-          }),
-          createFormGroup({
-            id: `course-day-${index}`,
-            label: 'Wochentag',
-            control: daySelect,
-          }),
-          createFormGroup({
-            id: `course-time-${index}`,
-            label: 'Uhrzeit (optional)',
-            control: timeInput,
-          }),
-          validationText,
-          createEl('div', {
-            className: 'd-flex flex-column gap-2',
-            children: [
-              createEl('div', { className: 'text-muted small', text: 'Kinder' }),
-              childList,
-            ],
-          }),
-        ],
-      });
-
-      const card = createEl('div', {
-        className: 'card border-0 shadow-sm',
-        children: [
-          createEl('div', {
-            className: 'card-body d-flex flex-column gap-2',
-            children: [headerRow, fields],
-          }),
-        ],
-      });
-
-      coursesList.append(card);
+    coursesState.forEach((course) => {
+      coursesList.append(buildCourseCard(course, childrenList));
     });
   };
 
@@ -1964,15 +2005,18 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     openChildDetailOverlay();
   });
   addCourseButton.addEventListener('click', () => {
-    coursesState.push({
+    const newCourse = {
+      id: createCourseId(),
       name: '',
       icon: '',
       day: '',
       time: '',
       children: [],
-    });
+    };
+    coursesState.push(newCourse);
+    coursesList.append(buildCourseCard(newCourse, getAvailableChildren()));
+    emptyCourses.classList.toggle('d-none', coursesState.length > 0);
     persistCourses();
-    renderCourses();
   });
 
   const open = () => {
@@ -2043,7 +2087,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
     syncRows(nextProfile, nextChildren);
-    coursesState = normalizeCourses(nextProfile.courses, getAvailableChildren());
+    coursesState = normalizeCourses(nextProfile.courses, getAvailableChildren()).map((course) => ({
+      ...course,
+      id: createCourseId(),
+    }));
     renderCourses();
     entlassungState = normalizeEntlassung(nextProfile.entlassung, getAvailableChildren());
     renderEntlassung();
