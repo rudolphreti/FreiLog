@@ -1112,22 +1112,54 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       pickerToggle.setAttribute('aria-expanded', 'false');
     };
 
+    const toEmojiFromUnicode = (value) => {
+      if (typeof value === 'string' && value.trim()) {
+        const trimmed = value.trim().replace(/^U\+/i, '');
+        if (/^1f/i.test(trimmed) || /^[0-9a-f]+$/i.test(trimmed)) {
+          const codePoints = trimmed.split('-').map((part) => parseInt(part, 16));
+          if (codePoints.every((code) => Number.isFinite(code))) {
+            return String.fromCodePoint(...codePoints);
+          }
+        }
+        return trimmed;
+      }
+      if (Array.isArray(value) && value.length) {
+        const codePoints = value.map((part) =>
+          typeof part === 'number' ? part : parseInt(part, 16),
+        );
+        if (codePoints.every((code) => Number.isFinite(code))) {
+          return String.fromCodePoint(...codePoints);
+        }
+      }
+      return '';
+    };
+
     const extractEmoji = (event) => {
       if (!event) {
         return '';
       }
       const detail = event.detail || {};
-      if (typeof detail === 'string') {
-        return detail;
+      if (typeof detail === 'string' || Array.isArray(detail)) {
+        return toEmojiFromUnicode(detail);
       }
-      return (
-        detail.emoji ||
+      if (typeof detail.emoji === 'string') {
+        return detail.emoji;
+      }
+      if (detail.emoji && typeof detail.emoji === 'object') {
+        return (
+          detail.emoji.emoji ||
+          detail.emoji.native ||
+          toEmojiFromUnicode(detail.emoji.unicode) ||
+          ''
+        );
+      }
+      return toEmojiFromUnicode(
         detail.unicode ||
-        detail.char ||
-        detail.symbol ||
-        detail.value ||
-        event.target?.value ||
-        ''
+          detail.char ||
+          detail.symbol ||
+          detail.value ||
+          event.target?.value ||
+          '',
       );
     };
 
