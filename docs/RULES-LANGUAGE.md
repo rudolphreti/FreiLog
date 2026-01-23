@@ -10,6 +10,7 @@ Code (developer-facing):
 - Comments: English.
 - User-visible errors: German.
 - Developer logs: English ok, avoid noisy spam.
+- Branch names in English
 
 Internationalization rule:
 - No hard-coded German strings inside business logic.
