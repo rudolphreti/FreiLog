@@ -208,16 +208,34 @@ const replaceAngebotReferences = (days, fromKey, toText) => {
   }
 
   Object.values(days).forEach((entry) => {
-    if (!entry || !Array.isArray(entry.angebote)) {
+    if (!entry || typeof entry !== 'object') {
       return;
     }
-    const normalized = ensureUniqueSortedStrings(
-      entry.angebote
-        .map((item) => normalizeAngebotText(item))
-        .filter(Boolean)
-        .map((item) => (normalizeAngebotKey(item) === fromKey ? normalizedTarget : item)),
-    );
-    entry.angebote = normalized;
+    if (Array.isArray(entry.angebote)) {
+      const normalized = ensureUniqueSortedStrings(
+        entry.angebote
+          .map((item) => normalizeAngebotText(item))
+          .filter(Boolean)
+          .map((item) => (normalizeAngebotKey(item) === fromKey ? normalizedTarget : item)),
+      );
+      entry.angebote = normalized;
+    }
+    if (entry.angebotModules && typeof entry.angebotModules === 'object') {
+      Object.keys(entry.angebotModules).forEach((moduleId) => {
+        const list = entry.angebotModules[moduleId];
+        if (!Array.isArray(list)) {
+          return;
+        }
+        entry.angebotModules[moduleId] = ensureUniqueSortedStrings(
+          list
+            .map((item) => normalizeAngebotText(item))
+            .filter(Boolean)
+            .map((item) =>
+              normalizeAngebotKey(item) === fromKey ? normalizedTarget : item,
+            ),
+        );
+      });
+    }
   });
 };
 
