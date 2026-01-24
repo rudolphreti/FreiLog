@@ -984,7 +984,8 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
       regular[key] = Array.isArray(value?.regular?.[key]) ? value.regular[key] : [];
     });
     const special = Array.isArray(value?.special) ? value.special : [];
-    return { regular, special };
+    const ausnahmen = Array.isArray(value?.ausnahmen) ? value.ausnahmen : [];
+    return { regular, special, ausnahmen };
   };
 
   const persistEntlassung = debounce(() => {

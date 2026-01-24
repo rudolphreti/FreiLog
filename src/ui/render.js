@@ -35,6 +35,7 @@ import { bindObservationCatalog, bindObservations } from '../features/observatio
 import { bindImportExport } from '../features/importExport.js';
 import { bindDrawerSections } from '../features/drawerSections.js';
 import { bindEntlassungControl, getEntlassungStatus } from '../features/entlassungControl.js';
+import { bindEntlassungAusnahmen } from '../features/entlassungAusnahmen.js';
 import { createWeeklyTableView } from '../features/weeklyTable.js';
 import { createClassSettingsView } from '../features/classSettings.js';
 import { createFreeDaysSettingsView } from '../features/freeDaysSettings.js';
@@ -219,26 +220,166 @@ const sortEntlassungSlots = (slots) => {
   });
 };
 
+const TIME_STEP_MINUTES = 5;
+const MIN_SONDER_MINUTES = 8 * 60;
+const MAX_SONDER_MINUTES = 17 * 60 + 30;
+
+const timeToMinutes = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+  const match = value.trim().match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+  if (!match) {
+    return null;
+  }
+  const hours = Number.parseInt(match[1], 10);
+  const minutes = Number.parseInt(match[2], 10);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) {
+    return null;
+  }
+  return hours * 60 + minutes;
+};
+
+const minutesToTime = (totalMinutes) => {
+  if (!Number.isFinite(totalMinutes)) {
+    return '';
+  }
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${pad(hours)}:${pad(minutes)}`;
+};
+
+const generateTimeRange = (startMinutes, endMinutes, stepMinutes = TIME_STEP_MINUTES) => {
+  const result = [];
+  for (let minutes = startMinutes; minutes <= endMinutes; minutes += stepMinutes) {
+    result.push(minutesToTime(minutes));
+  }
+  return result;
+};
+
+const SONDER_TIME_OPTIONS = generateTimeRange(MIN_SONDER_MINUTES, MAX_SONDER_MINUTES);
+
+const cloneSlots = (slots) =>
+  (Array.isArray(slots) ? slots : []).map((slot) => ({
+    time: slot?.time || '',
+    children: Array.isArray(slot?.children) ? [...slot.children] : [],
+    ausnahmeChildren: Array.isArray(slot?.ausnahmeChildren) ? [...slot.ausnahmeChildren] : [],
+  }));
+
+const extractAllowedTimes = (slots) => {
+  const seen = new Set();
+  const result = [];
+  (Array.isArray(slots) ? slots : []).forEach((slot) => {
+    const time = typeof slot?.time === 'string' ? slot.time : '';
+    const minutes = timeToMinutes(time);
+    if (minutes === null || seen.has(time)) {
+      return;
+    }
+    seen.add(time);
+    result.push(time);
+  });
+  return result.sort((a, b) => {
+    const minutesA = timeToMinutes(a);
+    const minutesB = timeToMinutes(b);
+    if (minutesA === null && minutesB === null) {
+      return 0;
+    }
+    if (minutesA === null) {
+      return 1;
+    }
+    if (minutesB === null) {
+      return -1;
+    }
+    return minutesA - minutesB;
+  });
+};
+
+const applyAusnahmenToSlots = (baseSlots, ausnahmenForDate) => {
+  const slots = cloneSlots(baseSlots);
+  const slotsByTime = new Map();
+  slots.forEach((slot) => {
+    if (slot.time) {
+      slotsByTime.set(slot.time, slot);
+    }
+  });
+
+  const removeChildFromSlots = (child) => {
+    slots.forEach((slot) => {
+      if (!Array.isArray(slot.children)) {
+        slot.children = [];
+        return;
+      }
+      slot.children = slot.children.filter((name) => name !== child);
+      if (Array.isArray(slot.ausnahmeChildren)) {
+        slot.ausnahmeChildren = slot.ausnahmeChildren.filter((name) => name !== child);
+      }
+    });
+  };
+
+  (Array.isArray(ausnahmenForDate) ? ausnahmenForDate : []).forEach((ausnahme) => {
+    const child = ausnahme?.child;
+    const time = ausnahme?.time;
+    if (!child || !time) {
+      return;
+    }
+    removeChildFromSlots(child);
+    let slot = slotsByTime.get(time);
+    if (!slot) {
+      slot = { time, children: [], ausnahmeChildren: [] };
+      slots.push(slot);
+      slotsByTime.set(time, slot);
+    }
+    if (!slot.children.includes(child)) {
+      slot.children.push(child);
+    }
+    if (!slot.ausnahmeChildren.includes(child)) {
+      slot.ausnahmeChildren.push(child);
+    }
+  });
+
+  sortEntlassungSlots(slots);
+  return slots;
+};
+
 const getEntlassungForDate = (entlassung, selectedDate, children) => {
   const normalized = normalizeEntlassung(entlassung, children);
+  const ausnahmenForDate = normalized.ausnahmen.filter((entry) => entry?.date === selectedDate);
+  const sortedAusnahmen = [...ausnahmenForDate].sort((a, b) => {
+    const minutesA = timeToMinutes(a?.time) ?? Number.POSITIVE_INFINITY;
+    const minutesB = timeToMinutes(b?.time) ?? Number.POSITIVE_INFINITY;
+    if (minutesA !== minutesB) {
+      return minutesA - minutesB;
+    }
+    const childA = typeof a?.child === 'string' ? a.child : '';
+    const childB = typeof b?.child === 'string' ? b.child : '';
+    return childA.localeCompare(childB, 'de');
+  });
   const specialEntry = normalized.special.find((entry) => entry?.date === selectedDate);
   if (specialEntry) {
-    const slots = Array.isArray(specialEntry?.times) ? [...specialEntry.times] : [];
-    sortEntlassungSlots(slots);
+    const baseSlots = Array.isArray(specialEntry?.times) ? specialEntry.times : [];
+    const allowedTimes = extractAllowedTimes(baseSlots);
+    const slots = applyAusnahmenToSlots(baseSlots, sortedAusnahmen);
     return {
       label: 'Sonderentlassung',
       slots,
+      allowedTimes,
+      sonderTimes: SONDER_TIME_OPTIONS,
+      ausnahmenForDate: sortedAusnahmen,
     };
   }
 
   const dayKey = getTimetableDayKey(selectedDate);
-  const slots = dayKey && Array.isArray(normalized.regular?.[dayKey])
-    ? [...normalized.regular[dayKey]]
+  const baseSlots = dayKey && Array.isArray(normalized.regular?.[dayKey])
+    ? normalized.regular[dayKey]
     : [];
-  sortEntlassungSlots(slots);
+  const allowedTimes = extractAllowedTimes(baseSlots);
+  const slots = applyAusnahmenToSlots(baseSlots, sortedAusnahmen);
   return {
     label: 'Ordentliche Entlassung',
     slots,
+    allowedTimes,
+    sonderTimes: SONDER_TIME_OPTIONS,
+    ausnahmenForDate: sortedAusnahmen,
   };
 };
 
@@ -277,6 +418,7 @@ let freeDaysSettingsView = null;
 let angebotBinding = null;
 let timetableSettingsView = null;
 let entlassungBinding = null;
+let entlassungAusnahmenBinding = null;
 let angebotOverlayView = null;
 let angebotCatalogView = null;
 let angebotCatalogBinding = null;
@@ -444,6 +586,10 @@ export const renderApp = (root, state) => {
         absentChildren,
         statusSet: entlassungStatus,
         courseIconsByChild,
+        children: sortedChildren,
+        ausnahmenForDate: entlassungInfo.ausnahmenForDate,
+        allowedTimes: entlassungInfo.allowedTimes,
+        sonderTimes: entlassungInfo.sonderTimes,
         readOnly: isReadOnlyDay,
         freeDayInfo,
       });
@@ -748,6 +894,14 @@ export const renderApp = (root, state) => {
       container: entlassungSection.element,
       selectedDate,
     });
+    entlassungAusnahmenBinding = bindEntlassungAusnahmen({
+      container: entlassungSection.element,
+      entlassungView: entlassungSection,
+      selectedDate,
+      children: sortedChildren,
+      entlassungInfo,
+      readOnly: isReadOnlyDay,
+    });
 
     bindDrawerSections(drawerContentRefs?.sections);
 
@@ -805,6 +959,10 @@ export const renderApp = (root, state) => {
       nextAbsentChildren: absentChildren,
       nextStatusSet: entlassungStatus,
       nextCourseIconsByChild: courseIconsByChild,
+      nextChildren: sortedChildren,
+      nextAusnahmenForDate: entlassungInfo.ausnahmenForDate,
+      nextAllowedTimes: entlassungInfo.allowedTimes,
+      nextSonderTimes: entlassungInfo.sonderTimes,
       nextReadOnly: isReadOnlyDay,
       nextFreeDayInfo: freeDayInfo,
     });
@@ -818,6 +976,16 @@ export const renderApp = (root, state) => {
   }
   if (entlassungBinding?.updateDate) {
     entlassungBinding.updateDate(selectedDate);
+  }
+  if (entlassungAusnahmenBinding?.updateDate) {
+    entlassungAusnahmenBinding.updateDate(selectedDate);
+  }
+  if (entlassungAusnahmenBinding?.updateData) {
+    entlassungAusnahmenBinding.updateData({
+      children: sortedChildren,
+      entlassungInfo,
+      readOnly: isReadOnlyDay,
+    });
   }
 
   const actions = drawerContentRefs?.actions;

@@ -94,6 +94,7 @@ const createEmptyClassProfile = () => ({
       friday: [],
     },
     special: [],
+    ausnahmen: [],
   },
 });
 
@@ -124,6 +125,9 @@ const ensureClassProfileDraft = (data) => {
   }
   if (!data.classProfile.entlassung || typeof data.classProfile.entlassung !== 'object') {
     data.classProfile.entlassung = createEmptyClassProfile().entlassung;
+  }
+  if (!Array.isArray(data.classProfile.entlassung.ausnahmen)) {
+    data.classProfile.entlassung.ausnahmen = [];
   }
 };
 
