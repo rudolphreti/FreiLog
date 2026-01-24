@@ -46,6 +46,18 @@ body {
   justify-content: center;
   font-size: 1.1rem;
   line-height: 1;
+  background: #fff;
+  color: #0f172a;
+  border-color: #e2e8f0;
+}
+
+.header-date-nav-btn:hover,
+.header-date-nav-btn:focus-visible {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  box-shadow: none;
+  outline: none;
 }
 
 .header-actions {
