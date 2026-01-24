@@ -355,6 +355,8 @@ export const buildAngebotSection = ({
   angebote,
   selectedAngebote,
   angebotNote = '',
+  weekTheme = '',
+  weekThemeWeekLabel = '',
   newValue,
   readOnly = false,
   freizeitModules = [],
@@ -363,6 +365,29 @@ export const buildAngebotSection = ({
   const activeAngebote = Array.isArray(selectedAngebote) ? selectedAngebote : [];
   const safeModules = Array.isArray(freizeitModules) ? freizeitModules : [];
   const safeAssignments = angebotModules && typeof angebotModules === 'object' ? angebotModules : {};
+  const normalizedWeekTheme = typeof weekTheme === 'string' ? weekTheme.trim() : '';
+  const themeLabel = createEl('p', {
+    className: 'angebot-week-theme__label text-muted small mb-1',
+    text: UI_LABELS.themaDerWoche,
+  });
+  const themeValue = createEl('p', {
+    className: 'angebot-week-theme__value mb-0',
+    text: normalizedWeekTheme || 'Kein Thema der Woche festgelegt.',
+  });
+  if (!normalizedWeekTheme) {
+    themeValue.classList.add('text-muted');
+  }
+  const weekMeta =
+    typeof weekThemeWeekLabel === 'string' && weekThemeWeekLabel.trim()
+      ? createEl('p', {
+          className: 'angebot-week-theme__meta text-muted small mb-0',
+          text: weekThemeWeekLabel.trim(),
+        })
+      : null;
+  const weekThemeContent = createEl('div', {
+    className: 'angebot-week-theme',
+    children: weekMeta ? [themeLabel, themeValue, weekMeta] : [themeLabel, themeValue],
+  });
 
   const openButton = createEl('button', {
     className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2',
@@ -434,7 +459,7 @@ export const buildAngebotSection = ({
 
   const content = createEl('div', {
     className: 'd-flex flex-column gap-3',
-    children: [openButton, infoTitle, modulesContainer],
+    children: [weekThemeContent, openButton, infoTitle, modulesContainer],
   });
 
   if (readOnly) {

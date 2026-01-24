@@ -21,7 +21,12 @@ import {
   buildObservationEditOverlay,
 } from './components.js';
 import { UI_LABELS } from './labels.js';
-import { normalizeCourses, normalizeEntlassung } from '../db/dbSchema.js';
+import {
+  normalizeCourses,
+  normalizeEntlassung,
+  normalizeWeekThemeAssignments,
+} from '../db/dbSchema.js';
+import { formatDisplayDate, getSchoolWeeks } from '../utils/schoolWeeks.js';
 import { getTimetableDayKey } from '../utils/angebotModules.js';
 import { bindDateEntry } from '../features/dateEntry.js';
 import { bindAngebot } from '../features/angebot.js';
@@ -40,6 +45,92 @@ import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+
+const pad = (value) => String(value).padStart(2, '0');
+
+const toUtcDate = (ymd) => {
+  if (typeof ymd !== 'string') {
+    return null;
+  }
+  const parts = ymd.split('-').map(Number);
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return null;
+  }
+  const [year, month, day] = parts;
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const formatYmd = (date) => {
+  if (!(date instanceof Date)) {
+    return '';
+  }
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  return `${year}-${month}-${day}`;
+};
+
+const addUtcDays = (date, days) => {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const parseWeekStartFromId = (weekId) => {
+  if (typeof weekId !== 'string') {
+    return '';
+  }
+  const match = weekId.trim().match(/(\d{4}-\d{2}-\d{2})$/);
+  return match ? match[1] : '';
+};
+
+const getWeekThemeDateKeys = (weekThemes) => {
+  const assignments = normalizeWeekThemeAssignments(weekThemes);
+  const keys = [];
+  Object.keys(assignments).forEach((weekId) => {
+    const startYmd = parseWeekStartFromId(weekId);
+    const startDate = toUtcDate(startYmd);
+    if (!startDate) {
+      return;
+    }
+    for (let offset = 0; offset < 5; offset += 1) {
+      keys.push(formatYmd(addUtcDays(startDate, offset)));
+    }
+  });
+  return keys;
+};
+
+const buildDaysIndex = (dateKeys, days) =>
+  dateKeys.reduce((acc, key) => {
+    acc[key] = days?.[key] || {};
+    return acc;
+  }, {});
+
+const resolveWeekThemeForDate = (selectedDate, days, weekThemes) => {
+  const assignments = normalizeWeekThemeAssignments(weekThemes);
+  const dateKeys = new Set([
+    ...Object.keys(days || {}),
+    ...getWeekThemeDateKeys(assignments),
+  ]);
+  if (!dateKeys.size) {
+    return { theme: '', weekLabel: '' };
+  }
+  const schoolYears = getSchoolWeeks(buildDaysIndex([...dateKeys], days));
+  const matchingWeek = schoolYears
+    .flatMap((year) => year.weeks || [])
+    .find((week) => week.startYmd <= selectedDate && week.endYmd >= selectedDate);
+  if (!matchingWeek) {
+    return { theme: '', weekLabel: '' };
+  }
+  const theme = assignments[matchingWeek.id] || '';
+  const weekLabel = `${matchingWeek.label} · ${formatDisplayDate(matchingWeek.startYmd)} – ${formatDisplayDate(
+    matchingWeek.endYmd,
+  )}`;
+  return {
+    theme,
+    weekLabel: theme ? weekLabel : '',
+  };
+};
 
 const createFallbackEntry = (date) => ({
   date,
@@ -306,6 +397,7 @@ export const renderApp = (root, state) => {
     entry.angebotModules,
     selectedAngebote,
   );
+  const weekThemeInfo = resolveWeekThemeForDate(selectedDate, weeklyDays, weekThemes);
   const angebotSection = buildAngebotSection({
     angebote: angebotePresets,
     selectedAngebote,
@@ -314,6 +406,8 @@ export const renderApp = (root, state) => {
     freizeitModules,
     angebotModules,
     angebotNote,
+    weekTheme: weekThemeInfo.theme,
+    weekThemeWeekLabel: weekThemeInfo.weekLabel,
   });
   angebotOpenButtonRef = angebotSection.refs.openButton || null;
   const entlassungInfo = getEntlassungForDate(
@@ -423,6 +517,7 @@ export const renderApp = (root, state) => {
       timetableSchedule,
       timetableLessons,
       classProfile,
+      weekThemes,
     });
   } else {
     weeklyTableViewBinding.update({
@@ -436,6 +531,7 @@ export const renderApp = (root, state) => {
       timetableSchedule,
       timetableLessons,
       classProfile,
+      weekThemes,
     });
   }
 
