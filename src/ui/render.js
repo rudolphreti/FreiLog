@@ -633,7 +633,11 @@ export const renderApp = (root, state) => {
     );
     root.appendChild(container);
 
-    bindDateEntry(header.refs.dateInput);
+    bindDateEntry({
+      input: header.refs.dateInput,
+      prevButton: header.refs.prevDateButton,
+      nextButton: header.refs.nextDateButton,
+    });
     const actions = drawerContentRefs?.actions;
     bindImportExport({
       exportButton: header.refs.exportButton,
@@ -770,7 +774,11 @@ export const renderApp = (root, state) => {
 
   appShell.headerEl.replaceWith(header.element);
   appShell.headerEl = header.element;
-  bindDateEntry(header.refs.dateInput);
+  bindDateEntry({
+    input: header.refs.dateInput,
+    prevButton: header.refs.prevDateButton,
+    nextButton: header.refs.nextDateButton,
+  });
 
   if (appShell.mainTabsView?.refs?.angebotPane) {
     appShell.mainTabsView.refs.angebotPane.replaceChildren(angebotSection.element);

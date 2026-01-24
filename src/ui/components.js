@@ -50,13 +50,23 @@ export const buildHeader = ({
       'aria-controls': 'mainDrawer',
     },
   });
+  const prevDateButton = createEl('button', {
+    className: 'btn btn-outline-primary header-date-nav-btn',
+    attrs: { type: 'button', 'aria-label': 'Poprzedni dzień' },
+    children: [createEl('span', { text: '«' })],
+  });
   const dateInput = createEl('input', {
-    className: 'form-control',
+    className: 'form-control header-date-input',
     attrs: { type: 'date', value: selectedDate || todayYmd(), 'aria-label': 'Datum' },
+  });
+  const nextDateButton = createEl('button', {
+    className: 'btn btn-outline-primary header-date-nav-btn',
+    attrs: { type: 'button', 'aria-label': 'Następny dzień' },
+    children: [createEl('span', { text: '»' })],
   });
   const dateGroup = createEl('div', {
     className: 'd-flex flex-wrap align-items-center gap-2 header-date',
-    children: [dateInput],
+    children: [prevDateButton, dateInput, nextDateButton],
   });
   if (freeDayInfo) {
     const label = freeDayInfo.label || 'Schulfrei';
@@ -114,6 +124,8 @@ export const buildHeader = ({
     element: header,
     refs: {
       dateInput,
+      prevDateButton,
+      nextDateButton,
       menuButton,
       exportButton: showExport ? exportButton : null,
       importButton: showInitialActions ? importButton : null,

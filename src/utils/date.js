@@ -3,12 +3,15 @@
 // must be provided by the backend to avoid issues with incorrect client system time.
 const pad = (value) => String(value).padStart(2, '0');
 
-export const todayYmd = () => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = pad(now.getMonth() + 1);
-  const day = pad(now.getDate());
+const formatDate = (date) => {
+  const year = date.getFullYear();
+  const month = pad(date.getMonth() + 1);
+  const day = pad(date.getDate());
   return `${year}-${month}-${day}`;
+};
+
+export const todayYmd = () => {
+  return formatDate(new Date());
 };
 
 export const isValidYmd = (value) => {
@@ -35,4 +38,12 @@ export const ensureYmd = (value, fallback) => {
   }
 
   return todayYmd();
+};
+
+export const addDaysYmd = (value, offset, fallback) => {
+  const base = ensureYmd(value, fallback);
+  const [year, month, day] = base.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
+  date.setDate(date.getDate() + Number(offset || 0));
+  return formatDate(date);
 };
