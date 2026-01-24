@@ -11,6 +11,7 @@ import {
 import { buildObservationTemplatesOverlay } from '../ui/components.js';
 import { debounce } from '../utils/debounce.js';
 import { normalizeObservationGroups } from '../utils/observationCatalog.js';
+import { normalizeObservationNoteList } from '../utils/observationNotes.js';
 import { setSavedObservationFilters } from '../state/store.js';
 import { formatDisplayDate } from '../utils/schoolWeeks.js';
 import { focusTextInput } from '../utils/focus.js';
@@ -104,17 +105,23 @@ const isHtmlElement = (value) => value instanceof HTMLElement;
 const isInputElement = (value) => value instanceof HTMLInputElement;
 const isTextAreaElement = (value) => value instanceof HTMLTextAreaElement;
 const isFormElement = (value) => value instanceof HTMLFormElement;
+const isButtonElement = (value) => value instanceof HTMLButtonElement;
 const getCardChild = (card) => card?.dataset?.child || null;
 const getDetailChild = (element) => element?.closest('[data-child]')?.dataset?.child || null;
-const syncNoteInputState = (panel) => {
+const syncNoteInputState = (panel, { readOnly = false } = {}) => {
   if (!panel) {
     return;
   }
-  const noteInput = panel.querySelector('[data-role="observation-note-input"]');
-  if (!isTextAreaElement(noteInput)) {
-    return;
+  const disabled = panel.dataset.absent === 'true' || readOnly;
+  panel.querySelectorAll('[data-role="observation-note-input"]').forEach((noteInput) => {
+    if (isTextAreaElement(noteInput)) {
+      noteInput.disabled = disabled;
+    }
+  });
+  const addButton = panel.querySelector('[data-role="observation-note-add"]');
+  if (isButtonElement(addButton)) {
+    addButton.disabled = disabled;
   }
-  noteInput.disabled = panel.dataset.absent === 'true';
 };
 
 export const getInitialLetters = (children) => {
@@ -751,9 +758,14 @@ export const bindObservations = ({
   let isEditOverlayOpen = false;
   let isMultiTemplateOpen = false;
   let isAssignOverlayOpen = false;
+  let isAssignNoteOverlayOpen = false;
   let isReadOnly = Boolean(readOnly);
   let editingObservation = null;
   let activeMultiObservation = null;
+  let assignNoteDraft = '';
+  const activeAssignNoteChildren = new Set();
+  let assignNoteAssignableSet = new Set();
+  const notePersistDebouncers = new Map();
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
   }, 200);
@@ -762,20 +774,117 @@ export const bindObservations = ({
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
   const noteEditTimers = new Map();
-  const markNoteEditing = (panel) => {
+  const markNoteEditing = (panel, index = null) => {
     if (!panel) {
       return;
     }
     panel.dataset.noteEditing = 'true';
+    if (Number.isFinite(index) && index >= 0) {
+      panel.dataset.noteEditingIndex = String(index);
+    }
     const existing = noteEditTimers.get(panel);
     if (existing) {
       window.clearTimeout(existing);
     }
     const timeoutId = window.setTimeout(() => {
       delete panel.dataset.noteEditing;
+      delete panel.dataset.noteEditingIndex;
       noteEditTimers.delete(panel);
     }, 1500);
     noteEditTimers.set(panel, timeoutId);
+  };
+  const reindexNoteInputs = (panel) => {
+    if (!panel) {
+      return [];
+    }
+    const inputs = Array.from(
+      panel.querySelectorAll('[data-role="observation-note-input"]'),
+    ).filter(isTextAreaElement);
+    inputs.forEach((input, index) => {
+      input.dataset.noteIndex = String(index);
+      input.setAttribute('aria-label', `Notiz ${index + 1}`);
+    });
+    return inputs;
+  };
+  const noteListsEqual = (left, right) => {
+    const a = normalizeObservationNoteList(left);
+    const b = normalizeObservationNoteList(right);
+    if (a.length !== b.length) {
+      return false;
+    }
+    return a.every((value, index) => value === b[index]);
+  };
+  const getObservationNotesForChild = (entry, child) =>
+    normalizeObservationNoteList(entry?.observationNotes?.[child]);
+  const getNotesFromPanel = (panel) => {
+    const inputs = reindexNoteInputs(panel);
+    const values = inputs.map((input) => input.value);
+    return normalizeObservationNoteList(values);
+  };
+  const persistObservationNotes = (child, panel) => {
+    if (!child || !panel || isReadOnly || panel.dataset.absent === 'true') {
+      return;
+    }
+    const entry = getEntry(getDate());
+    const currentValue = getObservationNotesForChild(entry, child);
+    const nextValue = getNotesFromPanel(panel);
+    if (noteListsEqual(currentValue, nextValue)) {
+      return;
+    }
+    updateEntry(getDate(), {
+      observationNotes: {
+        [child]: {
+          items: nextValue,
+          replace: true,
+        },
+      },
+    });
+  };
+  const getNotePersistDebouncer = (child) => {
+    const existing = notePersistDebouncers.get(child);
+    if (existing) {
+      return existing;
+    }
+    const debounced = debounce((panel) => {
+      persistObservationNotes(child, panel);
+    }, 250);
+    notePersistDebouncers.set(child, debounced);
+    return debounced;
+  };
+  const schedulePersistNotes = (child, panel) => {
+    if (!child || !panel) {
+      return;
+    }
+    getNotePersistDebouncer(child)(panel);
+  };
+  const appendNoteField = (panel) => {
+    if (!panel || isReadOnly || panel.dataset.absent === 'true') {
+      return null;
+    }
+    const noteList = panel.querySelector('[data-role="observation-note-list"]');
+    if (!noteList) {
+      return null;
+    }
+    const noteItem = document.createElement('div');
+    noteItem.className = 'observation-note-item d-flex flex-column gap-1';
+    const noteInput = document.createElement('textarea');
+    noteInput.className = 'form-control observation-note-input';
+    noteInput.rows = 3;
+    noteInput.placeholder = 'Notiz';
+    noteInput.dataset.role = 'observation-note-input';
+    noteItem.appendChild(noteInput);
+    noteList.appendChild(noteItem);
+    const inputs = reindexNoteInputs(panel);
+    const newIndex = Math.max(inputs.indexOf(noteInput), 0);
+    noteInput.disabled = panel.dataset.absent === 'true' || isReadOnly;
+    markNoteEditing(panel, newIndex);
+    requestAnimationFrame(() => {
+      if (!noteInput.disabled) {
+        noteInput.focus();
+        noteInput.click();
+      }
+    });
+    return noteInput;
   };
   const handleExternalOpen = (event) => {
     const child = event?.detail?.child;
@@ -800,55 +909,25 @@ export const bindObservations = ({
       const panel = overlayContent.querySelector(
         `[data-child="${safeChildSelector}"]`,
       );
-      const noteInput = panel?.querySelector('[data-role="observation-note-input"]');
-      if (isTextAreaElement(noteInput)) {
-        noteInput.disabled = panel?.dataset?.absent === 'true';
-        noteInput.removeAttribute('readonly');
-        markNoteEditing(panel);
-        requestAnimationFrame(() => {
-          if (!noteInput.disabled) {
-            noteInput.focus();
-            noteInput.click();
-          }
-        });
+      if (!panel) {
+        return;
       }
+      syncNoteInputState(panel, { readOnly: isReadOnly });
+      const noteInputs = reindexNoteInputs(panel);
+      const noteInput = noteInputs[0];
+      if (!isTextAreaElement(noteInput)) {
+        return;
+      }
+      noteInput.removeAttribute('readonly');
+      markNoteEditing(panel, Number(noteInput.dataset.noteIndex) || 0);
+      requestAnimationFrame(() => {
+        if (!noteInput.disabled) {
+          noteInput.focus();
+          noteInput.click();
+        }
+      });
     };
     attemptOpen();
-  };
-  const persistObservationNoteValue = (child, value) => {
-    if (!child || isReadOnly) {
-      return;
-    }
-    const entry = getEntry(getDate());
-    const currentValue =
-      entry?.observationNotes && typeof entry.observationNotes[child] === 'string'
-        ? entry.observationNotes[child]
-        : '';
-    if (currentValue === value) {
-      return;
-    }
-    updateEntry(getDate(), {
-      observationNotes: {
-        [child]: value,
-      },
-    });
-  };
-  const persistObservationNote = (panel) => {
-    if (!panel) {
-      return;
-    }
-    if (panel.dataset.absent === 'true') {
-      return;
-    }
-    const noteInput = panel.querySelector('[data-role="observation-note-input"]');
-    if (!isTextAreaElement(noteInput)) {
-      return;
-    }
-    const child = getDetailChild(panel);
-    if (!child) {
-      return;
-    }
-    persistObservationNoteValue(child, noteInput.value);
   };
   const getDetailPanel = (child) => {
     if (!child) {
@@ -864,7 +943,11 @@ export const bindObservations = ({
     if (!activeChild) {
       return;
     }
-    persistObservationNote(getDetailPanel(activeChild));
+    const panel = getDetailPanel(activeChild);
+    if (!panel) {
+      return;
+    }
+    persistObservationNotes(activeChild, panel);
   };
 
   if (templatesOverlay) {
@@ -905,7 +988,8 @@ export const bindObservations = ({
       isCreateOverlayOpen ||
       isEditOverlayOpen ||
       isMultiTemplateOpen ||
-      isAssignOverlayOpen;
+      isAssignOverlayOpen ||
+      isAssignNoteOverlayOpen;
     document.body.classList.toggle('observation-overlay-open', shouldBeOpen);
   };
 
@@ -919,6 +1003,184 @@ export const bindObservations = ({
     if (isHtmlElement(label)) {
       label.textContent = value ? `Beobachtung: ${value}` : '';
     }
+  };
+
+  const assignNoteOverlayEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-overlay"]',
+  );
+  const assignNoteListEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-list"]',
+  );
+  const assignNoteInputEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-input"]',
+  );
+  const assignNoteSaveButtonEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-save"]',
+  );
+  const assignNoteOpenButtonEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-open"]',
+  );
+
+  const getAssignChildEntries = () => {
+    const childButtons = list.querySelectorAll('[data-role="observation-child"]');
+    const entries = [];
+    childButtons.forEach((button) => {
+      const child = button.dataset.child;
+      if (!child) {
+        return;
+      }
+      entries.push({
+        child,
+        isAbsent: button.dataset.absent === 'true',
+      });
+    });
+    return entries;
+  };
+
+  const syncAssignNoteSelection = (entries) => {
+    const assignable = entries
+      .filter(({ isAbsent }) => !isAbsent)
+      .map(({ child }) => child);
+    const assignableSet = new Set(assignable);
+    assignNoteAssignableSet = assignableSet;
+    activeAssignNoteChildren.forEach((child) => {
+      if (!assignableSet.has(child)) {
+        activeAssignNoteChildren.delete(child);
+      }
+    });
+    if (!activeAssignNoteChildren.size && assignable.length) {
+      assignable.forEach((child) => activeAssignNoteChildren.add(child));
+    }
+    return assignableSet;
+  };
+
+  const updateAssignNoteButtonState = (button, isSelected) => {
+    button.classList.toggle('is-selected', isSelected);
+    button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+  };
+
+  const buildAssignNoteButton = ({ child, isAbsent }) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className =
+      'btn btn-outline-primary observation-assign-pill observation-assign-note-pill';
+    button.textContent = child;
+    button.dataset.role = 'observation-assign-note-child';
+    button.dataset.child = child;
+    button.dataset.absent = isAbsent ? 'true' : 'false';
+    const isSelected = activeAssignNoteChildren.has(child) && !isAbsent;
+    updateAssignNoteButtonState(button, isSelected);
+    if (isAbsent) {
+      button.classList.add('is-absent');
+    }
+    button.disabled = isReadOnly || isAbsent;
+    return button;
+  };
+
+  const updateAssignNoteSaveState = () => {
+    const hasDraft = assignNoteDraft.trim().length > 0;
+    const hasSelection = Array.from(activeAssignNoteChildren).some((child) =>
+      assignNoteAssignableSet.has(child),
+    );
+    const shouldDisable = isReadOnly || !hasDraft || !hasSelection;
+    if (isButtonElement(assignNoteSaveButtonEl)) {
+      assignNoteSaveButtonEl.disabled = shouldDisable;
+    }
+    if (isButtonElement(assignNoteOpenButtonEl)) {
+      assignNoteOpenButtonEl.disabled = isReadOnly || assignNoteAssignableSet.size === 0;
+    }
+    if (isTextAreaElement(assignNoteInputEl)) {
+      assignNoteInputEl.disabled = isReadOnly || assignNoteAssignableSet.size === 0;
+    }
+  };
+
+  const rebuildAssignNoteList = () => {
+    if (!assignOverlay || !assignNoteListEl) {
+      return;
+    }
+    const entries = getAssignChildEntries();
+    syncAssignNoteSelection(entries);
+    if (isTextAreaElement(assignNoteInputEl) && assignNoteInputEl.value !== assignNoteDraft) {
+      assignNoteInputEl.value = assignNoteDraft;
+    }
+    const nextButtons = entries.map((entry) => buildAssignNoteButton(entry));
+    assignNoteListEl.replaceChildren(...nextButtons);
+    updateAssignNoteSaveState();
+  };
+
+  const refreshAssignNoteButtons = () => {
+    if (!assignOverlay || !isAssignOverlayOpen) {
+      return;
+    }
+    rebuildAssignNoteList();
+    assignNoteListEl
+      ?.querySelectorAll('[data-role="observation-assign-note-child"]')
+      .forEach((button) => {
+        const child = button.dataset.child;
+        const isAbsent = button.dataset.absent === 'true';
+        const isSelected = Boolean(child) && activeAssignNoteChildren.has(child) && !isAbsent;
+        updateAssignNoteButtonState(button, isSelected);
+        button.disabled = isReadOnly || isAbsent;
+      });
+    updateAssignNoteSaveState();
+  };
+
+  const openAssignNoteOverlay = () => {
+    if (
+      isReadOnly ||
+      !assignOverlay ||
+      !assignNoteOverlayEl ||
+      !isAssignOverlayOpen
+    ) {
+      return;
+    }
+    rebuildAssignNoteList();
+    isAssignNoteOverlayOpen = true;
+    assignNoteOverlayEl.classList.add('is-open');
+    assignNoteOverlayEl.setAttribute('aria-hidden', 'false');
+    updateBodyOverlayClass();
+    if (isTextAreaElement(assignNoteInputEl) && !assignNoteInputEl.disabled) {
+      requestAnimationFrame(() => {
+        assignNoteInputEl.focus();
+      });
+    }
+  };
+
+  const closeAssignNoteOverlay = ({ clearDraft = false, force = false } = {}) => {
+    if (!assignNoteOverlayEl) {
+      return;
+    }
+    if (!isAssignNoteOverlayOpen && !force) {
+      if (clearDraft) {
+        assignNoteDraft = '';
+        if (isTextAreaElement(assignNoteInputEl)) {
+          assignNoteInputEl.value = '';
+        }
+        updateAssignNoteSaveState();
+      }
+      return;
+    }
+    isAssignNoteOverlayOpen = false;
+    assignNoteOverlayEl.classList.remove('is-open');
+    assignNoteOverlayEl.setAttribute('aria-hidden', 'true');
+    if (clearDraft) {
+      assignNoteDraft = '';
+      if (isTextAreaElement(assignNoteInputEl)) {
+        assignNoteInputEl.value = '';
+      }
+    }
+    updateAssignNoteSaveState();
+    updateBodyOverlayClass();
+  };
+
+  const resetAssignNoteState = () => {
+    activeAssignNoteChildren.clear();
+    assignNoteAssignableSet = new Set();
+    assignNoteDraft = '';
+    if (isTextAreaElement(assignNoteInputEl)) {
+      assignNoteInputEl.value = '';
+    }
+    closeAssignNoteOverlay({ force: true });
   };
 
   const buildAssignButton = ({ child, isAbsent }) => {
@@ -947,17 +1209,10 @@ export const bindObservations = ({
     if (!assignList) {
       return;
     }
-    const childButtons = list.querySelectorAll('[data-role="observation-child"]');
-    const nextButtons = [];
-    childButtons.forEach((button) => {
-      const child = button.dataset.child;
-      if (!child) {
-        return;
-      }
-      const isAbsent = button.dataset.absent === 'true';
-      nextButtons.push(buildAssignButton({ child, isAbsent }));
-    });
+    const entries = getAssignChildEntries();
+    const nextButtons = entries.map((entry) => buildAssignButton(entry));
     assignList.replaceChildren(...nextButtons);
+    rebuildAssignNoteList();
   };
 
   const hasObservationForChild = (dateValue, child, observationKey) => {
@@ -1003,6 +1258,7 @@ export const bindObservations = ({
         updateAssignButtonState(button, isAssigned);
         button.disabled = isReadOnly || isAbsent;
       });
+    refreshAssignNoteButtons();
   };
 
   const setOverlayState = (child) => {
@@ -1018,7 +1274,7 @@ export const bindObservations = ({
     });
     setOverlayTitle(activePanel ? child : '');
     overlayContent.scrollTop = 0;
-    syncNoteInputState(activePanel);
+    syncNoteInputState(activePanel, { readOnly: isReadOnly });
     return activePanel;
   };
 
@@ -1138,6 +1394,7 @@ export const bindObservations = ({
     if (isReadOnly || !assignOverlay || !observation) {
       return;
     }
+    resetAssignNoteState();
     activeMultiObservation = observation;
     rebuildAssignList();
     setAssignObservationLabel(observation);
@@ -1154,6 +1411,7 @@ export const bindObservations = ({
     }
     isAssignOverlayOpen = false;
     activeMultiObservation = null;
+    resetAssignNoteState();
     assignOverlay.classList.remove('is-open');
     assignOverlay.setAttribute('aria-hidden', 'true');
     setAssignObservationLabel('');
@@ -1336,6 +1594,22 @@ export const bindObservations = ({
       return;
     }
 
+    const noteAddButton = target.closest('[data-role="observation-note-add"]');
+    if (noteAddButton) {
+      if (isReadOnly) {
+        return;
+      }
+      const child = card.dataset.child;
+      const panel = (child && getDetailPanel(child)) || card;
+      if (!child || !panel) {
+        return;
+      }
+      markNoteEditing(panel);
+      persistObservationNotes(child, panel);
+      appendNoteField(panel);
+      return;
+    }
+
     const removeButton = target.closest(
       '[data-role="observation-today-remove"]',
     );
@@ -1410,7 +1684,14 @@ export const bindObservations = ({
       return;
     }
     const panel = target.closest('[data-child]');
-    markNoteEditing(panel);
+    const child = getDetailChild(target);
+    if (!panel || !child) {
+      return;
+    }
+    reindexNoteInputs(panel);
+    const noteIndex = Number(target.dataset.noteIndex);
+    markNoteEditing(panel, Number.isFinite(noteIndex) ? noteIndex : 0);
+    schedulePersistNotes(child, panel);
   };
   const handleOverlayFocusOut = (event) => {
     const target = event.target;
@@ -1420,8 +1701,19 @@ export const bindObservations = ({
     if (target.dataset.role !== 'observation-note-input') {
       return;
     }
-    const panel = target.closest('[data-child]');
-    persistObservationNote(panel);
+    const child = getDetailChild(target);
+    const panel = (child && getDetailPanel(child)) || target.closest('[data-child]');
+    if (!panel || !child) {
+      return;
+    }
+    const relatedTarget = event.relatedTarget;
+    if (
+      isHtmlElement(relatedTarget) &&
+      relatedTarget.closest('[data-role="observation-note-add"]')
+    ) {
+      return;
+    }
+    persistObservationNotes(child, panel);
   };
 
   const handleListClick = (event) => {
@@ -1898,6 +2190,72 @@ export const bindObservations = ({
     }
   };
 
+  const toggleAssignNoteChild = (childButton) => {
+    if (isReadOnly || childButton.dataset.absent === 'true') {
+      return;
+    }
+    const child = childButton.dataset.child;
+    if (!child || !assignNoteAssignableSet.has(child)) {
+      return;
+    }
+    if (activeAssignNoteChildren.has(child)) {
+      activeAssignNoteChildren.delete(child);
+    } else {
+      activeAssignNoteChildren.add(child);
+    }
+    updateAssignNoteButtonState(childButton, activeAssignNoteChildren.has(child));
+    updateAssignNoteSaveState();
+  };
+
+  const saveAssignNote = () => {
+    if (isReadOnly) {
+      return;
+    }
+    const noteValue = isTextAreaElement(assignNoteInputEl)
+      ? assignNoteInputEl.value
+      : assignNoteDraft;
+    assignNoteDraft = noteValue;
+    if (!noteValue.trim()) {
+      updateAssignNoteSaveState();
+      return;
+    }
+    const selectedChildren = Array.from(activeAssignNoteChildren).filter((child) =>
+      assignNoteAssignableSet.has(child),
+    );
+    if (!selectedChildren.length) {
+      updateAssignNoteSaveState();
+      return;
+    }
+    const observationNotesPatch = {};
+    selectedChildren.forEach((child) => {
+      observationNotesPatch[child] = {
+        items: [noteValue],
+        append: true,
+      };
+    });
+    updateEntry(getDate(), {
+      observationNotes: observationNotesPatch,
+    });
+    assignNoteDraft = '';
+    if (isTextAreaElement(assignNoteInputEl)) {
+      assignNoteInputEl.value = '';
+    }
+    closeAssignNoteOverlay({ clearDraft: true });
+    refreshAssignNoteButtons();
+  };
+
+  const handleAssignOverlayInput = (event) => {
+    const target = event.target;
+    if (!isTextAreaElement(target)) {
+      return;
+    }
+    if (target.dataset.role !== 'observation-assign-note-input') {
+      return;
+    }
+    assignNoteDraft = target.value;
+    updateAssignNoteSaveState();
+  };
+
   const handleAssignOverlayClick = (event) => {
     const target = event.target;
     if (!isHtmlElement(target) || !assignOverlay) {
@@ -1905,7 +2263,44 @@ export const bindObservations = ({
     }
 
     if (target === assignOverlay) {
-      closeAssignOverlay();
+      if (isAssignNoteOverlayOpen) {
+        closeAssignNoteOverlay();
+      } else {
+        closeAssignOverlay();
+      }
+      return;
+    }
+
+    if (assignNoteOverlayEl && target === assignNoteOverlayEl) {
+      closeAssignNoteOverlay();
+      return;
+    }
+
+    const noteCloseButton = target.closest('[data-role="observation-assign-note-close"]');
+    if (noteCloseButton) {
+      closeAssignNoteOverlay();
+      return;
+    }
+
+    const noteOpenButton = target.closest('[data-role="observation-assign-note-open"]');
+    if (noteOpenButton) {
+      if (isAssignNoteOverlayOpen) {
+        closeAssignNoteOverlay();
+      } else {
+        openAssignNoteOverlay();
+      }
+      return;
+    }
+
+    const noteChildButton = target.closest('[data-role="observation-assign-note-child"]');
+    if (noteChildButton) {
+      toggleAssignNoteChild(noteChildButton);
+      return;
+    }
+
+    const noteSaveButton = target.closest('[data-role="observation-assign-note-save"]');
+    if (noteSaveButton) {
+      saveAssignNote();
       return;
     }
 
@@ -2098,6 +2493,7 @@ export const bindObservations = ({
     multiTemplatesOverlay.addEventListener('click', handleMultiTemplateClick);
   }
   if (assignOverlay) {
+    assignOverlay.addEventListener('input', handleAssignOverlayInput);
     assignOverlay.addEventListener('click', handleAssignOverlayClick);
   }
   createOverlay.addEventListener('submit', handleCreateSubmit);

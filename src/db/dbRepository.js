@@ -25,6 +25,10 @@ import {
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import {
+  mergeObservationNoteLists,
+  normalizeObservationNoteList,
+} from '../utils/observationNotes.js';
 import { isFreeDay, normalizeFreeDays } from '../utils/freeDays.js';
 import {
   DEFAULT_TIMETABLE_LESSONS,
@@ -328,7 +332,7 @@ const buildDefaultObservationNotes = (childrenList) => {
   }
 
   return childrenList.reduce((acc, child) => {
-    acc[child] = '';
+    acc[child] = [];
     return acc;
   }, {});
 };
@@ -387,6 +391,12 @@ const sanitizeObservationsForDate = (observations, { absentSet, childrenSet, isF
 
 const sanitizeObservationNotesForDate = (observationNotes, { absentSet, childrenSet, isFreeDay }) => {
   const shouldFillChildren = childrenSet && childrenSet.size > 0;
+  if (isFreeDay) {
+    if (!shouldFillChildren) {
+      return {};
+    }
+    return buildDefaultObservationNotes(Array.from(childrenSet));
+  }
   const result = {};
   if (observationNotes && typeof observationNotes === 'object') {
     Object.entries(observationNotes).forEach(([child, note]) => {
@@ -396,14 +406,14 @@ const sanitizeObservationNotesForDate = (observationNotes, { absentSet, children
       if (absentSet.has(child)) {
         return;
       }
-      result[child] = normalizeNoteText(note);
+      result[child] = normalizeObservationNoteList(note);
     });
   }
 
   if (shouldFillChildren) {
     childrenSet.forEach((child) => {
       if (!result[child]) {
-        result[child] = '';
+        result[child] = [];
       }
     });
   }
@@ -462,7 +472,28 @@ const mergeObservationNotes = (currentNotes, patchNotes) => {
       : {};
 
   Object.entries(patchNotes).forEach(([child, incomingValue]) => {
-    base[child] = normalizeNoteText(incomingValue);
+    const existingList = normalizeObservationNoteList(base[child]);
+    if (typeof incomingValue === 'string' || Array.isArray(incomingValue)) {
+      base[child] = normalizeObservationNoteList(incomingValue);
+      return;
+    }
+    if (!incomingValue || typeof incomingValue !== 'object') {
+      base[child] = existingList;
+      return;
+    }
+    const items =
+      incomingValue.items ??
+      incomingValue.notes ??
+      incomingValue.values ??
+      incomingValue.value ??
+      [];
+    const incomingList = normalizeObservationNoteList(items);
+    const shouldReplace = incomingValue.replace === true && incomingValue.append !== true;
+    base[child] = shouldReplace
+      ? incomingList
+      : incomingList.length
+        ? mergeObservationNoteLists(existingList, incomingList)
+        : existingList;
   });
 
   return base;

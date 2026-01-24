@@ -456,6 +456,34 @@ body {
   font-weight: 600;
 }
 
+.observation-assign-note-list {
+  min-height: 2.5rem;
+}
+
+.observation-assign-note-pill.is-selected {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #ffffff;
+}
+
+.observation-note-item textarea {
+  resize: vertical;
+}
+
+.observation-note-add {
+  border-radius: 999px;
+  padding: 0.25rem 0.85rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.observation-note-add:hover,
+.observation-note-add:focus-visible {
+  background: #eef2ff;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
+}
+
 .observation-assign-pill.is-assigned {
   background: #e2e8f0;
   border-color: #cbd5f5;
@@ -1585,6 +1613,44 @@ body.child-detail-overlay-open {
 .observation-multi-catalog-overlay .observation-templates-overlay__panel,
 .observation-assign-overlay .observation-templates-overlay__panel {
   background: #f5f7fb;
+}
+
+.observation-assign-overlay .observation-templates-overlay__panel {
+  position: relative;
+}
+
+.observation-assign-note-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 3;
+}
+
+.observation-assign-note-overlay.is-open {
+  display: flex;
+}
+
+.observation-assign-note-overlay__panel {
+  width: min(100%, 32rem);
+  max-height: 100%;
+  overflow-y: auto;
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+
+.observation-assign-note-overlay__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
 }
 
 .observation-templates-overlay__header {

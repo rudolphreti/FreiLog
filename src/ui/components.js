@@ -11,6 +11,10 @@ import {
   normalizeObservationGroups,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import {
+  hasObservationNotes,
+  normalizeObservationNoteList,
+} from '../utils/observationNotes.js';
 import { ANGEBOT_GROUP_CODES, normalizeAngebotKey } from '../utils/angebotCatalog.js';
 import { ANGEBOT_NOTE_LIMIT } from '../utils/angebotNotes.js';
 import { todayYmd } from '../utils/date.js';
@@ -2007,7 +2011,7 @@ export const buildObservationTemplatesOverlay = ({
   };
 };
 
-export const buildObservationAssignOverlay = () => {
+export const buildObservationAssignOverlay = ({ readOnly = false } = {}) => {
   const overlay = createEl('div', {
     className: 'observation-templates-overlay observation-assign-overlay',
     dataset: { role: 'observation-assign-overlay' },
@@ -2035,20 +2039,75 @@ export const buildObservationAssignOverlay = () => {
     className: 'text-muted small mb-0',
     dataset: { role: 'observation-assign-observation' },
   });
+  const noteOpenButton = createEl('button', {
+    className: 'btn btn-outline-secondary observation-assign-note-open align-self-start',
+    text: 'Notiz...',
+    attrs: { type: 'button', disabled: readOnly ? 'true' : null },
+    dataset: { role: 'observation-assign-note-open' },
+  });
   const list = createEl('div', {
     className: 'd-flex flex-wrap gap-2 observation-assign-list',
     dataset: { role: 'observation-assign-list' },
   });
   const content = createEl('div', {
     className: 'mt-3 d-flex flex-column gap-3',
-    children: [observationLabel, list],
+    children: [noteOpenButton, observationLabel, list],
   });
   const scrollContent = createEl('div', {
     className: 'observation-templates-overlay__content',
     children: [content],
   });
 
-  overlayPanel.append(header, scrollContent);
+  const noteOverlay = createEl('div', {
+    className: 'observation-assign-note-overlay',
+    dataset: { role: 'observation-assign-note-overlay' },
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const notePanel = createEl('div', {
+    className: 'observation-assign-note-overlay__panel',
+    attrs: { role: 'dialog', 'aria-modal': 'true' },
+  });
+  const noteHeader = createEl('div', {
+    className: 'observation-assign-note-overlay__header',
+  });
+  const noteTitle = createEl('h4', {
+    className: 'h6 mb-0',
+    text: 'Notiz zuweisen',
+  });
+  const noteCloseButton = createEl('button', {
+    className: 'btn-close observation-templates-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+    dataset: { role: 'observation-assign-note-close' },
+  });
+  noteHeader.append(noteTitle, noteCloseButton);
+  const noteList = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 observation-assign-note-list',
+    dataset: { role: 'observation-assign-note-list' },
+  });
+  const noteInput = createEl('textarea', {
+    className: 'form-control',
+    attrs: {
+      rows: '4',
+      placeholder: 'Notiz',
+      'aria-label': 'Notiz für ausgewählte Kinder',
+    },
+    dataset: { role: 'observation-assign-note-input' },
+  });
+  noteInput.disabled = readOnly;
+  const noteSaveButton = createEl('button', {
+    className: 'btn btn-primary observation-assign-note-save align-self-start',
+    text: 'Speichern',
+    attrs: { type: 'button', disabled: readOnly ? 'true' : null },
+    dataset: { role: 'observation-assign-note-save' },
+  });
+  const noteBody = createEl('div', {
+    className: 'd-flex flex-column gap-3 mt-3',
+    children: [noteList, noteInput, noteSaveButton],
+  });
+  notePanel.append(noteHeader, noteBody);
+  noteOverlay.appendChild(notePanel);
+
+  overlayPanel.append(header, scrollContent, noteOverlay);
   overlay.appendChild(overlayPanel);
 
   return {
@@ -2057,6 +2116,12 @@ export const buildObservationAssignOverlay = () => {
       list,
       closeButton,
       observationLabel,
+      noteOpenButton,
+      noteOverlay,
+      noteList,
+      noteInput,
+      noteSaveButton,
+      noteCloseButton,
     },
   };
 };
@@ -2091,11 +2156,11 @@ const rebuildChildButton = ({
   child,
   isAbsent,
   observationsByChild,
-  note,
+  notes,
   readOnly = false,
 }) => {
   const count = getObservationCount(observationsByChild, child);
-  const hasNote = typeof note === 'string' && note.trim().length > 0;
+  const hasNote = hasObservationNotes(notes);
   const badge = isAbsent
     ? createEl('span', {
         className: 'badge text-bg-light text-secondary observation-absent-badge',
@@ -2180,6 +2245,90 @@ const rebuildTopList = (topItems, getGroupsForLabel, observationGroups, selected
       });
 };
 
+const reindexObservationNoteInputs = (noteList) => {
+  if (!noteList) {
+    return;
+  }
+  noteList.querySelectorAll('[data-role="observation-note-input"]').forEach((input, index) => {
+    input.dataset.noteIndex = String(index);
+    input.setAttribute('aria-label', `Notiz ${index + 1}`);
+  });
+};
+
+const buildObservationNoteItem = (value, index, { disabled }) => {
+  const noteInput = createEl('textarea', {
+    className: 'form-control observation-note-input',
+    attrs: {
+      rows: '3',
+      placeholder: 'Notiz',
+      'aria-label': `Notiz ${index + 1}`,
+    },
+    dataset: { role: 'observation-note-input', noteIndex: String(index) },
+  });
+  noteInput.value = value;
+  noteInput.disabled = disabled;
+
+  return createEl('div', {
+    className: 'observation-note-item d-flex flex-column gap-1',
+    children: [noteInput],
+  });
+};
+
+const renderObservationNoteItems = (noteList, notes, disabled) => {
+  if (!noteList) {
+    return;
+  }
+  const normalized = normalizeObservationNoteList(notes);
+  const values = normalized.length ? normalized : [''];
+  const items = values.map((value, index) =>
+    buildObservationNoteItem(value, index, { disabled }),
+  );
+  noteList.replaceChildren(...items);
+  reindexObservationNoteInputs(noteList);
+};
+
+const syncObservationNoteItems = ({ detail, refs, notes, disabled }) => {
+  if (!detail || !refs?.noteList || !refs?.noteAddButton) {
+    return;
+  }
+  const activeElement = document.activeElement;
+  const activeIndex =
+    activeElement instanceof HTMLTextAreaElement &&
+    activeElement.dataset.role === 'observation-note-input' &&
+    refs.noteList.contains(activeElement)
+      ? Number(activeElement.dataset.noteIndex)
+      : null;
+
+  const noteInputs = refs.noteList.querySelectorAll('[data-role="observation-note-input"]');
+  const isEditing = detail.dataset.noteEditing === 'true' && noteInputs.length > 0;
+
+  if (!isEditing) {
+    renderObservationNoteItems(refs.noteList, notes, disabled);
+  } else {
+    noteInputs.forEach((input) => {
+      input.disabled = disabled;
+    });
+  }
+
+  refs.noteAddButton.disabled = disabled;
+
+  const shouldRestoreFocus = activeIndex !== null || detail.dataset.noteEditing === 'true';
+  if (!shouldRestoreFocus || disabled) {
+    return;
+  }
+  const preferredIndex = Number(detail.dataset.noteEditingIndex);
+  const inputs = refs.noteList.querySelectorAll('[data-role="observation-note-input"]');
+  const fallbackIndex =
+    Number.isFinite(preferredIndex) && preferredIndex >= 0 ? preferredIndex : activeIndex ?? 0;
+  const target = inputs[Math.min(fallbackIndex, inputs.length - 1)];
+  if (!target) {
+    return;
+  }
+  requestAnimationFrame(() => {
+    target.focus();
+  });
+};
+
 const createDetailPanel = ({
   child,
   isAbsent,
@@ -2187,7 +2336,8 @@ const createDetailPanel = ({
   observationGroups,
   getGroupsForLabel,
   todayItems = [],
-  note = '',
+  notes = [],
+  readOnly = false,
 }) => {
   const selectedKeys = buildSelectedObservationKeys(todayItems);
   const topList = rebuildTopList(topItems, getGroupsForLabel, observationGroups, selectedKeys);
@@ -2268,19 +2418,25 @@ const createDetailPanel = ({
     className: 'form-label mb-0',
     text: 'Notizen',
   });
-  const noteInput = createEl('textarea', {
-    className: 'form-control',
-    attrs: {
-      rows: '3',
-      placeholder: 'Notizen',
-      'aria-label': 'Notizen',
-    },
-    dataset: { role: 'observation-note-input' },
+  const noteList = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    dataset: { role: 'observation-note-list' },
   });
-  noteInput.value = note;
+  const noteAddButton = createEl('button', {
+    className: 'btn btn-outline-secondary observation-note-add align-self-start',
+    text: '+',
+    attrs: {
+      type: 'button',
+      'aria-label': 'Neue Notiz hinzufügen',
+    },
+    dataset: { role: 'observation-note-add' },
+  });
+  const noteDisabled = isAbsent || readOnly;
+  renderObservationNoteItems(noteList, notes, noteDisabled);
+  noteAddButton.disabled = noteDisabled;
   const noteSection = createEl('div', {
     className: 'observation-section observation-section--notes d-flex flex-column gap-2',
-    children: [noteLabel, noteInput],
+    children: [noteLabel, noteList, noteAddButton],
   });
 
   const detail = createEl('div', {
@@ -2315,7 +2471,8 @@ const createDetailPanel = ({
       todaySection,
       addSection,
       noteSection,
-      noteInput,
+      noteList,
+      noteAddButton,
       todayTitle,
       todayList,
       templatesButton,
@@ -3202,16 +3359,13 @@ export const buildObservationsSection = ({
   });
   children.forEach((child) => {
     const isAbsent = absentSet.has(child);
-    const note =
-      observationNotes && typeof observationNotes[child] === 'string'
-        ? observationNotes[child]
-        : '';
+    const notes = normalizeObservationNoteList(observationNotes?.[child]);
     list.appendChild(
       rebuildChildButton({
         child,
         isAbsent,
         observationsByChild: observations,
-        note,
+        notes,
         readOnly: isReadOnly,
       }),
     );
@@ -3269,7 +3423,7 @@ export const buildObservationsSection = ({
     className: 'observation-templates-overlay observation-multi-catalog-overlay',
     closeRole: 'observation-multi-catalog-close',
   });
-  const assignOverlay = buildObservationAssignOverlay();
+  const assignOverlay = buildObservationAssignOverlay({ readOnly: isReadOnly });
   const editOverlay = buildObservationEditOverlay({ observationGroups });
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
 
@@ -3277,10 +3431,7 @@ export const buildObservationsSection = ({
 
   children.forEach((child) => {
     const data = observations[child] || {};
-    const note =
-      observationNotes && typeof observationNotes[child] === 'string'
-        ? observationNotes[child]
-        : '';
+    const notes = normalizeObservationNoteList(observationNotes?.[child]);
     const selectedKeys = buildSelectedObservationKeys(data);
     const topItems = buildTopItems(observationStats?.[child], observationCatalog, {
       excludeKeys: selectedKeys,
@@ -3293,9 +3444,15 @@ export const buildObservationsSection = ({
       observationGroups,
       getGroupsForLabel,
       todayItems: data,
-      note,
+      notes,
+      readOnly: isReadOnly,
     });
-    refs.noteInput.disabled = isAbsent;
+    syncObservationNoteItems({
+      detail,
+      refs,
+      notes,
+      disabled: isAbsent || isReadOnly,
+    });
     const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
     nextToday.dataset.role = 'observation-today-list';
     refs.todayList.replaceWith(nextToday);
@@ -3314,15 +3471,15 @@ export const buildObservationsSection = ({
     editOverlay.element,
     createOverlay.element,
   );
-    overlay.appendChild(overlayPanel);
+  overlay.appendChild(overlayPanel);
 
-    body.append(
-      multiObservationButton,
-      list,
-      overlay,
-      multiTemplatesOverlay.element,
-      assignOverlay.element,
-    );
+  body.append(
+    multiObservationButton,
+    list,
+    overlay,
+    multiTemplatesOverlay.element,
+    assignOverlay.element,
+  );
   section.appendChild(body);
 
   const updateChildDetail = ({
@@ -3332,9 +3489,11 @@ export const buildObservationsSection = ({
     isAbsent,
     getGroupsForLabel,
     observationGroups,
-    note,
+    notes,
+    readOnly: nextReadOnly,
   }) => {
     const detail = overlayContent.querySelector(`[data-child="${child}"]`);
+    const noteDisabled = isAbsent || Boolean(nextReadOnly);
     if (!detail) {
       const panel = createDetailPanel({
         child,
@@ -3343,8 +3502,20 @@ export const buildObservationsSection = ({
         observationGroups,
         getGroupsForLabel,
         todayItems: data,
-        note,
+        notes,
+        readOnly: nextReadOnly,
       });
+      syncObservationNoteItems({
+        detail: panel.detail,
+        refs: panel.refs,
+        notes,
+        disabled: noteDisabled,
+      });
+      const nextToday = rebuildTodayList(data, getGroupsForLabel, observationGroups);
+      nextToday.dataset.role = 'observation-today-list';
+      panel.refs.todayList.replaceWith(nextToday);
+      panel.refs.todayList = nextToday;
+      panel.refs.topList.dataset.role = 'observation-top-list';
       panel.detail.hidden = true;
       detailRefs.set(child, panel.refs);
       overlayContent.appendChild(panel.detail);
@@ -3370,7 +3541,11 @@ export const buildObservationsSection = ({
     refs.todayList.replaceWith(nextToday);
     refs.todayList = nextToday;
 
-    const hadNoteFocus = document.activeElement === refs.noteInput;
+    const activeElement = document.activeElement;
+    const hadNoteFocus =
+      activeElement instanceof HTMLTextAreaElement &&
+      activeElement.dataset.role === 'observation-note-input' &&
+      refs.noteList?.contains(activeElement);
     const isHidden = Boolean(isAbsent);
     refs.topList.hidden = isHidden;
     refs.todayTitle.hidden = isHidden;
@@ -3380,20 +3555,17 @@ export const buildObservationsSection = ({
     refs.todaySection.hidden = isHidden;
     refs.addSection.hidden = isHidden;
     refs.noteSection.hidden = isHidden;
-    refs.noteInput.disabled = isAbsent;
 
-    if (refs.noteInput && document.activeElement !== refs.noteInput) {
-      const nextNote = typeof note === 'string' ? note : '';
-      if (refs.noteInput.value !== nextNote) {
-        refs.noteInput.value = nextNote;
-      }
-    }
-    const shouldRestoreFocus =
-      hadNoteFocus || detail.dataset.noteEditing === 'true';
-    if (shouldRestoreFocus && !refs.noteInput.disabled) {
-      requestAnimationFrame(() => {
-        refs.noteInput.focus();
-      });
+    syncObservationNoteItems({
+      detail,
+      refs,
+      notes,
+      disabled: noteDisabled,
+    });
+
+    const shouldRestoreFocus = hadNoteFocus || detail.dataset.noteEditing === 'true';
+    if (shouldRestoreFocus && !noteDisabled) {
+      reindexObservationNoteInputs(refs.noteList);
     }
 
     if (isAbsent) {
@@ -3478,6 +3650,24 @@ export const buildObservationsSection = ({
     isReadOnly = shouldBeReadOnly;
     currentFreeDayInfo = nextFreeDayInfo;
     multiObservationButton.disabled = isReadOnly;
+    const assignNoteOpenButton = refs.assignOverlay.querySelector(
+      '[data-role="observation-assign-note-open"]',
+    );
+    if (assignNoteOpenButton instanceof HTMLButtonElement) {
+      assignNoteOpenButton.disabled = isReadOnly;
+    }
+    const assignNoteInput = refs.assignOverlay.querySelector(
+      '[data-role="observation-assign-note-input"]',
+    );
+    if (assignNoteInput instanceof HTMLTextAreaElement) {
+      assignNoteInput.disabled = isReadOnly;
+    }
+    const assignNoteSaveButton = refs.assignOverlay.querySelector(
+      '[data-role="observation-assign-note-save"]',
+    );
+    if (assignNoteSaveButton instanceof HTMLButtonElement) {
+      assignNoteSaveButton.disabled = isReadOnly;
+    }
 
     list.replaceChildren(
       ...nextChildren.map((child) =>
@@ -3485,10 +3675,7 @@ export const buildObservationsSection = ({
           child,
           isAbsent: absentSetNext.has(child),
           observationsByChild: nextObservations,
-          note:
-            nextObservationNotes && typeof nextObservationNotes[child] === 'string'
-              ? nextObservationNotes[child]
-              : '',
+          notes: normalizeObservationNoteList(nextObservationNotes?.[child]),
           readOnly: isReadOnly,
         }),
       ),
@@ -3496,10 +3683,7 @@ export const buildObservationsSection = ({
 
     nextChildren.forEach((child) => {
       const data = nextObservations[child] || {};
-      const note =
-        nextObservationNotes && typeof nextObservationNotes[child] === 'string'
-          ? nextObservationNotes[child]
-          : '';
+      const notes = normalizeObservationNoteList(nextObservationNotes?.[child]);
       const selectedKeys = buildSelectedObservationKeys(data);
       const topItems = buildTopItems(nextObservationStats?.[child], nextObservationCatalog, {
         excludeKeys: selectedKeys,
@@ -3511,7 +3695,8 @@ export const buildObservationsSection = ({
         isAbsent: absentSetNext.has(child),
         getGroupsForLabel: getGroupsForLabelNext,
         observationGroups: nextObservationGroups,
-        note,
+        notes,
+        readOnly: isReadOnly,
       });
     });
 
@@ -3674,8 +3859,14 @@ export const buildObservationsSection = ({
     }
 
     detailRefs.forEach((detailRef) => {
-      if (detailRef?.noteInput) {
-        detailRef.noteInput.disabled = detailRef.noteSection?.hidden;
+      const shouldDisable = detailRef?.noteSection?.hidden || isReadOnly;
+      detailRef?.noteList
+        ?.querySelectorAll('[data-role="observation-note-input"]')
+        .forEach((input) => {
+          input.disabled = Boolean(shouldDisable);
+        });
+      if (detailRef?.noteAddButton) {
+        detailRef.noteAddButton.disabled = Boolean(shouldDisable);
       }
     });
   };

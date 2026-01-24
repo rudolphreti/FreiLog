@@ -46,6 +46,7 @@ import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+import { normalizeObservationNoteList } from '../utils/observationNotes.js';
 
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -185,6 +186,26 @@ const normalizeObservations = (value) => {
   }
 
   return {};
+};
+
+const normalizeObservationNotes = (value, childrenList) => {
+  const source = value && typeof value === 'object' ? value : {};
+  const allowed = Array.isArray(childrenList) ? new Set(childrenList) : null;
+  const result = {};
+  Object.entries(source).forEach(([child, note]) => {
+    if (allowed && !allowed.has(child)) {
+      return;
+    }
+    result[child] = normalizeObservationNoteList(note);
+  });
+  if (allowed) {
+    allowed.forEach((child) => {
+      if (!(child in result)) {
+        result[child] = [];
+      }
+    });
+  }
+  return result;
 };
 
 const getPreservedUiState = (root) => ({
@@ -492,10 +513,7 @@ export const renderApp = (root, state) => {
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
-  const observationNotes =
-    entry.observationNotes && typeof entry.observationNotes === 'object'
-      ? entry.observationNotes
-      : {};
+  const observationNotes = normalizeObservationNotes(entry.observationNotes, sortedChildren);
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const angebotCatalog = db.angebotCatalog || [];

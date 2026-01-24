@@ -19,6 +19,7 @@ import {
   normalizeObservationKey,
   normalizeObservationText,
 } from '../utils/observationCatalog.js';
+import { normalizeObservationNoteList } from '../utils/observationNotes.js';
 import {
   DEFAULT_TIMETABLE_LESSONS,
   DEFAULT_TIMETABLE_SCHEDULE,
@@ -547,13 +548,13 @@ const normalizeObservationNotes = (value, childrenSet) => {
     if (!normalizedChild || (allowed && !allowed.has(normalizedChild))) {
       return;
     }
-    result[normalizedChild] = typeof note === 'string' ? note : '';
+    result[normalizedChild] = normalizeObservationNoteList(note);
   });
 
   if (allowed) {
     allowed.forEach((child) => {
-      if (!result[child]) {
-        result[child] = '';
+      if (!(child in result)) {
+        result[child] = [];
       }
     });
   }
