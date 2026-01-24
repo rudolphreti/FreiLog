@@ -627,8 +627,8 @@ const buildWeeklyTable = ({
   const filterButton = createEl('button', {
     className: 'btn btn-light btn-sm weekly-table__corner-button weekly-table__filter-button',
     attrs: { type: 'button', 'aria-label': 'Filter öffnen' },
-    text: '⚙️',
   });
+  filterButton.append(buildFilterIcon());
   filterButton.addEventListener('click', () => {
     if (typeof onOpenFilters === 'function') {
       onOpenFilters();
@@ -686,7 +686,7 @@ const buildWeeklyTable = ({
 
   const showOffers = typeFilters?.offers !== false;
   const showObservations = typeFilters?.observations !== false;
-  const showAbsence = typeFilters?.absence !== false;
+  const showAbsence = showObservations;
 
   const angeboteRow = createEl('tr', {
     className: 'weekly-table__offers-row',
@@ -743,7 +743,7 @@ const buildWeeklyTable = ({
 
   const sortedChildren = [...children].sort((a, b) => a.localeCompare(b, 'de'));
 
-  if (!showObservations && !showAbsence) {
+  if (!showObservations) {
     table.append(thead, tbody);
     return table;
   }
@@ -828,6 +828,23 @@ const buildSelectGroup = ({ id, label }) => {
   return { wrapper, select };
 };
 
+const buildFilterIcon = () => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('fill', 'currentColor');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.classList.add('weekly-table__filter-icon');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute(
+    'd',
+    'M6 10.117V16l4-2v-3.883l4.447-5.342A.5.5 0 0 0 14.06 4H1.94a.5.5 0 0 0-.387.775L6 10.117z',
+  );
+  svg.append(path);
+  return svg;
+};
+
 const buildTypeFilterGroup = ({ id, label, options }) => {
   const wrapper = createEl('div', {
     className: 'weekly-table__control',
@@ -896,7 +913,6 @@ export const createWeeklyTableView = ({
   let typeFilters = {
     observations: true,
     offers: true,
-    absence: true,
   };
   let freeDayFilters = {
     weekend: false,
@@ -971,7 +987,6 @@ export const createWeeklyTableView = ({
     options: [
       { value: 'observations', label: 'Beobachtungen', checked: true },
       { value: 'offers', label: 'Angebote', checked: true },
-      { value: 'absence', label: 'Abwesenheit', checked: true },
     ],
   });
   controls.append(
@@ -1541,7 +1556,7 @@ export const createWeeklyTableView = ({
     const sortedChildren = [...visibleChildren].sort((a, b) => a.localeCompare(b, 'de'));
     const showOffers = typeFilters?.offers !== false;
     const showObservations = typeFilters?.observations !== false;
-    const showAbsence = typeFilters?.absence !== false;
+    const showAbsence = showObservations;
 
     const buildPdfGroupDots = (groups, groupConfig) => {
       const normalized = Array.isArray(groups) ? groups.filter(Boolean) : [];

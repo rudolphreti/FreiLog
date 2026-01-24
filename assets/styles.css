@@ -943,6 +943,10 @@ body.child-detail-overlay-open {
   padding: 0.25rem 0.45rem;
 }
 
+.weekly-table__filter-icon {
+  display: block;
+}
+
 .weekly-table__corner-button.is-active {
   background: #1d4ed8;
   border-color: #1d4ed8;
