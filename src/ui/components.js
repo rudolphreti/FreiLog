@@ -369,6 +369,10 @@ export const buildAngebotSection = ({
   angebotNote = '',
   weekTheme = '',
   weekThemeWeekLabel = '',
+  weekThemeWeekLabelFull = '',
+  weekThemeWeekId = '',
+  weekThemeSchoolYearLabel = '',
+  weekThemeWeekStartYmd = '',
   newValue,
   readOnly = false,
   freizeitModules = [],
@@ -378,9 +382,42 @@ export const buildAngebotSection = ({
   const safeModules = Array.isArray(freizeitModules) ? freizeitModules : [];
   const safeAssignments = angebotModules && typeof angebotModules === 'object' ? angebotModules : {};
   const normalizedWeekTheme = typeof weekTheme === 'string' ? weekTheme.trim() : '';
+  const normalizedWeekLabelFull =
+    typeof weekThemeWeekLabelFull === 'string' ? weekThemeWeekLabelFull.trim() : '';
+  const normalizedWeekId = typeof weekThemeWeekId === 'string' ? weekThemeWeekId.trim() : '';
+  const normalizedSchoolYearLabel =
+    typeof weekThemeSchoolYearLabel === 'string' ? weekThemeSchoolYearLabel.trim() : '';
+  const normalizedWeekStartYmd =
+    typeof weekThemeWeekStartYmd === 'string' ? weekThemeWeekStartYmd.trim() : '';
   const themeLabel = createEl('p', {
     className: 'angebot-week-theme__label text-muted small mb-1',
     text: UI_LABELS.themaDerWoche,
+  });
+  const themeLabelRowChildren = [themeLabel];
+  let weekThemeEditButton = null;
+  if (normalizedWeekId) {
+    const editTargetLabel = normalizedWeekLabelFull || normalizedWeekId;
+    weekThemeEditButton = createEl('button', {
+      className: 'btn btn-light btn-sm angebot-week-theme__edit',
+      attrs: {
+        type: 'button',
+        'aria-label': `Thema der Woche bearbeiten (${editTargetLabel})`,
+        title: 'Thema der Woche bearbeiten',
+      },
+      dataset: {
+        role: 'angebot-week-theme-edit',
+        weekId: normalizedWeekId,
+        schoolYearLabel: normalizedSchoolYearLabel,
+        weekLabel: normalizedWeekLabelFull,
+        weekStartYmd: normalizedWeekStartYmd,
+      },
+      text: '✎',
+    });
+    themeLabelRowChildren.push(weekThemeEditButton);
+  }
+  const themeLabelRow = createEl('div', {
+    className: 'angebot-week-theme__label-row',
+    children: themeLabelRowChildren,
   });
   const themeValue = createEl('p', {
     className: 'angebot-week-theme__value mb-0',
@@ -398,7 +435,7 @@ export const buildAngebotSection = ({
       : null;
   const weekThemeContent = createEl('div', {
     className: 'angebot-week-theme',
-    children: weekMeta ? [themeLabel, themeValue, weekMeta] : [themeLabel, themeValue],
+    children: weekMeta ? [themeLabelRow, themeValue, weekMeta] : [themeLabelRow, themeValue],
   });
 
   const openButton = createEl('button', {
@@ -500,6 +537,11 @@ export const buildAngebotSection = ({
     refs: {
       selectedList: modulesContainer,
       openButton,
+      weekThemeEditButton,
+      weekThemeWeekId: normalizedWeekId,
+      weekThemeSchoolYearLabel: normalizedSchoolYearLabel,
+      weekThemeWeekLabel: normalizedWeekLabelFull,
+      weekThemeWeekStartYmd: normalizedWeekStartYmd,
     },
   };
 };

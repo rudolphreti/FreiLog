@@ -728,6 +728,10 @@ export const bindAngebotCatalog = ({
   weekThemes = {},
   angebotGroups,
   selectedAngebote,
+  weekThemeEditButton,
+  weekThemeWeekId = '',
+  weekThemeSchoolYearLabel = '',
+  weekThemeWeekLabel = '',
   catalog,
   topStats,
   savedFilters,
@@ -763,11 +767,22 @@ export const bindAngebotCatalog = ({
   let suppressClick = false;
   let openButtonRef = openButton || null;
   let manageOpenButtonRef = manageOpenButton || null;
+  let weekThemeEditButtonRef = weekThemeEditButton || null;
   let manageOverlayRef = manageOverlay || null;
   let detailOverlayRef = detailOverlay || null;
   let deleteConfirmRef = deleteConfirmOverlay || null;
   let detailOffer = null;
   let createContext = 'day';
+  let currentWeekThemeTarget = {
+    weekId: typeof weekThemeWeekId === 'string' ? weekThemeWeekId.trim() : '',
+    schoolYearLabel:
+      typeof weekThemeSchoolYearLabel === 'string' ? weekThemeSchoolYearLabel.trim() : '',
+    weekLabel: typeof weekThemeWeekLabel === 'string' ? weekThemeWeekLabel.trim() : '',
+  };
+  let weekThemeFocusRequest = null;
+  let focusedWeekThemeItem = null;
+  let weekThemeFocusFrame = null;
+  let weekThemeFocusTimer = null;
   const noteInput = overlay.querySelector('[data-role="angebot-note-input"]');
 
   const getActiveModuleId = () => {
@@ -802,6 +817,49 @@ export const bindAngebotCatalog = ({
       }
     }
     return '';
+  };
+
+  const normalizeWeekThemeTarget = (target = {}) => {
+    const safeTarget = target && typeof target === 'object' ? target : {};
+    const weekId =
+      typeof safeTarget.weekId === 'string' ? safeTarget.weekId.trim() : '';
+    const schoolYearLabel =
+      typeof safeTarget.schoolYearLabel === 'string' ? safeTarget.schoolYearLabel.trim() : '';
+    const weekLabel =
+      typeof safeTarget.weekLabel === 'string' ? safeTarget.weekLabel.trim() : '';
+    return {
+      weekId,
+      schoolYearLabel,
+      weekLabel,
+    };
+  };
+
+  const setWeekThemeTarget = (target = {}) => {
+    currentWeekThemeTarget = normalizeWeekThemeTarget(target);
+  };
+
+  const clearWeekThemeFocusState = () => {
+    if (weekThemeFocusFrame) {
+      cancelAnimationFrame(weekThemeFocusFrame);
+      weekThemeFocusFrame = null;
+    }
+    if (weekThemeFocusTimer) {
+      window.clearTimeout(weekThemeFocusTimer);
+      weekThemeFocusTimer = null;
+    }
+    if (focusedWeekThemeItem) {
+      focusedWeekThemeItem.classList.remove('is-focus');
+      focusedWeekThemeItem = null;
+    }
+  };
+
+  const requestWeekThemeFocus = (target = {}) => {
+    const normalized = normalizeWeekThemeTarget(target);
+    if (!normalized.weekId) {
+      return null;
+    }
+    weekThemeFocusRequest = normalized;
+    return normalized;
   };
 
   setFilterState(catalogOverlay, {
@@ -858,6 +916,15 @@ export const bindAngebotCatalog = ({
     manageOpenButtonRef = button || null;
     if (manageOpenButtonRef && manageOpenButtonRef instanceof HTMLElement) {
       manageOpenButtonRef.addEventListener('click', handleManageOpen);
+    }
+  };
+  const setWeekThemeEditButton = (button) => {
+    if (weekThemeEditButtonRef && weekThemeEditButtonRef instanceof HTMLElement) {
+      weekThemeEditButtonRef.removeEventListener('click', handleWeekThemeEdit);
+    }
+    weekThemeEditButtonRef = button || null;
+    if (weekThemeEditButtonRef && weekThemeEditButtonRef instanceof HTMLElement) {
+      weekThemeEditButtonRef.addEventListener('click', handleWeekThemeEdit);
     }
   };
 
@@ -963,6 +1030,23 @@ export const bindAngebotCatalog = ({
       return;
     }
     const availableLabels = new Set(currentSchoolYears.map((year) => year.label));
+    if (weekThemeFocusRequest?.weekId) {
+      const focusYear = currentSchoolYears.find((year) =>
+        year.weeks?.some((week) => week.id === weekThemeFocusRequest.weekId),
+      );
+      if (focusYear?.label) {
+        selectedWeekThemeYear = focusYear.label;
+        if (!weekThemeFocusRequest.schoolYearLabel) {
+          weekThemeFocusRequest.schoolYearLabel = focusYear.label;
+        }
+      }
+    }
+    if (
+      weekThemeFocusRequest?.schoolYearLabel &&
+      availableLabels.has(weekThemeFocusRequest.schoolYearLabel)
+    ) {
+      selectedWeekThemeYear = weekThemeFocusRequest.schoolYearLabel;
+    }
     if (!selectedWeekThemeYear || !availableLabels.has(selectedWeekThemeYear)) {
       selectedWeekThemeYear = currentSchoolYears[currentSchoolYears.length - 1].label;
     }
@@ -1132,6 +1216,8 @@ export const bindAngebotCatalog = ({
       const isDisabled = freeInfo.allFree;
       const item = document.createElement('div');
       item.className = 'angebot-week-theme__item';
+      item.dataset.weekId = week.id;
+      item.dataset.schoolYearLabel = week.schoolYearLabel || '';
       if (isDisabled) {
         item.classList.add('is-disabled');
       }
@@ -1197,6 +1283,42 @@ export const bindAngebotCatalog = ({
     });
   };
 
+  const applyWeekThemeFocus = () => {
+    if (!manageOverlayRef || !weekThemeFocusRequest?.weekId) {
+      return;
+    }
+    if (!manageOverlayRef.classList.contains('is-open')) {
+      return;
+    }
+    const targetWeekId = weekThemeFocusRequest.weekId;
+    clearWeekThemeFocusState();
+    weekThemeFocusFrame = requestAnimationFrame(() => {
+      weekThemeFocusFrame = null;
+      const item = manageOverlayRef.querySelector(`[data-week-id="${targetWeekId}"]`);
+      if (!(item instanceof HTMLElement)) {
+        weekThemeFocusRequest = null;
+        return;
+      }
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      item.classList.add('is-focus');
+      focusedWeekThemeItem = item;
+      weekThemeFocusTimer = window.setTimeout(() => {
+        if (focusedWeekThemeItem === item) {
+          item.classList.remove('is-focus');
+          focusedWeekThemeItem = null;
+        }
+        weekThemeFocusTimer = null;
+      }, 1800);
+      const input = item.querySelector('[data-role="angebot-week-theme-input"]');
+      if (input instanceof HTMLInputElement && !input.disabled) {
+        const caretPosition = input.value.length;
+        input.focus({ preventScroll: true });
+        input.setSelectionRange(caretPosition, caretPosition);
+      }
+      weekThemeFocusRequest = null;
+    });
+  };
+
   const renderManage = () => {
     if (!manageOverlayRef) {
       return;
@@ -1223,6 +1345,7 @@ export const bindAngebotCatalog = ({
     renderWeekThemeDatalist();
     renderWeekThemeYearOptions();
     renderWeekThemeList();
+    applyWeekThemeFocus();
   };
 
   const openOverlay = () => {
@@ -1250,11 +1373,15 @@ export const bindAngebotCatalog = ({
     catalogOverlay.setAttribute('aria-hidden', 'true');
   };
 
-  const openManageOverlay = () => {
+  const openManageOverlay = ({ weekThemeFocus = null } = {}) => {
     if (!manageOverlayRef) {
       return;
     }
     closeDrawerIfOpen();
+    const normalizedFocus = weekThemeFocus ? requestWeekThemeFocus(weekThemeFocus) : null;
+    if (normalizedFocus) {
+      manageOverlayRef.dataset.manageTab = 'week-theme';
+    }
     manageOverlayRef.classList.add('is-open');
     manageOverlayRef.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
@@ -1270,6 +1397,8 @@ export const bindAngebotCatalog = ({
     document.body.classList.remove('observation-overlay-open');
     closeDetailOverlay();
     closeEditOverlay();
+    clearWeekThemeFocusState();
+    weekThemeFocusRequest = null;
   };
 
   const setDetailGroups = (groups) => {
@@ -1725,6 +1854,40 @@ export const bindAngebotCatalog = ({
 
   const handleManageOpen = () => {
     openManageOverlay();
+  };
+
+  const getWeekThemeTargetFromButton = (button) => {
+    if (!(button instanceof HTMLElement)) {
+      return normalizeWeekThemeTarget();
+    }
+    return normalizeWeekThemeTarget({
+      weekId: button.dataset.weekId,
+      schoolYearLabel: button.dataset.schoolYearLabel,
+      weekLabel: button.dataset.weekLabel,
+    });
+  };
+
+  const handleWeekThemeEdit = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const targetFromButton = getWeekThemeTargetFromButton(event.currentTarget);
+    const focusTarget = targetFromButton.weekId ? targetFromButton : currentWeekThemeTarget;
+    if (!focusTarget.weekId) {
+      openManageOverlay();
+      return;
+    }
+    setWeekThemeTarget(focusTarget);
+    openManageOverlay({ weekThemeFocus: focusTarget });
+  };
+
+  const handleWeekThemeEditEvent = (event) => {
+    const detail = event?.detail || {};
+    const focusTarget = normalizeWeekThemeTarget(detail);
+    if (!focusTarget.weekId) {
+      return;
+    }
+    setWeekThemeTarget(focusTarget);
+    openManageOverlay({ weekThemeFocus: focusTarget });
   };
 
   const handleManageClick = (event) => {
@@ -2248,8 +2411,10 @@ export const bindAngebotCatalog = ({
   createOverlay.addEventListener('submit', handleCreateSubmit);
   editOverlay.addEventListener('click', handleEditClick);
   editOverlay.addEventListener('submit', handleEditSubmit);
+  window.addEventListener('freilog:angebot-week-theme-edit', handleWeekThemeEditEvent);
   setOpenButton(openButtonRef);
   setManageOpenButton(manageOpenButtonRef);
+  setWeekThemeEditButton(weekThemeEditButtonRef);
 
   return {
     update: ({
@@ -2259,6 +2424,10 @@ export const bindAngebotCatalog = ({
       weekThemes: nextWeekThemes = currentWeekThemes,
       selectedAngebote: nextSelected,
       angebotNote: nextAngebotNote,
+      weekThemeEditButton: nextWeekThemeEditButton,
+      weekThemeWeekId: nextWeekThemeWeekId,
+      weekThemeSchoolYearLabel: nextWeekThemeSchoolYearLabel,
+      weekThemeWeekLabel: nextWeekThemeWeekLabel,
       catalog: nextCatalog,
       topStats: nextStats,
       angebotGroups: nextGroups,
@@ -2283,6 +2452,17 @@ export const bindAngebotCatalog = ({
       currentTopStats = nextStats || {};
       currentModules = Array.isArray(nextModules) ? nextModules : [];
       setAssignments(nextModuleAssignments, nextSelected || currentSelected);
+      if (
+        nextWeekThemeWeekId !== undefined ||
+        nextWeekThemeSchoolYearLabel !== undefined ||
+        nextWeekThemeWeekLabel !== undefined
+      ) {
+        setWeekThemeTarget({
+          weekId: nextWeekThemeWeekId ?? currentWeekThemeTarget.weekId,
+          schoolYearLabel: nextWeekThemeSchoolYearLabel ?? currentWeekThemeTarget.schoolYearLabel,
+          weekLabel: nextWeekThemeWeekLabel ?? currentWeekThemeTarget.weekLabel,
+        });
+      }
       if (typeof nextAngebotNote === 'string') {
         currentNote = normalizeAngebotNote(nextAngebotNote);
       }
@@ -2327,6 +2507,9 @@ export const bindAngebotCatalog = ({
       }
       if (nextManageOpenButton) {
         setManageOpenButton(nextManageOpenButton);
+      }
+      if (nextWeekThemeEditButton !== undefined) {
+        setWeekThemeEditButton(nextWeekThemeEditButton);
       }
       renderNoteInput();
     },

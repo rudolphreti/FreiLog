@@ -114,22 +114,40 @@ const resolveWeekThemeForDate = (selectedDate, days, weekThemes) => {
     ...getWeekThemeDateKeys(assignments),
   ]);
   if (!dateKeys.size) {
-    return { theme: '', weekLabel: '' };
+    return {
+      theme: '',
+      weekLabel: '',
+      weekLabelFull: '',
+      weekId: '',
+      schoolYearLabel: '',
+      weekStartYmd: '',
+    };
   }
   const schoolYears = getSchoolWeeks(buildDaysIndex([...dateKeys], days));
   const matchingWeek = schoolYears
     .flatMap((year) => year.weeks || [])
     .find((week) => week.startYmd <= selectedDate && week.endYmd >= selectedDate);
   if (!matchingWeek) {
-    return { theme: '', weekLabel: '' };
+    return {
+      theme: '',
+      weekLabel: '',
+      weekLabelFull: '',
+      weekId: '',
+      schoolYearLabel: '',
+      weekStartYmd: '',
+    };
   }
   const theme = assignments[matchingWeek.id] || '';
-  const weekLabel = `${matchingWeek.label} · ${formatDisplayDate(matchingWeek.startYmd)} – ${formatDisplayDate(
+  const weekLabelFull = `${matchingWeek.label} · ${formatDisplayDate(matchingWeek.startYmd)} – ${formatDisplayDate(
     matchingWeek.endYmd,
   )}`;
   return {
     theme,
-    weekLabel: theme ? weekLabel : '',
+    weekLabel: theme ? weekLabelFull : '',
+    weekLabelFull,
+    weekId: matchingWeek.id,
+    schoolYearLabel: matchingWeek.schoolYearLabel || '',
+    weekStartYmd: matchingWeek.startYmd,
   };
 };
 
@@ -550,6 +568,10 @@ export const renderApp = (root, state) => {
     angebotNote,
     weekTheme: weekThemeInfo.theme,
     weekThemeWeekLabel: weekThemeInfo.weekLabel,
+    weekThemeWeekLabelFull: weekThemeInfo.weekLabelFull,
+    weekThemeWeekId: weekThemeInfo.weekId,
+    weekThemeSchoolYearLabel: weekThemeInfo.schoolYearLabel,
+    weekThemeWeekStartYmd: weekThemeInfo.weekStartYmd,
   });
   angebotOpenButtonRef = angebotSection.refs.openButton || null;
   const entlassungInfo = getEntlassungForDate(
@@ -855,6 +877,10 @@ export const renderApp = (root, state) => {
       angebotGroups,
       selectedAngebote,
       angebotNote,
+      weekThemeEditButton: angebotSection.refs.weekThemeEditButton,
+      weekThemeWeekId: weekThemeInfo.weekId,
+      weekThemeSchoolYearLabel: weekThemeInfo.schoolYearLabel,
+      weekThemeWeekLabel: weekThemeInfo.weekLabelFull,
       modules: freizeitModules,
       moduleAssignments: angebotModules,
       catalog: angebotCatalog,
@@ -998,6 +1024,10 @@ export const renderApp = (root, state) => {
       weekThemes,
       selectedAngebote,
       angebotNote,
+      weekThemeEditButton: angebotSection.refs.weekThemeEditButton,
+      weekThemeWeekId: weekThemeInfo.weekId,
+      weekThemeSchoolYearLabel: weekThemeInfo.schoolYearLabel,
+      weekThemeWeekLabel: weekThemeInfo.weekLabelFull,
       modules: freizeitModules,
       moduleAssignments: angebotModules,
       catalog: angebotCatalog,

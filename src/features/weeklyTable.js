@@ -716,6 +716,9 @@ const buildWeeklyTable = ({
   const showOffers = typeFilters?.offers !== false;
   const showObservations = typeFilters?.observations !== false;
   const showAbsence = showObservations;
+  const themeDisplayLabel = `${week.label} · ${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(
+    week.endYmd,
+  )}`;
 
   const themeRow = createEl('tr', {
     className: 'weekly-table__theme-row',
@@ -739,7 +742,23 @@ const buildWeeklyTable = ({
     createEl('td', {
       className: themeRowFreeDayClass,
       attrs: { colspan: String(weekDays.length) },
-      children: [themeContent],
+      children: [
+        buildCellContent({
+          content: themeContent,
+          dateKey: week.startYmd,
+          displayDate: themeDisplayLabel,
+          isEditMode,
+          onEditCell,
+          isFreeDay: false,
+          isAbsent: false,
+          editLabel: UI_LABELS.themaDerWoche,
+          editPayload: {
+            weekId: week.id,
+            schoolYearLabel: week.schoolYearLabel || '',
+            dateKey: week.startYmd,
+          },
+        }),
+      ],
     }),
   );
 
@@ -1343,12 +1362,27 @@ export const createWeeklyTableView = ({
       getAngebotGroupsForLabel,
       angebotGroups: currentAngebotGroups,
       observationGroups: currentObservationGroups,
-      onEditCell: ({ child, dateKey }) => {
-        if (!dateKey) {
+      onEditCell: ({ child, dateKey, weekId, schoolYearLabel }) => {
+        if (!dateKey && !weekId) {
           return;
         }
-        const safeDate = dateKey;
-        setSelectedDate(safeDate);
+        if (dateKey) {
+          setSelectedDate(dateKey);
+        }
+
+        if (weekId) {
+          window.setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent('freilog:angebot-week-theme-edit', {
+                detail: {
+                  weekId,
+                  schoolYearLabel: schoolYearLabel || '',
+                },
+              }),
+            );
+          }, 120);
+          return;
+        }
 
         if (child) {
           window.setTimeout(() => {

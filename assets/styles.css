@@ -947,6 +947,31 @@ body.child-detail-overlay-open {
   gap: 0.15rem;
 }
 
+.angebot-week-theme__label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.angebot-week-theme__label-row .angebot-week-theme__label {
+  margin-bottom: 0;
+}
+
+.angebot-week-theme__edit {
+  padding: 0.2rem 0.45rem;
+  line-height: 1;
+  border-color: #c7d2fe;
+  color: #1e3a8a;
+}
+
+.angebot-week-theme__edit:hover,
+.angebot-week-theme__edit:focus-visible {
+  border-color: #818cf8;
+  color: #1e3a8a;
+  background: #e0e7ff;
+}
+
 .angebot-week-theme__value {
   font-weight: 600;
   color: #1e3a8a;
@@ -1654,10 +1679,18 @@ body.child-detail-overlay-open {
   border-radius: 0.85rem;
   padding: 0.85rem 0.95rem;
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05);
+  scroll-margin-top: 5.5rem;
 }
 
 .angebot-week-theme__item.is-disabled {
   opacity: 0.7;
+}
+
+.angebot-week-theme__item.is-focus {
+  border-color: #6366f1;
+  box-shadow:
+    0 10px 24px rgba(99, 102, 241, 0.25),
+    0 0 0 3px rgba(99, 102, 241, 0.25);
 }
 
 .angebot-week-theme__header {
