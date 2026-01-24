@@ -1904,7 +1904,8 @@ export const createWeeklyTableView = ({
       .cell-free-day { background: #f8fafc; }
       .cell-absent { background: #fff1f2; }
       .theme-row th,
-      .theme-row td { background: #fff; font-weight: 400; text-align: center; }
+      .theme-row td { background: #fff; font-weight: 400; }
+      .theme-row td { text-align: center; }
       .theme-row th { background: #fff; color: inherit; border-color: #000; font-weight: 400; }
       .offers-row th { background: #fff; font-weight: 400; }
       @media print {
