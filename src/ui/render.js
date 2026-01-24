@@ -954,9 +954,21 @@ export const renderApp = (root, state) => {
   });
 
   if (appShell.mainTabsView?.refs?.angebotPane) {
-    appShell.mainTabsView.refs.angebotPane.replaceChildren(angebotSection.element);
+    const angebotPane = appShell.mainTabsView.refs.angebotPane;
+    const shouldReplaceAngebotPane =
+      angebotPane.childElementCount !== 1 ||
+      angebotPane.firstElementChild !== angebotSection.element;
+    if (shouldReplaceAngebotPane) {
+      angebotPane.replaceChildren(angebotSection.element);
+    }
   }
-  appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
+  const shouldReplaceContentWrap =
+    appShell.contentWrap.childElementCount !== 2 ||
+    appShell.contentWrap.firstElementChild !== appShell.headerEl ||
+    appShell.contentWrap.lastElementChild !== appShell.mainTabsEl;
+  if (shouldReplaceContentWrap) {
+    appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
+  }
 
   appShell.observationsView.update({
     nextChildren: sortedChildren,

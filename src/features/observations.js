@@ -783,11 +783,44 @@ export const bindObservations = ({
   let templateLongPressTimer = null;
   let suppressTemplateClick = false;
   const noteEditTimers = new Map();
-  const markNoteEditing = (panel, index = null) => {
+  const getScrollSpacer = (panel) =>
+    panel?.querySelector('[data-role="observation-scroll-spacer"]') || null;
+  const setScrollSpacerHeight = (panel, height) => {
+    if (!panel) {
+      return;
+    }
+    const nextHeight = Number.isFinite(height) ? Math.max(height, 0) : 0;
+    const existing = getScrollSpacer(panel);
+    if (!nextHeight) {
+      existing?.remove();
+      return;
+    }
+    const spacer = existing || document.createElement('div');
+    spacer.dataset.role = 'observation-scroll-spacer';
+    spacer.className = 'observation-scroll-spacer';
+    spacer.setAttribute('aria-hidden', 'true');
+    spacer.style.height = `${nextHeight}px`;
+    spacer.dataset.height = `${nextHeight}`;
+    if (!existing) {
+      panel.appendChild(spacer);
+    }
+  };
+  const adjustScrollSpacer = (panel, deltaHeight) => {
+    if (!panel || !Number.isFinite(deltaHeight) || deltaHeight === 0) {
+      return;
+    }
+    const existing = getScrollSpacer(panel);
+    const rawHeight = existing ? Number(existing.dataset.height) : 0;
+    const currentHeight = Number.isFinite(rawHeight) ? rawHeight : 0;
+    const nextHeight = Math.max(currentHeight + deltaHeight, 0);
+    setScrollSpacerHeight(panel, nextHeight);
+  };
+  const markNoteEditing = (panel, index = null, { shouldFocus = true } = {}) => {
     if (!panel) {
       return;
     }
     panel.dataset.noteEditing = 'true';
+    panel.dataset.noteEditingFocus = shouldFocus ? 'true' : 'false';
     if (Number.isFinite(index) && index >= 0) {
       panel.dataset.noteEditingIndex = String(index);
     }
@@ -798,6 +831,7 @@ export const bindObservations = ({
     const timeoutId = window.setTimeout(() => {
       delete panel.dataset.noteEditing;
       delete panel.dataset.noteEditingIndex;
+      delete panel.dataset.noteEditingFocus;
       noteEditTimers.delete(panel);
     }, 1500);
     noteEditTimers.set(panel, timeoutId);
@@ -806,6 +840,8 @@ export const bindObservations = ({
     if (!panel) {
       return [];
     }
+    const previousScrollHeight = overlayContent.scrollHeight;
+    const previousScrollTop = overlayContent.scrollTop;
     const disabled =
       typeof disabledOverride === 'boolean'
         ? disabledOverride
@@ -828,19 +864,13 @@ export const bindObservations = ({
         deleteButton.disabled = disabled || !hasContent;
       }
     });
+    const nextScrollHeight = overlayContent.scrollHeight;
+    if (nextScrollHeight > previousScrollHeight) {
+      adjustScrollSpacer(panel, previousScrollHeight - nextScrollHeight);
+    }
+    const nextMaxScroll = overlayContent.scrollHeight - overlayContent.clientHeight;
+    overlayContent.scrollTop = Math.min(previousScrollTop, Math.max(nextMaxScroll, 0));
     return inputs;
-  };
-  const clearNoteEditing = (panel) => {
-    if (!panel) {
-      return;
-    }
-    const existing = noteEditTimers.get(panel);
-    if (existing) {
-      window.clearTimeout(existing);
-      noteEditTimers.delete(panel);
-    }
-    delete panel.dataset.noteEditing;
-    delete panel.dataset.noteEditingIndex;
   };
   const noteListsEqual = (left, right) => {
     const a = normalizeObservationNoteList(left);
@@ -897,7 +927,7 @@ export const bindObservations = ({
     }
     getNotePersistDebouncer(child)(panel);
   };
-  const appendNoteField = (panel) => {
+  const appendNoteField = (panel, { focus = true, markEditing = true } = {}) => {
     if (!panel || isReadOnly || panel.dataset.absent === 'true') {
       return null;
     }
@@ -928,13 +958,17 @@ export const bindObservations = ({
     deleteButton.classList.add('d-none');
     deleteButton.hidden = true;
     deleteButton.setAttribute('aria-hidden', 'true');
-    markNoteEditing(panel, newIndex);
-    requestAnimationFrame(() => {
-      if (!noteInput.disabled) {
-        noteInput.focus();
-        noteInput.click();
-      }
-    });
+    if (markEditing) {
+      markNoteEditing(panel, newIndex, { shouldFocus: focus });
+    }
+    if (focus) {
+      requestAnimationFrame(() => {
+        if (!noteInput.disabled) {
+          noteInput.focus();
+          noteInput.click();
+        }
+      });
+    }
     return noteInput;
   };
   const handleExternalOpen = (event) => {
@@ -1098,6 +1132,100 @@ export const bindObservations = ({
     updateBodyOverlayClass();
   };
 
+  const syncNotesAfterDelete = (panel, nextNotes, deletedIndex) => {
+    if (!panel) {
+      return;
+    }
+    const noteList = panel.querySelector('[data-role="observation-note-list"]');
+    if (!noteList) {
+      return;
+    }
+    const previousScrollTop = overlayContent.scrollTop;
+    const previousScrollHeight = overlayContent.scrollHeight;
+    const disabled = panel.dataset.absent === 'true' || isReadOnly;
+    const activeElement = document.activeElement;
+    const hadActiveNoteFocus =
+      isTextAreaElement(activeElement) &&
+      activeElement.dataset.role === 'observation-note-input' &&
+      noteList.contains(activeElement);
+    const previousEditingIndex = Number(panel.dataset.noteEditingIndex);
+    const preferredIndex = hadActiveNoteFocus
+      ? Number(activeElement.dataset.noteIndex)
+      : Number.isFinite(previousEditingIndex)
+        ? previousEditingIndex
+        : deletedIndex;
+    const editingFocusRequested = panel.dataset.noteEditingFocus === 'true' || hadActiveNoteFocus;
+
+    const noteItems = Array.from(noteList.querySelectorAll('.observation-note-item'));
+    const itemToRemove = noteItems[deletedIndex];
+    if (itemToRemove instanceof HTMLElement) {
+      itemToRemove.remove();
+    }
+
+    let inputs = reindexNoteInputs(panel, { disabledOverride: disabled });
+
+    while (inputs.length > nextNotes.length) {
+      const lastInput = inputs[inputs.length - 1];
+      const lastItem = lastInput?.closest('.observation-note-item');
+      if (lastItem instanceof HTMLElement) {
+        lastItem.remove();
+      } else {
+        break;
+      }
+      inputs = reindexNoteInputs(panel, { disabledOverride: disabled });
+    }
+
+    while (inputs.length < nextNotes.length) {
+      const appended = appendNoteField(panel, { focus: false, markEditing: false });
+      if (!appended) {
+        break;
+      }
+      inputs = reindexNoteInputs(panel, { disabledOverride: disabled });
+    }
+
+    if (inputs.length === 0) {
+      appendNoteField(panel, { focus: false, markEditing: false });
+      inputs = reindexNoteInputs(panel, { disabledOverride: disabled });
+    }
+
+    inputs.forEach((input, idx) => {
+      if (idx >= nextNotes.length) {
+        return;
+      }
+      const nextValue = nextNotes[idx];
+      if (input.value !== nextValue) {
+        input.value = nextValue;
+      }
+    });
+
+    inputs = reindexNoteInputs(panel, { disabledOverride: disabled });
+    const nextScrollHeight = overlayContent.scrollHeight;
+    const scrollShrink = previousScrollHeight - nextScrollHeight;
+    if (previousScrollTop > 0 && scrollShrink > 0) {
+      adjustScrollSpacer(panel, scrollShrink);
+    }
+    const maxScrollTop = overlayContent.scrollHeight - overlayContent.clientHeight;
+    overlayContent.scrollTop = Math.min(previousScrollTop, Math.max(maxScrollTop, 0));
+
+    const maxIndex = Math.max(inputs.length - 1, 0);
+    const normalizedPreferred = Number.isFinite(preferredIndex) ? preferredIndex : 0;
+    const adjustedPreferred =
+      normalizedPreferred > deletedIndex ? normalizedPreferred - 1 : normalizedPreferred;
+    const targetIndex = Math.min(Math.max(adjustedPreferred, 0), maxIndex);
+
+    markNoteEditing(panel, targetIndex, { shouldFocus: editingFocusRequested });
+    if (!editingFocusRequested) {
+      return;
+    }
+    const focusTarget = inputs[targetIndex];
+    if (!isTextAreaElement(focusTarget) || focusTarget.disabled) {
+      return;
+    }
+    requestAnimationFrame(() => {
+      focusTarget.focus();
+    });
+  };
+
   const deleteNoteForChild = (child, index) => {
     if (!child || !Number.isFinite(index) || index < 0) {
       return;
@@ -1112,7 +1240,7 @@ export const bindObservations = ({
     }
     rawNotes.splice(index, 1);
     const nextNotes = normalizeObservationNoteList(rawNotes);
-    clearNoteEditing(panel);
+    syncNotesAfterDelete(panel, nextNotes, index);
     updateEntry(getDate(), {
       observationNotes: {
         [child]: {

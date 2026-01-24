@@ -2337,9 +2337,10 @@ const syncObservationNoteItems = ({ detail, refs, notes, disabled }) => {
     });
   }
 
+  reindexObservationNoteInputs(refs.noteList);
   refs.noteAddButton.disabled = disabled;
 
-  const shouldRestoreFocus = activeIndex !== null || detail.dataset.noteEditing === 'true';
+  const shouldRestoreFocus = activeIndex !== null || detail.dataset.noteEditingFocus === 'true';
   if (!shouldRestoreFocus || disabled) {
     return;
   }
@@ -3648,7 +3649,7 @@ export const buildObservationsSection = ({
       disabled: noteDisabled,
     });
 
-    const shouldRestoreFocus = hadNoteFocus || detail.dataset.noteEditing === 'true';
+    const shouldRestoreFocus = hadNoteFocus || detail.dataset.noteEditingFocus === 'true';
     if (shouldRestoreFocus && !noteDisabled) {
       reindexObservationNoteInputs(refs.noteList);
     }
