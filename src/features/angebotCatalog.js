@@ -1115,25 +1115,54 @@ export const bindAngebotCatalog = ({
     }
     const list = manageOverlayRef.querySelector('[data-role="angebot-week-theme-list"]');
     const emptyState = manageOverlayRef.querySelector('[data-role="angebot-week-theme-empty"]');
-    if (!(list instanceof HTMLElement) || !(emptyState instanceof HTMLElement)) {
+    const currentWeekContainer = manageOverlayRef.querySelector(
+      '[data-role="angebot-week-theme-current"]',
+    );
+    if (
+      !(list instanceof HTMLElement) ||
+      !(emptyState instanceof HTMLElement) ||
+      !(currentWeekContainer instanceof HTMLElement)
+    ) {
       return;
     }
     const year = selectedWeekThemeYear ? findSchoolYear(selectedWeekThemeYear) : null;
     const weeks = year?.weeks || [];
     list.replaceChildren();
+    currentWeekContainer.replaceChildren();
+    currentWeekContainer.classList.add('d-none');
     if (!weeks.length) {
       emptyState.classList.remove('d-none');
       return;
     }
     emptyState.classList.add('d-none');
     const datalistId = getWeekThemeDatalistId();
-    weeks.forEach((week) => {
+    let currentWeek = null;
+    if (isValidYmd(currentDate)) {
+      for (const schoolYear of currentSchoolYears) {
+        const yearWeeks = schoolYear.weeks || [];
+        for (const week of yearWeeks) {
+          if (currentDate >= week.startYmd && currentDate <= week.endYmd) {
+            currentWeek = week;
+            break;
+          }
+        }
+        if (currentWeek) {
+          break;
+        }
+      }
+    }
+    const currentWeekId = currentWeek?.id || '';
+
+    const buildWeekThemeItem = (week, { isCurrent = false } = {}) => {
       const freeInfo = getWeekFreeInfo(week, currentFreeDays);
       const isDisabled = freeInfo.allFree;
       const item = document.createElement('div');
       item.className = 'angebot-week-theme__item';
       if (isDisabled) {
         item.classList.add('is-disabled');
+      }
+      if (isCurrent) {
+        item.classList.add('is-current-week');
       }
 
       const header = document.createElement('div');
@@ -1193,6 +1222,22 @@ export const bindAngebotCatalog = ({
       }
 
       item.append(header, inputWrap);
+      return item;
+    };
+
+    if (currentWeekId) {
+      const currentLabel = document.createElement('div');
+      currentLabel.className = 'angebot-week-theme__current-label';
+      currentLabel.textContent = `Aktuelle Woche: ${currentWeek.label || currentWeek.id}`;
+      const currentItem = buildWeekThemeItem(currentWeek, { isCurrent: true });
+      const divider = document.createElement('hr');
+      divider.className = 'angebot-week-theme__divider my-1';
+      currentWeekContainer.append(currentLabel, currentItem, divider);
+      currentWeekContainer.classList.remove('d-none');
+    }
+
+    weeks.forEach((week) => {
+      const item = buildWeekThemeItem(week, { isCurrent: week.id === currentWeekId });
       list.appendChild(item);
     });
   };
