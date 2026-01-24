@@ -4099,9 +4099,14 @@ export const buildObservationsSection = ({
         observationCatalog: nextObservationCatalog,
         observationGroups: nextObservationGroups,
         savedFilters: currentSavedFilters,
+        title: 'Kurze Beobachtungen oder Notizen mehreren Kindern zuweisen',
         role: 'observation-multi-catalog-overlay',
         className: 'observation-templates-overlay observation-multi-catalog-overlay',
         closeRole: 'observation-multi-catalog-close',
+        readOnly: isReadOnly,
+        withNotesTab: true,
+        shortTabLabel: 'Kurze Einträge',
+        notesTabLabel: 'Notizen',
       });
       if (refreshed?.element) {
         const nextPanel = refreshed.element.querySelector(
