@@ -36,7 +36,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeGeldsammlungen } from '../utils/geldsammlungen.js';
 
-export const SCHEMA_VERSION = 12;
+export const SCHEMA_VERSION = 13;
 
 const createEmptyEntlassung = () => ({
   regular: {
@@ -47,6 +47,7 @@ const createEmptyEntlassung = () => ({
     friday: [],
   },
   special: [],
+  ausnahmen: [],
 });
 
 const DEFAULT_CLASS_PROFILE = {
@@ -257,6 +258,38 @@ const normalizeEntlassungSlots = (value, allowedSet) => {
   return result;
 };
 
+const normalizeEntlassungAusnahmen = (value, allowedSet) => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set();
+  const result = [];
+
+  value.forEach((entry) => {
+    const date = typeof entry?.date === 'string' ? entry.date.trim() : '';
+    if (!isValidYmd(date)) {
+      return;
+    }
+    const child = normalizeChildName(entry?.child);
+    if (!child || (allowedSet && !allowedSet.has(child))) {
+      return;
+    }
+    const time = normalizeEntlassungTime(entry?.time);
+    if (!time) {
+      return;
+    }
+    const key = `${date}::${child}`;
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    result.push({ date, child, time });
+  });
+
+  return result;
+};
+
 export const normalizeCourses = (value, childrenList = [], fallbackCourses = []) => {
   const source = Array.isArray(value)
     ? value
@@ -319,6 +352,11 @@ export const normalizeEntlassung = (value, childrenList = [], fallbackEntlassung
     : Array.isArray(fallback.special)
       ? fallback.special
       : [];
+  const baseAusnahmen = Array.isArray(source.ausnahmen)
+    ? source.ausnahmen
+    : Array.isArray(fallback.ausnahmen)
+      ? fallback.ausnahmen
+      : [];
 
   const allowedSet = Array.isArray(childrenList)
     ? new Set(childrenList.map((child) => normalizeChildName(child)).filter(Boolean))
@@ -339,9 +377,12 @@ export const normalizeEntlassung = (value, childrenList = [], fallbackEntlassung
     special.push({ date, times });
   });
 
+  const ausnahmen = normalizeEntlassungAusnahmen(baseAusnahmen, allowedSet);
+
   return {
     regular,
     special,
+    ausnahmen,
   };
 };
 

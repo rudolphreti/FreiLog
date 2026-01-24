@@ -2621,9 +2621,17 @@ const buildEntlassungChildButton = ({
   child,
   isEntlassen,
   isAbsent,
+  isAusnahme,
   readOnly,
   courseIcons = [],
 }) => {
+  const ausnahmeBadge = isAusnahme
+    ? createEl('span', {
+        className: 'badge text-bg-warning text-dark entlassung-ausnahme-badge',
+        dataset: { role: 'entlassung-ausnahme-badge' },
+        text: 'Ausnahme',
+      })
+    : null;
   const statusBadge = isEntlassen
     ? createEl('span', {
         className: 'badge text-bg-light text-secondary entlassung-badge',
@@ -2665,6 +2673,7 @@ const buildEntlassungChildButton = ({
     children: [
       createEl('span', { className: 'fw-semibold', text: child }),
       courseIconGroup,
+      ausnahmeBadge,
       statusBadge,
       absentBadge,
     ].filter(Boolean),
@@ -2679,12 +2688,14 @@ const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly, courseIco
   return slots.map((slot) => {
     const timeLabel = slot?.time || 'Ohne Uhrzeit';
     const children = Array.isArray(slot?.children) ? slot.children : [];
+    const ausnahmeSet = new Set(Array.isArray(slot?.ausnahmeChildren) ? slot.ausnahmeChildren : []);
     const childList = createEl('div', { className: 'd-flex flex-wrap gap-2' });
 
     if (children.length) {
       children.forEach((child) => {
         const isAbsent = absentSet.has(child);
         const isEntlassen = statusSet.has(child) && !isAbsent;
+        const isAusnahme = ausnahmeSet.has(child);
         const courseIcons =
           courseIconsByChild instanceof Map ? courseIconsByChild.get(child) : null;
         childList.appendChild(
@@ -2692,6 +2703,7 @@ const buildEntlassungSlots = ({ slots, absentSet, statusSet, readOnly, courseIco
             child,
             isEntlassen,
             isAbsent,
+            isAusnahme,
             readOnly,
             courseIcons,
           }),
@@ -2856,6 +2868,10 @@ export const buildEntlassungSection = ({
   absentChildren,
   statusSet,
   courseIconsByChild,
+  children = [],
+  ausnahmenForDate = [],
+  allowedTimes = [],
+  sonderTimes = [],
   readOnly = false,
   freeDayInfo = null,
 }) => {
@@ -2864,16 +2880,127 @@ export const buildEntlassungSection = ({
     dataset: { readonly: readOnly ? 'true' : 'false' },
   });
   const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
+  const labelBadge = createEl('span', {
+    className: 'badge text-bg-light border text-secondary align-self-start',
+    text: entlassungLabel,
+  });
   const header = createEl('div', {
     className: 'd-flex flex-column gap-1',
     children: [
       createEl('div', { className: 'h6 mb-0', text: 'Entlassung' }),
+      labelBadge,
     ],
   });
   const slotsWrapper = createEl('div', { className: 'd-flex flex-column gap-2' });
   const notice = createEl('div', { className: 'alert mb-0', hidden: true });
 
-  body.append(header, notice, slotsWrapper);
+  const ausnahmenTitle = createEl('div', { className: 'fw-semibold', text: 'Ausnahmen' });
+  const ausnahmenAddButton = createEl('button', {
+    className: 'btn btn-outline-primary btn-sm',
+    attrs: { type: 'button', 'data-role': 'entlassung-ausnahme-add' },
+    text: '+ Ausnahme',
+  });
+  const ausnahmenHeader = createEl('div', {
+    className: 'd-flex justify-content-between align-items-center gap-2',
+    children: [ausnahmenTitle, ausnahmenAddButton],
+  });
+  const ausnahmenEmpty = createEl('div', {
+    className: 'text-muted small',
+    dataset: { role: 'entlassung-ausnahme-empty' },
+    text: 'Keine Ausnahmen für dieses Datum.',
+  });
+  const ausnahmenList = createEl('div', {
+    className: 'd-flex flex-column gap-2',
+    dataset: { role: 'entlassung-ausnahme-list' },
+  });
+  const ausnahmenError = createEl('div', {
+    className: 'text-danger small d-none',
+    dataset: { role: 'entlassung-ausnahme-error' },
+  });
+  const ausnahmenSonderToggle = createEl('input', {
+    className: 'form-check-input',
+    attrs: {
+      type: 'checkbox',
+      role: 'switch',
+      id: 'entlassung-ausnahme-sonder-toggle',
+      'data-role': 'entlassung-ausnahme-sonder-toggle',
+    },
+  });
+  const ausnahmenSonderToggleLabel = createEl('label', {
+    className: 'form-check-label',
+    attrs: { for: 'entlassung-ausnahme-sonder-toggle' },
+    text: 'Sonderentlassung',
+  });
+  const ausnahmenSonderSwitch = createEl('div', {
+    className: 'form-check form-switch',
+    children: [ausnahmenSonderToggle, ausnahmenSonderToggleLabel],
+  });
+  const ausnahmenChildSelect = createEl('select', {
+    className: 'form-select form-select-sm',
+    attrs: { 'data-role': 'entlassung-ausnahme-child', 'aria-label': 'Kind auswählen' },
+  });
+  const ausnahmenTimeSelect = createEl('select', {
+    className: 'form-select form-select-sm',
+    attrs: { 'data-role': 'entlassung-ausnahme-time', 'aria-label': 'Entlassungszeit auswählen' },
+  });
+  const ausnahmenAllowedHint = createEl('div', {
+    className: 'text-muted small d-none',
+    dataset: { role: 'entlassung-ausnahme-allowed-hint' },
+    text: 'Keine definierten Uhrzeiten verfügbar. Nutze eine Sonderentlassung.',
+  });
+  const ausnahmenRegularLabel = createEl('div', {
+    className: 'small text-muted',
+    dataset: { role: 'entlassung-ausnahme-regular-label' },
+    text: 'Entlassungszeit (laut Einstellungen)',
+  });
+  const ausnahmenSonderSelect = createEl('select', {
+    className: 'form-select form-select-sm d-none',
+    attrs: {
+      'data-role': 'entlassung-ausnahme-sonder-time',
+      'aria-label': 'Sonderentlassung auswählen',
+    },
+  });
+  const ausnahmenSonderLabel = createEl('div', {
+    className: 'small text-muted d-none',
+    dataset: { role: 'entlassung-ausnahme-sonder-label' },
+    text: 'Sonderentlassung (08:00–17:30)',
+  });
+  const ausnahmenActions = createEl('div', {
+    className: 'd-flex flex-wrap gap-2 justify-content-end',
+  });
+  const ausnahmenCancelButton = createEl('button', {
+    className: 'btn btn-outline-secondary btn-sm',
+    attrs: { type: 'button', 'data-role': 'entlassung-ausnahme-cancel' },
+    text: 'Abbrechen',
+  });
+  const ausnahmenSubmitButton = createEl('button', {
+    className: 'btn btn-primary btn-sm',
+    attrs: { type: 'submit', 'data-role': 'entlassung-ausnahme-submit' },
+    text: 'Ausnahme speichern',
+  });
+  ausnahmenActions.append(ausnahmenCancelButton, ausnahmenSubmitButton);
+  const ausnahmenForm = createEl('form', {
+    className: 'border rounded-3 p-2 d-flex flex-column gap-2 entlassung-ausnahme-form d-none',
+    dataset: { role: 'entlassung-ausnahme-form' },
+    children: [
+      ausnahmenSonderSwitch,
+      createEl('div', { className: 'small text-muted', text: 'Kind auswählen' }),
+      ausnahmenChildSelect,
+      ausnahmenRegularLabel,
+      ausnahmenTimeSelect,
+      ausnahmenAllowedHint,
+      ausnahmenSonderLabel,
+      ausnahmenSonderSelect,
+      ausnahmenError,
+      ausnahmenActions,
+    ],
+  });
+  const ausnahmenSection = createEl('div', {
+    className: 'd-flex flex-column gap-2 entlassung-ausnahmen',
+    children: [ausnahmenHeader, ausnahmenList, ausnahmenEmpty, ausnahmenForm],
+  });
+
+  body.append(header, notice, ausnahmenSection, slotsWrapper);
   section.appendChild(body);
 
   const update = ({
@@ -2882,15 +3009,24 @@ export const buildEntlassungSection = ({
     nextAbsentChildren,
     nextStatusSet,
     nextCourseIconsByChild,
+    nextChildren = [],
+    nextAusnahmenForDate = [],
+    nextAllowedTimes = [],
+    nextSonderTimes = [],
     nextReadOnly = false,
     nextFreeDayInfo = null,
   }) => {
     section.dataset.readonly = nextReadOnly ? 'true' : 'false';
+    labelBadge.textContent = nextLabel || entlassungLabel;
     const safeSlots = Array.isArray(nextSlots) ? nextSlots : [];
     const absentSet = new Set(nextAbsentChildren || []);
     const status = nextStatusSet instanceof Set ? nextStatusSet : new Set();
     const courseIcons =
       nextCourseIconsByChild instanceof Map ? nextCourseIconsByChild : courseIconsByChild;
+    const safeChildren = Array.isArray(nextChildren) ? nextChildren : [];
+    const safeAusnahmen = Array.isArray(nextAusnahmenForDate) ? nextAusnahmenForDate : [];
+    const safeAllowedTimes = Array.isArray(nextAllowedTimes) ? nextAllowedTimes : [];
+    const safeSonderTimes = Array.isArray(nextSonderTimes) ? nextSonderTimes : [];
 
     const dayLabel = nextFreeDayInfo?.label || 'Schulfrei';
     if (nextReadOnly) {
@@ -2900,6 +3036,72 @@ export const buildEntlassungSection = ({
     } else {
       notice.hidden = true;
     }
+
+    ausnahmenAddButton.disabled = nextReadOnly;
+
+    const updateSelectOptions = (select, options, placeholder) => {
+      const previousValue = select.value;
+      const optionNodes = [
+        createEl('option', { attrs: { value: '' }, text: placeholder }),
+        ...options.map((value) => createEl('option', { attrs: { value }, text: value })),
+      ];
+      select.replaceChildren(...optionNodes);
+      if (previousValue && options.includes(previousValue)) {
+        select.value = previousValue;
+      }
+    };
+
+    updateSelectOptions(ausnahmenChildSelect, safeChildren, 'Kind auswählen');
+    updateSelectOptions(ausnahmenTimeSelect, safeAllowedTimes, 'Uhrzeit auswählen');
+    updateSelectOptions(ausnahmenSonderSelect, safeSonderTimes, 'Sonderzeit auswählen');
+
+    const hasAllowedTimes = safeAllowedTimes.length > 0;
+    const isSonderMode = ausnahmenSonderToggle.checked;
+    ausnahmenAllowedHint.classList.toggle('d-none', hasAllowedTimes || isSonderMode);
+
+    [
+      ausnahmenChildSelect,
+      ausnahmenSonderToggle,
+      ausnahmenCancelButton,
+      ausnahmenSubmitButton,
+    ].forEach((control) => {
+      control.disabled = nextReadOnly;
+    });
+    ausnahmenTimeSelect.disabled = nextReadOnly || isSonderMode || !hasAllowedTimes;
+    ausnahmenSonderSelect.disabled = nextReadOnly || !isSonderMode;
+
+    const ausnahmeItems = safeAusnahmen.map((entry) => {
+      const time = entry?.time || '—';
+      const child = entry?.child || '—';
+      const badge = createEl('span', {
+        className: 'badge text-bg-warning text-dark',
+        text: 'Ausnahme',
+      });
+      const label = createEl('div', {
+        className: 'd-flex flex-wrap align-items-center gap-2',
+        children: [
+          badge,
+          createEl('span', { className: 'fw-semibold', text: child }),
+          createEl('span', { className: 'text-muted small', text: time }),
+        ],
+      });
+      const removeButton = createEl('button', {
+        className: 'btn btn-outline-danger btn-sm',
+        attrs: {
+          type: 'button',
+          'data-role': 'entlassung-ausnahme-remove',
+          'data-child': child,
+        },
+        text: 'Entfernen',
+      });
+      removeButton.disabled = nextReadOnly;
+      return createEl('div', {
+        className: 'border rounded-3 p-2 d-flex flex-column flex-sm-row gap-2 justify-content-between align-items-start align-items-sm-center',
+        children: [label, removeButton],
+      });
+    });
+    ausnahmenList.replaceChildren(...ausnahmeItems);
+    ausnahmenEmpty.classList.toggle('d-none', ausnahmeItems.length > 0);
 
     slotsWrapper.replaceChildren(
       ...buildEntlassungSlots({
@@ -2918,6 +3120,10 @@ export const buildEntlassungSection = ({
     nextAbsentChildren: absentChildren,
     nextStatusSet: statusSet,
     nextCourseIconsByChild: courseIconsByChild,
+    nextChildren: children,
+    nextAusnahmenForDate: ausnahmenForDate,
+    nextAllowedTimes: allowedTimes,
+    nextSonderTimes: sonderTimes,
     nextReadOnly: readOnly,
     nextFreeDayInfo: freeDayInfo,
   });
@@ -2925,6 +3131,20 @@ export const buildEntlassungSection = ({
   return {
     element: section,
     update,
+    refs: {
+      ausnahmenAddButton,
+      ausnahmenForm,
+      ausnahmenChildSelect,
+      ausnahmenTimeSelect,
+      ausnahmenSonderToggle,
+      ausnahmenSonderSelect,
+      ausnahmenError,
+      ausnahmenRegularLabel,
+      ausnahmenSonderLabel,
+      ausnahmenAllowedHint,
+      ausnahmenCancelButton,
+      ausnahmenSubmitButton,
+    },
   };
 };
 
