@@ -2257,6 +2257,11 @@ const reindexObservationNoteInputs = (noteList) => {
     if (deleteButton instanceof HTMLButtonElement) {
       deleteButton.dataset.noteIndex = String(index);
       deleteButton.setAttribute('aria-label', `Notiz ${index + 1} löschen`);
+      const hasContent = input.value.trim().length > 0;
+      deleteButton.classList.toggle('d-none', !hasContent);
+      deleteButton.hidden = !hasContent;
+      deleteButton.setAttribute('aria-hidden', hasContent ? 'false' : 'true');
+      deleteButton.disabled = input.disabled || !hasContent;
     }
   });
 };

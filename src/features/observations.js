@@ -802,10 +802,14 @@ export const bindObservations = ({
     }, 1500);
     noteEditTimers.set(panel, timeoutId);
   };
-  const reindexNoteInputs = (panel) => {
+  const reindexNoteInputs = (panel, { disabledOverride } = {}) => {
     if (!panel) {
       return [];
     }
+    const disabled =
+      typeof disabledOverride === 'boolean'
+        ? disabledOverride
+        : panel.dataset.absent === 'true' || isReadOnly;
     const inputs = Array.from(
       panel.querySelectorAll('[data-role="observation-note-input"]'),
     ).filter(isTextAreaElement);
@@ -817,9 +821,26 @@ export const bindObservations = ({
       if (isButtonElement(deleteButton)) {
         deleteButton.dataset.noteIndex = String(index);
         deleteButton.setAttribute('aria-label', `Notiz ${index + 1} löschen`);
+        const hasContent = input.value.trim().length > 0;
+        deleteButton.classList.toggle('d-none', !hasContent);
+        deleteButton.hidden = !hasContent;
+        deleteButton.setAttribute('aria-hidden', hasContent ? 'false' : 'true');
+        deleteButton.disabled = disabled || !hasContent;
       }
     });
     return inputs;
+  };
+  const clearNoteEditing = (panel) => {
+    if (!panel) {
+      return;
+    }
+    const existing = noteEditTimers.get(panel);
+    if (existing) {
+      window.clearTimeout(existing);
+      noteEditTimers.delete(panel);
+    }
+    delete panel.dataset.noteEditing;
+    delete panel.dataset.noteEditingIndex;
   };
   const noteListsEqual = (left, right) => {
     const a = normalizeObservationNoteList(left);
@@ -904,6 +925,9 @@ export const bindObservations = ({
     const disabled = panel.dataset.absent === 'true' || isReadOnly;
     noteInput.disabled = disabled;
     deleteButton.disabled = disabled;
+    deleteButton.classList.add('d-none');
+    deleteButton.hidden = true;
+    deleteButton.setAttribute('aria-hidden', 'true');
     markNoteEditing(panel, newIndex);
     requestAnimationFrame(() => {
       if (!noteInput.disabled) {
@@ -1088,6 +1112,7 @@ export const bindObservations = ({
     }
     rawNotes.splice(index, 1);
     const nextNotes = normalizeObservationNoteList(rawNotes);
+    clearNoteEditing(panel);
     updateEntry(getDate(), {
       observationNotes: {
         [child]: {
@@ -2609,6 +2634,9 @@ export const bindObservations = ({
   };
 
   overlayContent.addEventListener('click', handleOverlayClick);
+  if (noteDeleteConfirmEl) {
+    noteDeleteConfirmEl.addEventListener('click', handleOverlayClick);
+  }
   overlayContent.addEventListener('input', handleOverlayInput);
   overlayContent.addEventListener('focusout', handleOverlayFocusOut);
   list.addEventListener('click', handleListClick);
