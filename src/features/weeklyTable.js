@@ -1885,28 +1885,28 @@ export const createWeeklyTableView = ({
       .pdf-item-text { display: inline-block; }
       .pdf-group-dots { display: inline-flex; align-items: center; gap: 3px; }
       .pdf-group-dot { color: var(--group-color, #6c757d); font-size: 11px; line-height: 1; display: inline-flex; align-items: center; }
-      .pdf-group-dot--overflow { color: #475569; font-size: 9px; font-weight: 600; }
+      .pdf-group-dot--overflow { color: #475569; font-size: 9px; font-weight: 400; }
       .pdf-module-line { display: grid; gap: 2px; }
-      .pdf-module-label { font-weight: 600; color: #334155; display: inline-flex; }
+      .pdf-module-label { font-weight: 400; color: #334155; display: inline-flex; }
       .pdf-module-offers { display: inline-flex; flex-wrap: wrap; gap: 4px; }
       .group { margin-bottom: 16px; }
       .badge { display: inline-block; border-radius: 999px; padding: 2px 8px; background: #e2e8f0; font-size: 10px; }
       .badge-absence { background: #fee2e2; color: #991b1b; }
       table { width: 100%; border-collapse: collapse; margin-bottom: 8px; table-layout: fixed; }
-      th, td { border: 1px solid #e2e8f0; padding: 6px; vertical-align: top; text-align: left; font-size: 11px; }
-      th { background: #f1f5f9; font-weight: 600; }
+      th, td { border: 1px solid #000; padding: 6px; vertical-align: top; text-align: left; font-size: 11px; font-weight: 400; }
+      th { background: #fff; font-weight: 400; }
       th:first-child { width: 130px; }
       .day-header { display: grid; gap: 4px; }
-      .day-title { font-weight: 600; }
+      .day-title { font-weight: 400; }
       .day-date { color: #64748b; font-size: 11px; }
       .cell-lines { display: grid; gap: 4px; }
       .line { margin: 0; }
       .cell-free-day { background: #f8fafc; }
       .cell-absent { background: #fff1f2; }
       .theme-row th,
-      .theme-row td { background: #fff4e5; font-weight: 600; text-align: center; }
-      .theme-row th { background: #fff4e5; color: #8a4b14; border-color: #f7c68f; }
-      .offers-row th { background: #f8fafc; }
+      .theme-row td { background: #fff; font-weight: 400; text-align: center; }
+      .theme-row th { background: #fff; color: inherit; border-color: #000; font-weight: 400; }
+      .offers-row th { background: #fff; font-weight: 400; }
       @media print {
         body { padding: 12px; }
       }
