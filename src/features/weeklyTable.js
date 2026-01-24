@@ -23,6 +23,7 @@ import {
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
+import { normalizeWeekThemeAssignments } from '../db/dbSchema.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -208,6 +209,30 @@ const getFreeDayDateKeys = (freeDays = []) => {
     const start = entry.start || entry.date || entry.startDate;
     const end = entry.end || entry.until || entry.endDate || start;
     getDateRangeKeys(start, end).forEach((key) => keys.push(key));
+  });
+  return keys;
+};
+
+const parseWeekStartFromId = (weekId) => {
+  if (typeof weekId !== 'string') {
+    return '';
+  }
+  const match = weekId.trim().match(/(\d{4}-\d{2}-\d{2})$/);
+  return match ? match[1] : '';
+};
+
+const getWeekThemeDateKeys = (weekThemes = {}) => {
+  const assignments = normalizeWeekThemeAssignments(weekThemes);
+  const keys = [];
+  Object.keys(assignments).forEach((weekId) => {
+    const startYmd = parseWeekStartFromId(weekId);
+    const startDate = toUtcDate(startYmd);
+    if (!startDate) {
+      return;
+    }
+    for (let offset = 0; offset < 5; offset += 1) {
+      keys.push(formatYmd(addUtcDays(startDate, offset)));
+    }
   });
   return keys;
 };
@@ -616,6 +641,7 @@ const buildWeeklyTable = ({
   visibleDateKeys,
   typeFilters,
   freeDayFilters,
+  weekThemes,
 }) => {
   const table = createEl('table', {
     className: 'table table-bordered table-sm align-middle weekly-table',
@@ -684,9 +710,23 @@ const buildWeeklyTable = ({
 
   const tbody = createEl('tbody');
 
+  const normalizedWeekThemes = normalizeWeekThemeAssignments(weekThemes);
+  const weekTheme = normalizedWeekThemes[week.id] || '';
+  const showWeekTheme = typeFilters?.weekTheme !== false;
   const showOffers = typeFilters?.offers !== false;
   const showObservations = typeFilters?.observations !== false;
   const showAbsence = showObservations;
+
+  const themeRow = createEl('tr', {
+    className: 'weekly-table__theme-row',
+  });
+  themeRow.append(
+    createEl('th', {
+      scope: 'row',
+      className: 'text-nowrap',
+      text: UI_LABELS.themaDerWoche,
+    }),
+  );
 
   const angeboteRow = createEl('tr', {
     className: 'weekly-table__offers-row',
@@ -704,6 +744,21 @@ const buildWeeklyTable = ({
     }
     return dayEntryByDateKey.get(dateKey);
   };
+  weekDays.forEach((item) => {
+    const freeInfo = item.freeInfo;
+    const themeContent = weekTheme
+      ? createEl('span', { text: weekTheme })
+      : createEl('span', { className: 'text-muted', text: '—' });
+    themeRow.append(
+      createEl('td', {
+        className: freeInfo ? 'weekly-table__cell--free-day' : '',
+        children: [themeContent],
+      }),
+    );
+  });
+  if (showWeekTheme) {
+    tbody.append(themeRow);
+  }
   weekDays.forEach((item) => {
     const dayEntry = getDayEntry(item.dateKey);
     const freeInfo = item.freeInfo;
@@ -888,8 +943,11 @@ export const createWeeklyTableView = ({
   timetableSchedule = {},
   timetableLessons = [],
   classProfile = {},
+  weekThemes = {},
 } = {}) => {
-  let schoolYears = getSchoolWeeks(days);
+  const initialWeekThemeKeys = getWeekThemeDateKeys(weekThemes);
+  const initialDateKeys = [...new Set([...Object.keys(days || {}), ...initialWeekThemeKeys])];
+  let schoolYears = getSchoolWeeks(buildDaysIndex(initialDateKeys, days));
   let selectedYear = schoolYears.length ? schoolYears[schoolYears.length - 1].label : null;
   let selectedWeekId = selectedYear ? getLatestWeekForYear(schoolYears, selectedYear)?.id : null;
   let currentDays = days || {};
@@ -902,6 +960,7 @@ export const createWeeklyTableView = ({
   let currentTimetableSchedule = timetableSchedule || {};
   let currentTimetableLessons = Array.isArray(timetableLessons) ? [...timetableLessons] : [];
   let currentClassProfile = classProfile || {};
+  let currentWeekThemes = normalizeWeekThemeAssignments(weekThemes);
   let angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
   let observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
   let isEditMode = false;
@@ -913,6 +972,7 @@ export const createWeeklyTableView = ({
   let typeFilters = {
     observations: true,
     offers: true,
+    weekTheme: true,
   };
   let freeDayFilters = {
     weekend: false,
@@ -985,6 +1045,7 @@ export const createWeeklyTableView = ({
     id: 'weekly-table-type',
     label: 'Art',
     options: [
+      { value: 'weekTheme', label: UI_LABELS.themaDerWoche, checked: true },
       { value: 'observations', label: 'Beobachtungen', checked: true },
       { value: 'offers', label: 'Angebote', checked: true },
     ],
@@ -1061,10 +1122,13 @@ export const createWeeklyTableView = ({
     const baseKeys = getSortedDateKeys(currentDays);
     const includeHolidays = daySelectionFilters.holidays || freeDayFilters.holidays;
     const holidayKeys = includeHolidays ? getFreeDayDateKeys(currentFreeDays) : [];
-    const keySet = new Set([...baseKeys, ...holidayKeys].filter((key) => isValidYmd(key)));
+    const weekThemeKeys = getWeekThemeDateKeys(currentWeekThemes);
+    const keySet = new Set(
+      [...baseKeys, ...holidayKeys, ...weekThemeKeys].filter((key) => isValidYmd(key)),
+    );
 
-    if (daySelectionFilters.working) {
-      const range = getDateRangeFromKeys([...keySet]);
+    if (daySelectionFilters.working && baseKeys.length) {
+      const range = getDateRangeFromKeys(baseKeys);
       if (range) {
         const startDate = toUtcDate(range.startYmd);
         const endDate = toUtcDate(range.endYmd);
@@ -1307,6 +1371,7 @@ export const createWeeklyTableView = ({
       timetableLessons: currentTimetableLessons,
       typeFilters,
       freeDayFilters,
+      weekThemes: currentWeekThemes,
       onOpenFilters: () => {
         openFilterOverlay();
       },
@@ -1557,6 +1622,7 @@ export const createWeeklyTableView = ({
     const showOffers = typeFilters?.offers !== false;
     const showObservations = typeFilters?.observations !== false;
     const showAbsence = showObservations;
+    const showWeekTheme = typeFilters?.weekTheme !== false;
 
     const buildPdfGroupDots = (groups, groupConfig) => {
       const normalized = Array.isArray(groups) ? groups.filter(Boolean) : [];
@@ -1602,6 +1668,8 @@ export const createWeeklyTableView = ({
         return;
       }
       weekGroups.push({
+        weekId: week.id,
+        weekTheme: currentWeekThemes[week.id] || '',
         heading: includeHeading
           ? `${week.label} (${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)})`
           : null,
@@ -1712,6 +1780,7 @@ export const createWeeklyTableView = ({
     const groupsHtml = weekGroups.length
       ? weekGroups
           .map((group) => {
+            const weekTheme = group.weekTheme || '';
             const headerCells = group.days
               .map((day) => {
                 const holidayBadge = day.holidayLabel
@@ -1726,6 +1795,18 @@ export const createWeeklyTableView = ({
                 return `<th class="${dayClasses}">${dayHeader}</th>`;
               })
               .join('');
+            const themeRow = showWeekTheme
+              ? `<tr class="theme-row">
+                  <th>${escapeHtml(UI_LABELS.themaDerWoche)}</th>
+                  ${group.days
+                    .map((day) => {
+                      const cellClasses = day.freeInfo ? 'cell-free-day' : '';
+                      const themeText = weekTheme ? escapeHtml(weekTheme) : '<span class="muted">—</span>';
+                      return `<td class="${cellClasses}">${themeText}</td>`;
+                    })
+                    .join('')}
+                </tr>`
+              : '';
             const offerRow = showOffers
               ? `<tr class="offers-row">
                   <th>Angebote</th>
@@ -1772,7 +1853,7 @@ export const createWeeklyTableView = ({
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
             const tableHead = `<thead><tr><th></th>${headerCells}</tr></thead>`;
-            const rows = `${offerRow}${childRows}`;
+            const rows = `${themeRow}${offerRow}${childRows}`;
             return `<section class="group">${heading}<table>${tableHead}<tbody>${rows}</tbody></table></section>`;
           })
           .join('')
@@ -1819,6 +1900,8 @@ export const createWeeklyTableView = ({
       .line { margin: 0; }
       .cell-free-day { background: #f8fafc; }
       .cell-absent { background: #fff1f2; }
+      .theme-row th,
+      .theme-row td { background: #eef2ff; font-weight: 600; }
       .offers-row th { background: #f8fafc; }
       @media print {
         body { padding: 12px; }
@@ -1878,6 +1961,7 @@ export const createWeeklyTableView = ({
     timetableSchedule: nextTimetableSchedule = {},
     timetableLessons: nextTimetableLessons = [],
     classProfile: nextClassProfile = {},
+    weekThemes: nextWeekThemes = {},
   } = {}) => {
     currentDays = nextDays || {};
     currentChildren = Array.isArray(nextChildren) ? [...nextChildren] : [];
@@ -1891,6 +1975,7 @@ export const createWeeklyTableView = ({
     currentTimetableSchedule = nextTimetableSchedule || {};
     currentTimetableLessons = Array.isArray(nextTimetableLessons) ? [...nextTimetableLessons] : [];
     currentClassProfile = nextClassProfile || {};
+    currentWeekThemes = normalizeWeekThemeAssignments(nextWeekThemes);
     angebotGroupMap = buildAngebotCatalogGroupMap(currentAngebotCatalog);
     observationGroupMap = buildObservationCatalogGroupMap(currentObservationCatalog);
     selectableDateKeys = getSelectableDateKeys();
