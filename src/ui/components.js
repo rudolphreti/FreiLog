@@ -955,6 +955,10 @@ export const buildAngebotCatalogOverlay = ({
       dataset: { role: 'angebot-week-theme-empty' },
       text: 'Keine Schulwochen im aktuellen Zeitraum gefunden.',
     });
+    const currentWeek = createEl('div', {
+      className: 'angebot-week-theme__current d-none',
+      dataset: { role: 'angebot-week-theme-current' },
+    });
     const weekList = createEl('div', {
       className: 'angebot-week-theme__list d-flex flex-column gap-2',
       dataset: { role: 'angebot-week-theme-list' },
@@ -969,7 +973,7 @@ export const buildAngebotCatalogOverlay = ({
     });
     const weekThemePaneContent = createEl('div', {
       className: 'mt-3 d-flex flex-column gap-3',
-      children: [yearRow, emptyState, weekList, hint, weekThemeDatalist],
+      children: [yearRow, emptyState, currentWeek, weekList, hint, weekThemeDatalist],
     });
     const weekThemePane = createEl('div', {
       className: 'tab-pane fade',
