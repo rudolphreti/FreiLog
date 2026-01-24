@@ -2,11 +2,14 @@ import {
   addPreset,
   getAngebotCatalog,
   getEntry,
+  getWeekThemes,
   removeAngebotCatalogEntry,
+  setWeekThemeForWeek,
   updateAngebotCatalogEntry,
   updateEntry,
   upsertAngebotCatalogEntry,
 } from '../db/dbRepository.js';
+import { normalizeWeekThemeAssignments, normalizeWeekThemeText } from '../db/dbSchema.js';
 import { setSavedAngebotFilters } from '../state/store.js';
 import {
   buildAngebotCatalogGroupMap,
@@ -18,11 +21,166 @@ import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { debounce } from '../utils/debounce.js';
 import { focusTextInput } from '../utils/focus.js';
 import { flattenModuleAssignments, normalizeModuleAssignments } from '../utils/angebotModules.js';
+import { isValidYmd } from '../utils/date.js';
+import { getFreeDayInfo, isSummerBreakEntry } from '../utils/freeDays.js';
+import { formatDisplayDate, getSchoolWeeks } from '../utils/schoolWeeks.js';
 
 const LONG_PRESS_MS = 600;
 
 const normalizeFilterQuery = (value) =>
   typeof value === 'string' ? value.trim().toLocaleLowerCase('de') : '';
+
+const pad = (value) => String(value).padStart(2, '0');
+
+const toUtcDate = (ymd) => {
+  if (!isValidYmd(ymd)) {
+    return null;
+  }
+  const [year, month, day] = ymd.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const formatYmd = (date) => {
+  if (!(date instanceof Date)) {
+    return '';
+  }
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  return `${year}-${month}-${day}`;
+};
+
+const addUtcDays = (date, days) => {
+  const next = new Date(date);
+  next.setUTCDate(next.getUTCDate() + days);
+  return next;
+};
+
+const isWeekend = (ymd) => {
+  const date = toUtcDate(ymd);
+  if (!date) {
+    return false;
+  }
+  const day = date.getUTCDay();
+  return day === 0 || day === 6;
+};
+
+const getDateRangeFromKeys = (keys) => {
+  const valid = (Array.isArray(keys) ? keys : []).filter((key) => isValidYmd(key));
+  const sorted = valid.sort((a, b) => a.localeCompare(b));
+  if (!sorted.length) {
+    return null;
+  }
+  return {
+    startYmd: sorted[0],
+    endYmd: sorted[sorted.length - 1],
+  };
+};
+
+const getFreeDayDateKeys = (freeDays = []) => {
+  const entries = Array.isArray(freeDays) ? freeDays : [];
+  const keys = [];
+  entries.forEach((entry) => {
+    if (!entry || isSummerBreakEntry(entry)) {
+      return;
+    }
+    const start = entry.start || entry.date || entry.startDate;
+    const end = entry.end || entry.until || entry.endDate || start;
+    const startDate = toUtcDate(start);
+    const endDate = toUtcDate(end);
+    if (!startDate || !endDate) {
+      return;
+    }
+    let cursor = startDate;
+    while (cursor <= endDate) {
+      keys.push(formatYmd(cursor));
+      cursor = addUtcDays(cursor, 1);
+    }
+  });
+  return keys;
+};
+
+const buildDaysIndex = (dateKeys, days) =>
+  dateKeys.reduce((acc, key) => {
+    acc[key] = days?.[key] || {};
+    return acc;
+  }, {});
+
+const buildSelectableDateKeys = (days = {}, freeDays = []) => {
+  const baseKeys = Object.keys(days || {}).filter((key) => isValidYmd(key));
+  const holidayKeys = getFreeDayDateKeys(freeDays);
+  const keySet = new Set([...baseKeys, ...holidayKeys]);
+  const range = getDateRangeFromKeys([...keySet]);
+  if (!range) {
+    return [];
+  }
+  const startDate = toUtcDate(range.startYmd);
+  const endDate = toUtcDate(range.endYmd);
+  if (!startDate || !endDate) {
+    return [];
+  }
+  let cursor = startDate;
+  while (cursor <= endDate) {
+    const ymd = formatYmd(cursor);
+    if (!keySet.has(ymd)) {
+      const freeInfo = getFreeDayInfo(ymd, freeDays);
+      if (!isWeekend(ymd) && freeInfo?.type !== 'holiday') {
+        keySet.add(ymd);
+      }
+    }
+    cursor = addUtcDays(cursor, 1);
+  }
+  return [...keySet].sort((a, b) => a.localeCompare(b));
+};
+
+const getWeekdayKeys = (week) => {
+  if (!week?.startDate || !week?.endDate) {
+    return [];
+  }
+  let cursor = new Date(week.startDate);
+  const end = new Date(week.endDate);
+  const keys = [];
+  while (cursor <= end) {
+    const day = cursor.getUTCDay();
+    if (day >= 1 && day <= 5) {
+      keys.push(formatYmd(cursor));
+    }
+    cursor = addUtcDays(cursor, 1);
+  }
+  return keys;
+};
+
+const getWeekFreeInfo = (week, freeDays = []) => {
+  const weekdayKeys = getWeekdayKeys(week);
+  const freeLabels = new Set();
+  let freeCount = 0;
+  weekdayKeys.forEach((key) => {
+    const freeInfo = getFreeDayInfo(key, freeDays);
+    if (freeInfo) {
+      freeCount += 1;
+      if (freeInfo.label) {
+        freeLabels.add(freeInfo.label);
+      }
+    }
+  });
+  const totalWeekdays = weekdayKeys.length;
+  const allFree = totalWeekdays > 0 && freeCount === totalWeekdays;
+  return {
+    weekdayKeys,
+    totalWeekdays,
+    freeCount,
+    allFree,
+    labels: [...freeLabels],
+  };
+};
+
+const buildSchoolYearsForThemes = (days = {}, freeDays = []) => {
+  const selectableKeys = buildSelectableDateKeys(days, freeDays);
+  if (!selectableKeys.length) {
+    return [];
+  }
+  return getSchoolWeeks(buildDaysIndex(selectableKeys, days));
+};
 
 const setFilterState = (overlay, nextState = {}) => {
   if (!overlay) {
@@ -403,11 +561,11 @@ const renderCatalogList = ({
   });
 };
 
-  const renderLetterButtons = (overlay, catalog) => {
-    const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
-    if (!letterBar) {
-      return;
-    }
+const renderLetterButtons = (overlay, catalog) => {
+  const letterBar = overlay.querySelector('[data-role="angebot-letter-bar"]');
+  if (!letterBar) {
+    return;
+  }
   const { selectedLetter } = getFilterState(overlay);
   const letters = new Set();
   (Array.isArray(catalog) ? catalog : []).forEach((entry) => {
@@ -565,6 +723,9 @@ export const bindAngebotCatalog = ({
   detailOverlay,
   deleteConfirmOverlay,
   date,
+  days = {},
+  freeDays = [],
+  weekThemes = {},
   angebotGroups,
   selectedAngebote,
   catalog,
@@ -580,6 +741,11 @@ export const bindAngebotCatalog = ({
   }
 
   let currentDate = date;
+  let currentDays = days || {};
+  let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
+  let currentWeekThemes = normalizeWeekThemeAssignments(weekThemes, getWeekThemes());
+  let currentSchoolYears = [];
+  let selectedWeekThemeYear = null;
   let currentCatalog = normalizeCatalog(catalog);
   let currentTopStats = topStats || {};
   let currentSelected = Array.isArray(selectedAngebote) ? selectedAngebote : [];
@@ -780,10 +946,263 @@ export const bindAngebotCatalog = ({
     renderNoteInput();
   };
 
+  const getManageActiveTab = () => {
+    if (!manageOverlayRef) {
+      return 'catalog';
+    }
+    return manageOverlayRef.dataset.manageTab === 'week-theme' ? 'week-theme' : 'catalog';
+  };
+
+  const findSchoolYear = (label) =>
+    currentSchoolYears.find((entry) => entry.label === label) || null;
+
+  const ensureWeekThemeYears = () => {
+    currentSchoolYears = buildSchoolYearsForThemes(currentDays, currentFreeDays);
+    if (!currentSchoolYears.length) {
+      selectedWeekThemeYear = null;
+      return;
+    }
+    const availableLabels = new Set(currentSchoolYears.map((year) => year.label));
+    if (!selectedWeekThemeYear || !availableLabels.has(selectedWeekThemeYear)) {
+      selectedWeekThemeYear = currentSchoolYears[currentSchoolYears.length - 1].label;
+    }
+  };
+
+  const syncManageTabs = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const activeTab = getManageActiveTab();
+    const tabButtons = manageOverlayRef.querySelectorAll('[data-role="angebot-manage-tab"]');
+    const tabPanes = manageOverlayRef.querySelectorAll('[data-role="angebot-manage-tab-pane"]');
+    if (!tabButtons.length || !tabPanes.length) {
+      return;
+    }
+    tabButtons.forEach((button) => {
+      const tabId = button.dataset.tab === 'week-theme' ? 'week-theme' : 'catalog';
+      const isActive = tabId === activeTab;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    tabPanes.forEach((pane) => {
+      const tabId = pane.dataset.tab === 'week-theme' ? 'week-theme' : 'catalog';
+      const isActive = tabId === activeTab;
+      pane.classList.toggle('show', isActive);
+      pane.classList.toggle('active', isActive);
+    });
+  };
+
+  const setManageActiveTab = (tabId) => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const nextTab = tabId === 'week-theme' ? 'week-theme' : 'catalog';
+    if (manageOverlayRef.dataset.manageTab === nextTab) {
+      return;
+    }
+    manageOverlayRef.dataset.manageTab = nextTab;
+    renderManage();
+  };
+
+  const getWeekThemeDatalistId = () => {
+    if (!manageOverlayRef) {
+      return '';
+    }
+    if (manageOverlayRef.dataset.weekThemeDatalistId) {
+      return manageOverlayRef.dataset.weekThemeDatalistId;
+    }
+    const datalist = manageOverlayRef.querySelector('[data-role="angebot-week-theme-datalist"]');
+    if (datalist instanceof HTMLDataListElement && datalist.id) {
+      return datalist.id;
+    }
+    return '';
+  };
+
+  const renderWeekThemeDatalist = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const datalist = manageOverlayRef.querySelector('[data-role="angebot-week-theme-datalist"]');
+    if (!(datalist instanceof HTMLDataListElement)) {
+      return;
+    }
+    const labels = Array.from(
+      new Set(
+        currentCatalog
+          .map((entry) =>
+            normalizeAngebotText(typeof entry === 'string' ? entry : entry?.text),
+          )
+          .filter(Boolean),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'de'));
+    datalist.replaceChildren();
+    labels.forEach((label) => {
+      const option = document.createElement('option');
+      option.value = label;
+      datalist.appendChild(option);
+    });
+  };
+
+  const renderWeekThemeYearOptions = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const yearRow = manageOverlayRef.querySelector('[data-role="angebot-week-theme-year-row"]');
+    const yearSelect = manageOverlayRef.querySelector(
+      '[data-role="angebot-week-theme-year-select"]',
+    );
+    if (!(yearSelect instanceof HTMLSelectElement)) {
+      return;
+    }
+    yearSelect.replaceChildren();
+    currentSchoolYears.forEach((year) => {
+      const option = document.createElement('option');
+      option.value = year.label;
+      option.textContent = year.label;
+      yearSelect.appendChild(option);
+    });
+    yearSelect.disabled = currentSchoolYears.length === 0;
+    if (
+      selectedWeekThemeYear &&
+      currentSchoolYears.some((year) => year.label === selectedWeekThemeYear)
+    ) {
+      yearSelect.value = selectedWeekThemeYear;
+    } else if (currentSchoolYears.length) {
+      selectedWeekThemeYear = currentSchoolYears[currentSchoolYears.length - 1].label;
+      yearSelect.value = selectedWeekThemeYear;
+    }
+    if (yearRow) {
+      yearRow.classList.toggle('d-none', currentSchoolYears.length <= 1);
+    }
+  };
+
+  const commitWeekThemeInput = (input) => {
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    if (input.dataset.role !== 'angebot-week-theme-input') {
+      return;
+    }
+    if (input.dataset.disabledWeek === 'true') {
+      const weekId = input.dataset.weekId;
+      input.value = weekId ? currentWeekThemes[weekId] || '' : '';
+      return;
+    }
+    const weekId = input.dataset.weekId;
+    if (!weekId) {
+      return;
+    }
+    const normalized = normalizeWeekThemeText(input.value);
+    if (input.value !== normalized) {
+      input.value = normalized;
+    }
+    const previous = currentWeekThemes[weekId] || '';
+    if ((normalized || '') === previous) {
+      return;
+    }
+    if (normalized) {
+      currentWeekThemes[weekId] = normalized;
+    } else {
+      delete currentWeekThemes[weekId];
+    }
+    currentWeekThemes = normalizeWeekThemeAssignments(currentWeekThemes);
+    setWeekThemeForWeek(weekId, normalized);
+  };
+
+  const renderWeekThemeList = () => {
+    if (!manageOverlayRef) {
+      return;
+    }
+    const list = manageOverlayRef.querySelector('[data-role="angebot-week-theme-list"]');
+    const emptyState = manageOverlayRef.querySelector('[data-role="angebot-week-theme-empty"]');
+    if (!(list instanceof HTMLElement) || !(emptyState instanceof HTMLElement)) {
+      return;
+    }
+    const year = selectedWeekThemeYear ? findSchoolYear(selectedWeekThemeYear) : null;
+    const weeks = year?.weeks || [];
+    list.replaceChildren();
+    if (!weeks.length) {
+      emptyState.classList.remove('d-none');
+      return;
+    }
+    emptyState.classList.add('d-none');
+    const datalistId = getWeekThemeDatalistId();
+    weeks.forEach((week) => {
+      const freeInfo = getWeekFreeInfo(week, currentFreeDays);
+      const isDisabled = freeInfo.allFree;
+      const item = document.createElement('div');
+      item.className = 'angebot-week-theme__item';
+      if (isDisabled) {
+        item.classList.add('is-disabled');
+      }
+
+      const header = document.createElement('div');
+      header.className = 'angebot-week-theme__header';
+
+      const titleWrap = document.createElement('div');
+      titleWrap.className = 'd-flex flex-column gap-1';
+      const title = document.createElement('div');
+      title.className = 'fw-semibold';
+      title.textContent = week.label || week.id;
+      const meta = document.createElement('div');
+      meta.className = 'angebot-week-theme__meta';
+      const rangeLabel = `${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(week.endYmd)}`;
+      meta.textContent = rangeLabel;
+      titleWrap.append(title, meta);
+
+      const status = document.createElement('div');
+      status.className = 'angebot-week-theme__status';
+      if (isDisabled) {
+        const badge = document.createElement('span');
+        badge.className = 'badge text-bg-secondary';
+        badge.textContent = 'Schulfrei (Mo–Fr)';
+        status.appendChild(badge);
+      } else if (freeInfo.freeCount > 0 && freeInfo.totalWeekdays > 0) {
+        const badge = document.createElement('span');
+        badge.className = 'badge text-bg-light text-secondary border';
+        badge.textContent = `${freeInfo.freeCount}/${freeInfo.totalWeekdays} frei`;
+        if (freeInfo.labels.length) {
+          badge.title = freeInfo.labels.join(', ');
+        }
+        status.appendChild(badge);
+      }
+
+      header.append(titleWrap, status);
+
+      const inputWrap = document.createElement('div');
+      inputWrap.className = 'angebot-week-theme__input';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'form-control';
+      input.placeholder = 'Thema der Woche';
+      input.value = currentWeekThemes[week.id] || '';
+      input.dataset.role = 'angebot-week-theme-input';
+      input.dataset.weekId = week.id;
+      input.dataset.disabledWeek = isDisabled ? 'true' : 'false';
+      input.disabled = isDisabled;
+      input.setAttribute('aria-label', `${week.label || week.id} Thema der Woche`);
+      if (datalistId) {
+        input.setAttribute('list', datalistId);
+      }
+      inputWrap.appendChild(input);
+      if (isDisabled) {
+        const helper = document.createElement('div');
+        helper.className = 'form-text small';
+        helper.textContent = 'Komplett schulfrei.';
+        inputWrap.appendChild(helper);
+      }
+
+      item.append(header, inputWrap);
+      list.appendChild(item);
+    });
+  };
+
   const renderManage = () => {
     if (!manageOverlayRef) {
       return;
     }
+    ensureWeekThemeYears();
+    syncManageTabs();
     const groupMap = getGroupMap();
     const filters = getFilterState(manageOverlayRef);
     const catalogList = manageOverlayRef.querySelector('[data-role="angebot-catalog-list"]');
@@ -801,6 +1220,9 @@ export const bindAngebotCatalog = ({
       searchInput.value = filters.query || '';
     }
     syncGroupUi(manageOverlayRef, angebotGroups);
+    renderWeekThemeDatalist();
+    renderWeekThemeYearOptions();
+    renderWeekThemeList();
   };
 
   const openOverlay = () => {
@@ -1313,7 +1735,13 @@ export const bindAngebotCatalog = ({
     if (!manageOverlayRef) {
       return;
     }
-    if (handleFilterClick(target, manageOverlayRef, renderManage)) {
+    const manageTabButton = target.closest('[data-role="angebot-manage-tab"]');
+    if (manageTabButton) {
+      setManageActiveTab(manageTabButton.dataset.tab);
+      return;
+    }
+    const activeTab = getManageActiveTab();
+    if (activeTab === 'catalog' && handleFilterClick(target, manageOverlayRef, renderManage)) {
       return;
     }
     if (target === manageOverlayRef || target.closest('[data-role="angebot-manage-close"]')) {
@@ -1324,6 +1752,9 @@ export const bindAngebotCatalog = ({
       openCreateOverlay('manage');
       return;
     }
+    if (activeTab !== 'catalog') {
+      return;
+    }
     const manageButton = target.closest('[data-role="angebot-add"]');
     if (manageButton) {
       const value = manageButton.dataset.value;
@@ -1331,6 +1762,33 @@ export const bindAngebotCatalog = ({
       if (entry) {
         openDetailOverlay(entry);
       }
+    }
+  };
+
+  const handleManageChange = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.dataset.role === 'angebot-week-theme-year-select') {
+      if (target instanceof HTMLSelectElement) {
+        selectedWeekThemeYear = target.value || null;
+        renderManage();
+      }
+      return;
+    }
+    if (target.dataset.role === 'angebot-week-theme-input') {
+      commitWeekThemeInput(target);
+    }
+  };
+
+  const handleManageFocusOut = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.dataset.role === 'angebot-week-theme-input') {
+      commitWeekThemeInput(target);
     }
   };
 
@@ -1768,6 +2226,8 @@ export const bindAngebotCatalog = ({
   if (manageOverlayRef) {
     manageOverlayRef.addEventListener('click', handleManageClick);
     manageOverlayRef.addEventListener('input', handleSearchInput);
+    manageOverlayRef.addEventListener('change', handleManageChange);
+    manageOverlayRef.addEventListener('focusout', handleManageFocusOut);
   }
   if (detailOverlayRef) {
     detailOverlayRef.addEventListener('click', handleDetailClick);
@@ -1794,6 +2254,9 @@ export const bindAngebotCatalog = ({
   return {
     update: ({
       date: nextDate,
+      days: nextDays = currentDays,
+      freeDays: nextFreeDays = currentFreeDays,
+      weekThemes: nextWeekThemes = currentWeekThemes,
       selectedAngebote: nextSelected,
       angebotNote: nextAngebotNote,
       catalog: nextCatalog,
@@ -1813,6 +2276,9 @@ export const bindAngebotCatalog = ({
         persistNote();
       }
       currentDate = nextDate || currentDate;
+      currentDays = nextDays || {};
+      currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
+      currentWeekThemes = normalizeWeekThemeAssignments(nextWeekThemes, getWeekThemes());
       currentCatalog = normalizeCatalog(nextCatalog || currentCatalog);
       currentTopStats = nextStats || {};
       currentModules = Array.isArray(nextModules) ? nextModules : [];
@@ -1836,21 +2302,23 @@ export const bindAngebotCatalog = ({
           showAndOr: nextSavedFilters.showAndOr !== false,
           showAlphabet: nextSavedFilters.showAlphabet === true,
         });
+        if (manageOverlayRef) {
+          setFilterState(manageOverlayRef, {
+            filter:
+              nextSavedFilters.selectedLetter ||
+              manageOverlayRef.dataset.angebotFilter ||
+              'ALL',
+            groups: normalizeAngebotGroups(nextSavedFilters.selectedGroups || []).join(','),
+            groupMode: nextSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+            multi: nextSavedFilters.multiGroups === true,
+            showAndOr: nextSavedFilters.showAndOr !== false,
+            showAlphabet: nextSavedFilters.showAlphabet === true,
+          });
+        }
       }
       syncGroupUi(catalogOverlay, angebotGroups);
       renderDaily();
       renderManage();
-      if (manageOverlayRef && nextSavedFilters) {
-        setFilterState(manageOverlayRef, {
-          filter: nextSavedFilters.selectedLetter || manageOverlayRef.dataset.angebotFilter || 'ALL',
-          groups: normalizeAngebotGroups(nextSavedFilters.selectedGroups || []).join(','),
-          groupMode: nextSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
-          multi: nextSavedFilters.multiGroups === true,
-          showAndOr: nextSavedFilters.showAndOr !== false,
-          showAlphabet: nextSavedFilters.showAlphabet === true,
-        });
-        syncGroupUi(manageOverlayRef, angebotGroups);
-      }
       if (nextOpenButton) {
         setOpenButton(nextOpenButton);
       }

@@ -36,7 +36,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeGeldsammlungen } from '../utils/geldsammlungen.js';
 
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
 
 const createEmptyEntlassung = () => ({
   regular: {
@@ -155,6 +155,32 @@ export const normalizeChildName = (value) => {
   }
 
   return value.trim().replace(/\s+/g, ' ');
+};
+
+export const normalizeWeekThemeText = (value) => normalizeAngebotText(value);
+
+export const normalizeWeekThemeAssignments = (value, fallback = {}) => {
+  const primary = isPlainObject(value) ? value : {};
+  const secondary = isPlainObject(fallback) ? fallback : {};
+  const merged = { ...secondary, ...primary };
+  const result = {};
+
+  Object.entries(merged).forEach(([weekId, theme]) => {
+    if (typeof weekId !== 'string') {
+      return;
+    }
+    const normalizedWeekId = weekId.trim();
+    if (!normalizedWeekId) {
+      return;
+    }
+    const normalizedTheme = normalizeWeekThemeText(theme);
+    if (!normalizedTheme) {
+      return;
+    }
+    result[normalizedWeekId] = normalizedTheme;
+  });
+
+  return result;
 };
 
 const normalizeChildNotes = (value, childrenList = []) => {
@@ -925,6 +951,7 @@ export const createEmptyAppData = () => ({
   classProfile: { ...DEFAULT_CLASS_PROFILE },
   angebote: [],
   angebotCatalog: [],
+  themaDerWoche: {},
   observationTemplates: [],
   observationCatalog: [],
   observationGroups: { ...DEFAULT_OBSERVATION_GROUPS },
@@ -981,6 +1008,11 @@ export const normalizeAppData = (source, fallback = {}) => {
       ...(Array.isArray(base.angebote) ? base.angebote : fallbackData.angebote || []),
       ...getAngebotCatalogLabels(angebotCatalog),
     ].map((item) => normalizeAngebotText(item)),
+  );
+
+  const themaDerWoche = normalizeWeekThemeAssignments(
+    base.themaDerWoche,
+    fallbackData.themaDerWoche,
   );
 
   const observationTemplates = ensureUniqueSortedStrings(
@@ -1055,6 +1087,7 @@ export const normalizeAppData = (source, fallback = {}) => {
     classProfile,
     angebote,
     angebotCatalog,
+    themaDerWoche,
     observationTemplates: getObservationCatalogLabels(observationCatalog),
     observationCatalog,
     observationGroups,

@@ -266,6 +266,7 @@ export const renderApp = (root, state) => {
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const angebotCatalog = db.angebotCatalog || [];
+  const weekThemes = db.themaDerWoche || {};
   const angebotStats = db.angebotStats || {};
   const observationStats = db.observationStats || {};
   const observationCatalog = db.observationCatalog || [];
@@ -372,6 +373,8 @@ export const renderApp = (root, state) => {
       showCreateButton: true,
       createButtonLabel: UI_LABELS.angebotCreate,
       createButtonRole: 'angebot-manage-create-open',
+      manageTabs: true,
+      weekThemeLabel: UI_LABELS.themaDerWoche,
     });
   }
   if (!angebotCreateOverlay) {
@@ -600,6 +603,9 @@ export const renderApp = (root, state) => {
       detailOverlay: angebotDetailOverlayView.element,
       deleteConfirmOverlay: angebotDeleteConfirmView.element,
       date: selectedDate,
+      days: weeklyDays,
+      freeDays,
+      weekThemes,
       angebotGroups,
       selectedAngebote,
       angebotNote,
@@ -715,6 +721,9 @@ export const renderApp = (root, state) => {
   if (angebotCatalogBinding) {
     angebotCatalogBinding.update({
       date: selectedDate,
+      days: weeklyDays,
+      freeDays,
+      weekThemes,
       selectedAngebote,
       angebotNote,
       modules: freizeitModules,

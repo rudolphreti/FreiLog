@@ -617,6 +617,8 @@ export const buildAngebotCatalogOverlay = ({
   showCreateButton = false,
   createButtonLabel = UI_LABELS.angebotCreate,
   createButtonRole = 'angebot-create-open',
+  manageTabs = false,
+  weekThemeLabel = UI_LABELS.themaDerWoche,
 }) => {
   const normalizedSavedFilters = normalizeSavedAngebotFilters(
     savedFilters || DEFAULT_SAVED_ANGEBOT_FILTERS,
@@ -625,19 +627,26 @@ export const buildAngebotCatalogOverlay = ({
     normalizedSavedFilters.selectedGroups,
   ).filter((group) => group !== 'SCHWARZ');
 
+  const weekThemeDatalistId = manageTabs ? `${role}-week-theme-options` : '';
+  const overlayDataset = {
+    role,
+    angebotFilter: normalizedSavedFilters.selectedLetter || 'ALL',
+    angebotQuery: '',
+    angebotGroups: normalizedSelectedGroups.join(','),
+    angebotGroupMode: normalizedSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
+    angebotMulti: normalizedSavedFilters.multiGroups ? 'true' : 'false',
+    angebotShowAndOr: normalizedSavedFilters.showAndOr ? 'true' : 'false',
+    angebotShowAlphabet: normalizedSavedFilters.showAlphabet ? 'true' : 'false',
+    angebotSettingsOpen: 'false',
+  };
+  if (manageTabs) {
+    overlayDataset.manageTab = 'catalog';
+    overlayDataset.weekThemeDatalistId = weekThemeDatalistId;
+  }
+
   const overlay = createEl('div', {
     className: 'angebot-catalog-overlay observation-templates-overlay',
-    dataset: {
-      role,
-      angebotFilter: normalizedSavedFilters.selectedLetter || 'ALL',
-      angebotQuery: '',
-      angebotGroups: normalizedSelectedGroups.join(','),
-      angebotGroupMode: normalizedSavedFilters.andOrMode === 'OR' ? 'OR' : 'AND',
-      angebotMulti: normalizedSavedFilters.multiGroups ? 'true' : 'false',
-      angebotShowAndOr: normalizedSavedFilters.showAndOr ? 'true' : 'false',
-      angebotShowAlphabet: normalizedSavedFilters.showAlphabet ? 'true' : 'false',
-      angebotSettingsOpen: 'false',
-    },
+    dataset: overlayDataset,
     attrs: { 'aria-hidden': 'true' },
   });
 
@@ -844,14 +853,102 @@ export const buildAngebotCatalogOverlay = ({
     dataset: { role: 'angebot-catalog-list' },
   });
 
+  const catalogPaneContent = createEl('div', {
+    className: 'mt-3 d-flex flex-column gap-3',
+    children: [filterRow, catalogList],
+  });
+
+  const buildManageTabsContent = () => {
+    const tabsNav = createEl('ul', {
+      className: 'nav nav-tabs angebot-manage-tabs',
+      attrs: { role: 'tablist' },
+      dataset: { role: 'angebot-manage-tabs-nav' },
+    });
+    const tabContent = createEl('div', {
+      className: 'tab-content angebot-manage-tabs-content',
+    });
+
+    const addTab = (tabId, label, isActive = false) => {
+      const tabButton = createEl('button', {
+        className: `nav-link${isActive ? ' active' : ''}`,
+        text: label,
+        attrs: {
+          type: 'button',
+          role: 'tab',
+          'aria-selected': isActive ? 'true' : 'false',
+        },
+        dataset: { role: 'angebot-manage-tab', tab: tabId },
+      });
+      const tabItem = createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [tabButton],
+      });
+      tabsNav.append(tabItem);
+      return tabButton;
+    };
+
+    addTab('catalog', 'Katalog', true);
+    addTab('week-theme', weekThemeLabel, false);
+
+    const catalogPane = createEl('div', {
+      className: 'tab-pane fade show active',
+      attrs: { role: 'tabpanel' },
+      dataset: { role: 'angebot-manage-tab-pane', tab: 'catalog' },
+      children: [catalogPaneContent],
+    });
+
+    const yearSelect = createEl('select', {
+      className: 'form-select form-select-sm',
+      dataset: { role: 'angebot-week-theme-year-select' },
+    });
+    const yearRow = createEl('div', {
+      className: 'angebot-week-theme__year-row d-flex align-items-center gap-2 flex-wrap',
+      dataset: { role: 'angebot-week-theme-year-row' },
+      children: [
+        createEl('label', {
+          className: 'form-label mb-0 small text-muted',
+          text: 'Schuljahr',
+        }),
+        yearSelect,
+      ],
+    });
+    const emptyState = createEl('div', {
+      className: 'alert alert-light border d-none mb-0',
+      dataset: { role: 'angebot-week-theme-empty' },
+      text: 'Keine Schulwochen im aktuellen Zeitraum gefunden.',
+    });
+    const weekList = createEl('div', {
+      className: 'angebot-week-theme__list d-flex flex-column gap-2',
+      dataset: { role: 'angebot-week-theme-list' },
+    });
+    const hint = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Wenn Montag bis Freitag schulfrei sind, ist keine Zuweisung möglich.',
+    });
+    const weekThemeDatalist = createEl('datalist', {
+      attrs: { id: weekThemeDatalistId },
+      dataset: { role: 'angebot-week-theme-datalist' },
+    });
+    const weekThemePaneContent = createEl('div', {
+      className: 'mt-3 d-flex flex-column gap-3',
+      children: [yearRow, emptyState, weekList, hint, weekThemeDatalist],
+    });
+    const weekThemePane = createEl('div', {
+      className: 'tab-pane fade',
+      attrs: { role: 'tabpanel' },
+      dataset: { role: 'angebot-manage-tab-pane', tab: 'week-theme' },
+      children: [weekThemePaneContent],
+    });
+
+    tabContent.append(catalogPane, weekThemePane);
+
+    return [tabsNav, tabContent];
+  };
+
   const content = createEl('div', {
     className: 'observation-templates-overlay__content',
-    children: [
-      createEl('div', {
-        className: 'mt-3 d-flex flex-column gap-3',
-        children: [filterRow, catalogList],
-      }),
-    ],
+    children: manageTabs ? buildManageTabsContent() : [catalogPaneContent],
   });
 
   panel.append(header, content);

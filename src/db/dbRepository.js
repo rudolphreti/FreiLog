@@ -4,6 +4,8 @@ import {
   normalizeCourses,
   normalizeEntlassung,
   normalizeAppData,
+  normalizeWeekThemeAssignments,
+  normalizeWeekThemeText,
   sanitizeDaysByDate,
 } from './dbSchema.js';
 import { clearAppData } from '../state/persistence.js';
@@ -239,6 +241,27 @@ const replaceAngebotReferences = (days, fromKey, toText) => {
   });
 };
 
+const replaceAngebotReferencesInWeekThemes = (themes, fromKey, toText) => {
+  if (!themes || typeof themes !== 'object') {
+    return;
+  }
+  const normalizedTarget = normalizeWeekThemeText(toText);
+  const targetKey = normalizeAngebotKey(normalizedTarget);
+  if (!targetKey) {
+    return;
+  }
+  const normalizedThemes = normalizeWeekThemeAssignments(themes);
+  const nextThemes = {};
+  Object.entries(normalizedThemes).forEach(([weekId, theme]) => {
+    const themeKey = normalizeAngebotKey(theme);
+    nextThemes[weekId] = themeKey === fromKey ? normalizedTarget : theme;
+  });
+  Object.keys(themes).forEach((key) => {
+    delete themes[key];
+  });
+  Object.assign(themes, nextThemes);
+};
+
 const removeAngebotReferences = (days, targetKey) => {
   if (!days || typeof days !== 'object') {
     return;
@@ -264,6 +287,24 @@ const removeAngebotReferences = (days, targetKey) => {
       });
     }
   });
+};
+
+const removeAngebotReferencesInWeekThemes = (themes, targetKey) => {
+  if (!themes || typeof themes !== 'object') {
+    return;
+  }
+  const normalizedThemes = normalizeWeekThemeAssignments(themes);
+  const nextThemes = {};
+  Object.entries(normalizedThemes).forEach(([weekId, theme]) => {
+    if (normalizeAngebotKey(theme) === targetKey) {
+      return;
+    }
+    nextThemes[weekId] = theme;
+  });
+  Object.keys(themes).forEach((key) => {
+    delete themes[key];
+  });
+  Object.assign(themes, nextThemes);
 };
 
 const buildDefaultObservations = (childrenList) => {
@@ -909,6 +950,32 @@ export const getAngebotCatalog = () => {
   return normalizeAngebotCatalog(data.angebotCatalog || data.angebote, data.angebote);
 };
 
+export const getWeekThemes = () => {
+  const data = getState().db;
+  if (!data || !data.themaDerWoche || typeof data.themaDerWoche !== 'object') {
+    return {};
+  }
+  return normalizeWeekThemeAssignments(data.themaDerWoche);
+};
+
+export const setWeekThemeForWeek = (weekId, value) => {
+  if (typeof weekId !== 'string' || !weekId.trim()) {
+    return;
+  }
+  const normalizedWeekId = weekId.trim();
+  const normalizedTheme = normalizeWeekThemeText(value);
+
+  updateAppData((data) => {
+    const currentThemes = normalizeWeekThemeAssignments(data.themaDerWoche);
+    if (!normalizedTheme) {
+      delete currentThemes[normalizedWeekId];
+    } else {
+      currentThemes[normalizedWeekId] = normalizedTheme;
+    }
+    data.themaDerWoche = currentThemes;
+  });
+};
+
 export const upsertAngebotCatalogEntry = (value, groups = []) => {
   const normalizedText = normalizeAngebotText(value);
   if (!normalizedText) {
@@ -1027,6 +1094,11 @@ export const updateAngebotCatalogEntry = ({ currentText, nextText, groups = [] }
       if (data.days) {
         replaceAngebotReferences(data.days, currentKey, targetText || normalizedNext);
       }
+      replaceAngebotReferencesInWeekThemes(
+        data.themaDerWoche,
+        currentKey,
+        targetText || normalizedNext,
+      );
       result = {
         status: 'merged',
         value: targetText || normalizedNext,
@@ -1050,6 +1122,9 @@ export const updateAngebotCatalogEntry = ({ currentText, nextText, groups = [] }
     ]);
     if (existingText !== normalizedNext && data.days) {
       replaceAngebotReferences(data.days, currentKey, normalizedNext);
+    }
+    if (existingText !== normalizedNext) {
+      replaceAngebotReferencesInWeekThemes(data.themaDerWoche, currentKey, normalizedNext);
     }
     catalog[currentIndex] =
       typeof existing === 'string'
@@ -1105,6 +1180,7 @@ export const removeAngebotCatalogEntry = (value) => {
     if (data.days) {
       removeAngebotReferences(data.days, normalizedKey);
     }
+    removeAngebotReferencesInWeekThemes(data.themaDerWoche, normalizedKey);
   });
 
   return removed;
