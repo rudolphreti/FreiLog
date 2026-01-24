@@ -2252,10 +2252,26 @@ const reindexObservationNoteInputs = (noteList) => {
   noteList.querySelectorAll('[data-role="observation-note-input"]').forEach((input, index) => {
     input.dataset.noteIndex = String(index);
     input.setAttribute('aria-label', `Notiz ${index + 1}`);
+    const item = input.closest('.observation-note-item');
+    const deleteButton = item?.querySelector('[data-role="observation-note-delete"]');
+    if (deleteButton instanceof HTMLButtonElement) {
+      deleteButton.dataset.noteIndex = String(index);
+      deleteButton.setAttribute('aria-label', `Notiz ${index + 1} löschen`);
+    }
   });
 };
 
 const buildObservationNoteItem = (value, index, { disabled }) => {
+  const deleteButton = createEl('button', {
+    className: 'btn btn-outline-danger btn-sm observation-note-delete align-self-end',
+    text: 'Löschen',
+    attrs: {
+      type: 'button',
+      'aria-label': `Notiz ${index + 1} löschen`,
+    },
+    dataset: { role: 'observation-note-delete', noteIndex: String(index) },
+  });
+  deleteButton.disabled = disabled;
   const noteInput = createEl('textarea', {
     className: 'form-control observation-note-input',
     attrs: {
@@ -2269,8 +2285,8 @@ const buildObservationNoteItem = (value, index, { disabled }) => {
   noteInput.disabled = disabled;
 
   return createEl('div', {
-    className: 'observation-note-item d-flex flex-column gap-1',
-    children: [noteInput],
+    className: 'observation-note-item d-flex flex-column gap-2',
+    children: [deleteButton, noteInput],
   });
 };
 
@@ -2300,6 +2316,7 @@ const syncObservationNoteItems = ({ detail, refs, notes, disabled }) => {
       : null;
 
   const noteInputs = refs.noteList.querySelectorAll('[data-role="observation-note-input"]');
+  const noteDeleteButtons = refs.noteList.querySelectorAll('[data-role="observation-note-delete"]');
   const isEditing = detail.dataset.noteEditing === 'true' && noteInputs.length > 0;
 
   if (!isEditing) {
@@ -2307,6 +2324,11 @@ const syncObservationNoteItems = ({ detail, refs, notes, disabled }) => {
   } else {
     noteInputs.forEach((input) => {
       input.disabled = disabled;
+    });
+    noteDeleteButtons.forEach((button) => {
+      if (button instanceof HTMLButtonElement) {
+        button.disabled = disabled;
+      }
     });
   }
 
@@ -2327,6 +2349,62 @@ const syncObservationNoteItems = ({ detail, refs, notes, disabled }) => {
   requestAnimationFrame(() => {
     target.focus();
   });
+};
+
+const buildObservationNoteDeleteConfirm = () => {
+  const overlay = createEl('div', {
+    className: 'class-settings-confirm angebot-delete-confirm d-none observation-note-delete-confirm',
+    dataset: { role: 'observation-note-delete-confirm-overlay' },
+    attrs: {
+      role: 'dialog',
+      'aria-modal': 'true',
+      'aria-labelledby': 'observation-note-delete-confirm-title',
+      'aria-describedby': 'observation-note-delete-confirm-message',
+      'aria-hidden': 'true',
+      tabIndex: '-1',
+    },
+  });
+  const panel = createEl('div', {
+    className: 'class-settings-confirm__panel',
+  });
+  const title = createEl('h3', {
+    className: 'h5 mb-2',
+    attrs: { id: 'observation-note-delete-confirm-title' },
+    text: 'Notiz löschen?',
+  });
+  const message = createEl('p', {
+    className: 'text-muted mb-3',
+    attrs: { id: 'observation-note-delete-confirm-message' },
+    text: '',
+    dataset: { role: 'observation-note-delete-confirm-message' },
+  });
+  const actions = createEl('div', {
+    className: 'class-settings-confirm__actions',
+    children: [
+      createEl('button', {
+        className: 'btn btn-danger',
+        text: 'Ja',
+        attrs: { type: 'button' },
+        dataset: { role: 'observation-note-delete-confirm' },
+      }),
+      createEl('button', {
+        className: 'btn btn-outline-secondary',
+        text: 'Abbrechen',
+        attrs: { type: 'button' },
+        dataset: { role: 'observation-note-delete-cancel' },
+      }),
+    ],
+  });
+  panel.append(title, message, actions);
+  overlay.appendChild(panel);
+  return {
+    element: overlay,
+    refs: {
+      message,
+      confirmButton: actions.querySelector('[data-role="observation-note-delete-confirm"]'),
+      cancelButton: actions.querySelector('[data-role="observation-note-delete-cancel"]'),
+    },
+  };
 };
 
 const createDetailPanel = ({
@@ -3426,6 +3504,7 @@ export const buildObservationsSection = ({
   const assignOverlay = buildObservationAssignOverlay({ readOnly: isReadOnly });
   const editOverlay = buildObservationEditOverlay({ observationGroups });
   const createOverlay = buildObservationCreateOverlay({ observationGroups });
+  const noteDeleteConfirmOverlay = buildObservationNoteDeleteConfirm();
 
   const detailRefs = new Map();
 
@@ -3470,6 +3549,7 @@ export const buildObservationsSection = ({
     templatesOverlay.element,
     editOverlay.element,
     createOverlay.element,
+    noteDeleteConfirmOverlay.element,
   );
   overlay.appendChild(overlayPanel);
 
@@ -3595,6 +3675,7 @@ export const buildObservationsSection = ({
     assignOverlay: assignOverlay.element,
     editOverlay: editOverlay.element,
     createOverlay: createOverlay.element,
+    noteDeleteConfirmOverlay: noteDeleteConfirmOverlay.element,
   };
 
   const update = ({
@@ -3667,6 +3748,12 @@ export const buildObservationsSection = ({
     );
     if (assignNoteSaveButton instanceof HTMLButtonElement) {
       assignNoteSaveButton.disabled = isReadOnly;
+    }
+    const noteDeleteConfirmButton = refs.noteDeleteConfirmOverlay.querySelector(
+      '[data-role="observation-note-delete-confirm"]',
+    );
+    if (noteDeleteConfirmButton instanceof HTMLButtonElement) {
+      noteDeleteConfirmButton.disabled = isReadOnly;
     }
 
     list.replaceChildren(
@@ -3864,6 +3951,13 @@ export const buildObservationsSection = ({
         ?.querySelectorAll('[data-role="observation-note-input"]')
         .forEach((input) => {
           input.disabled = Boolean(shouldDisable);
+        });
+      detailRef?.noteList
+        ?.querySelectorAll('[data-role="observation-note-delete"]')
+        .forEach((button) => {
+          if (button instanceof HTMLButtonElement) {
+            button.disabled = Boolean(shouldDisable);
+          }
         });
       if (detailRef?.noteAddButton) {
         detailRef.noteAddButton.disabled = Boolean(shouldDisable);

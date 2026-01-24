@@ -893,6 +893,7 @@ export const renderApp = (root, state) => {
       assignOverlay: observationsSection.refs.assignOverlay,
       editOverlay: observationsSection.refs.editOverlay,
       createOverlay: observationsSection.refs.createOverlay,
+      noteDeleteConfirmOverlay: observationsSection.refs.noteDeleteConfirmOverlay,
       date: selectedDate,
       observationGroups,
       savedFilters: savedObsFilters,

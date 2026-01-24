@@ -122,6 +122,11 @@ const syncNoteInputState = (panel, { readOnly = false } = {}) => {
   if (isButtonElement(addButton)) {
     addButton.disabled = disabled;
   }
+  panel.querySelectorAll('[data-role="observation-note-delete"]').forEach((button) => {
+    if (isButtonElement(button)) {
+      button.disabled = disabled;
+    }
+  });
 };
 
 export const getInitialLetters = (children) => {
@@ -715,6 +720,7 @@ export const bindObservations = ({
   assignOverlay,
   editOverlay,
   createOverlay,
+  noteDeleteConfirmOverlay,
   date,
   observationGroups,
   savedFilters,
@@ -728,7 +734,8 @@ export const bindObservations = ({
     !overlayTitle ||
     !templatesOverlay ||
     !editOverlay ||
-    !createOverlay
+    !createOverlay ||
+    !noteDeleteConfirmOverlay
   ) {
     return;
   }
@@ -759,9 +766,11 @@ export const bindObservations = ({
   let isMultiTemplateOpen = false;
   let isAssignOverlayOpen = false;
   let isAssignNoteOverlayOpen = false;
+  let isNoteDeleteConfirmOpen = false;
   let isReadOnly = Boolean(readOnly);
   let editingObservation = null;
   let activeMultiObservation = null;
+  let noteDeleteTarget = null;
   let assignNoteDraft = '';
   const activeAssignNoteChildren = new Set();
   let assignNoteAssignableSet = new Set();
@@ -803,6 +812,12 @@ export const bindObservations = ({
     inputs.forEach((input, index) => {
       input.dataset.noteIndex = String(index);
       input.setAttribute('aria-label', `Notiz ${index + 1}`);
+      const item = input.closest('.observation-note-item');
+      const deleteButton = item?.querySelector('[data-role="observation-note-delete"]');
+      if (isButtonElement(deleteButton)) {
+        deleteButton.dataset.noteIndex = String(index);
+        deleteButton.setAttribute('aria-label', `Notiz ${index + 1} löschen`);
+      }
     });
     return inputs;
   };
@@ -820,6 +835,10 @@ export const bindObservations = ({
     const inputs = reindexNoteInputs(panel);
     const values = inputs.map((input) => input.value);
     return normalizeObservationNoteList(values);
+  };
+  const getRawNotesFromPanel = (panel) => {
+    const inputs = reindexNoteInputs(panel);
+    return inputs.map((input) => input.value);
   };
   const persistObservationNotes = (child, panel) => {
     if (!child || !panel || isReadOnly || panel.dataset.absent === 'true') {
@@ -866,17 +885,25 @@ export const bindObservations = ({
       return null;
     }
     const noteItem = document.createElement('div');
-    noteItem.className = 'observation-note-item d-flex flex-column gap-1';
+    noteItem.className = 'observation-note-item d-flex flex-column gap-2';
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className =
+      'btn btn-outline-danger btn-sm observation-note-delete align-self-end';
+    deleteButton.textContent = 'Löschen';
+    deleteButton.dataset.role = 'observation-note-delete';
     const noteInput = document.createElement('textarea');
     noteInput.className = 'form-control observation-note-input';
     noteInput.rows = 3;
     noteInput.placeholder = 'Notiz';
     noteInput.dataset.role = 'observation-note-input';
-    noteItem.appendChild(noteInput);
+    noteItem.append(deleteButton, noteInput);
     noteList.appendChild(noteItem);
     const inputs = reindexNoteInputs(panel);
     const newIndex = Math.max(inputs.indexOf(noteInput), 0);
-    noteInput.disabled = panel.dataset.absent === 'true' || isReadOnly;
+    const disabled = panel.dataset.absent === 'true' || isReadOnly;
+    noteInput.disabled = disabled;
+    deleteButton.disabled = disabled;
     markNoteEditing(panel, newIndex);
     requestAnimationFrame(() => {
       if (!noteInput.disabled) {
@@ -989,7 +1016,8 @@ export const bindObservations = ({
       isEditOverlayOpen ||
       isMultiTemplateOpen ||
       isAssignOverlayOpen ||
-      isAssignNoteOverlayOpen;
+      isAssignNoteOverlayOpen ||
+      isNoteDeleteConfirmOpen;
     document.body.classList.toggle('observation-overlay-open', shouldBeOpen);
   };
 
@@ -1020,6 +1048,92 @@ export const bindObservations = ({
   const assignNoteOpenButtonEl = assignOverlay?.querySelector(
     '[data-role="observation-assign-note-open"]',
   );
+  const noteDeleteConfirmEl =
+    noteDeleteConfirmOverlay instanceof HTMLElement ? noteDeleteConfirmOverlay : null;
+  const noteDeleteConfirmMessageEl = noteDeleteConfirmEl?.querySelector(
+    '[data-role="observation-note-delete-confirm-message"]',
+  );
+  const noteDeleteConfirmButtonEl = noteDeleteConfirmEl?.querySelector(
+    '[data-role="observation-note-delete-confirm"]',
+  );
+  const noteDeleteCancelButtonEl = noteDeleteConfirmEl?.querySelector(
+    '[data-role="observation-note-delete-cancel"]',
+  );
+
+  const closeNoteDeleteConfirm = ({ force = false } = {}) => {
+    if (!noteDeleteConfirmEl) {
+      return;
+    }
+    if (!isNoteDeleteConfirmOpen && !force) {
+      return;
+    }
+    isNoteDeleteConfirmOpen = false;
+    noteDeleteTarget = null;
+    noteDeleteConfirmEl.classList.add('d-none');
+    noteDeleteConfirmEl.setAttribute('aria-hidden', 'true');
+    updateBodyOverlayClass();
+  };
+
+  const deleteNoteForChild = (child, index) => {
+    if (!child || !Number.isFinite(index) || index < 0) {
+      return;
+    }
+    const panel = getDetailPanel(child);
+    if (!panel) {
+      return;
+    }
+    const rawNotes = getRawNotesFromPanel(panel);
+    if (index >= rawNotes.length) {
+      return;
+    }
+    rawNotes.splice(index, 1);
+    const nextNotes = normalizeObservationNoteList(rawNotes);
+    updateEntry(getDate(), {
+      observationNotes: {
+        [child]: {
+          items: nextNotes,
+          replace: true,
+        },
+      },
+    });
+  };
+
+  const openNoteDeleteConfirm = ({ child, index, note }) => {
+    if (
+      isReadOnly ||
+      !noteDeleteConfirmEl ||
+      !child ||
+      !Number.isFinite(index) ||
+      index < 0
+    ) {
+      return;
+    }
+    noteDeleteTarget = { child, index };
+    const trimmed = typeof note === 'string' ? note.trim() : '';
+    const noteLabel = trimmed ? `„${trimmed}”` : 'diese leere Notiz';
+    if (isHtmlElement(noteDeleteConfirmMessageEl)) {
+      noteDeleteConfirmMessageEl.textContent = `Möchtest du ${noteLabel} wirklich löschen?`;
+    }
+    noteDeleteConfirmEl.classList.remove('d-none');
+    noteDeleteConfirmEl.setAttribute('aria-hidden', 'false');
+    isNoteDeleteConfirmOpen = true;
+    updateBodyOverlayClass();
+    const focusTarget = noteDeleteConfirmButtonEl || noteDeleteCancelButtonEl;
+    if (isButtonElement(focusTarget)) {
+      requestAnimationFrame(() => {
+        focusTarget.focus();
+      });
+    }
+  };
+
+  const confirmNoteDelete = () => {
+    if (!noteDeleteTarget) {
+      return;
+    }
+    const { child, index } = noteDeleteTarget;
+    closeNoteDeleteConfirm({ force: true });
+    deleteNoteForChild(child, index);
+  };
 
   const getAssignChildEntries = () => {
     const childButtons = list.querySelectorAll('[data-role="observation-child"]');
@@ -1316,6 +1430,7 @@ export const bindObservations = ({
     persistActiveNote();
     closeTemplateOverlay();
     closeCreateOverlay();
+    closeNoteDeleteConfirm({ force: true });
     isOverlayOpen = false;
     activeChild = null;
     overlay.classList.remove('is-open');
@@ -1586,6 +1701,22 @@ export const bindObservations = ({
       return;
     }
 
+    if (noteDeleteConfirmEl && noteDeleteConfirmEl.contains(target)) {
+      if (target === noteDeleteConfirmEl) {
+        closeNoteDeleteConfirm();
+        return;
+      }
+      if (target.closest('[data-role="observation-note-delete-cancel"]')) {
+        closeNoteDeleteConfirm();
+        return;
+      }
+      if (target.closest('[data-role="observation-note-delete-confirm"]')) {
+        confirmNoteDelete();
+        return;
+      }
+      return;
+    }
+
     const card = target.closest('[data-child]');
     if (!card || !getCardChild(card)) {
       return;
@@ -1607,6 +1738,24 @@ export const bindObservations = ({
       markNoteEditing(panel);
       persistObservationNotes(child, panel);
       appendNoteField(panel);
+      return;
+    }
+
+    const noteDeleteButton = target.closest('[data-role="observation-note-delete"]');
+    if (noteDeleteButton) {
+      if (isReadOnly) {
+        return;
+      }
+      const child = card.dataset.child;
+      const panel = (child && getDetailPanel(child)) || card;
+      if (!child || !panel) {
+        return;
+      }
+      const noteIndex = Number(noteDeleteButton.dataset.noteIndex);
+      const rawNotes = getRawNotesFromPanel(panel);
+      const noteValue =
+        Number.isFinite(noteIndex) && noteIndex >= 0 ? rawNotes[noteIndex] || '' : '';
+      openNoteDeleteConfirm({ child, index: noteIndex, note: noteValue });
       return;
     }
 
@@ -2544,6 +2693,9 @@ export const bindObservations = ({
   return {
     updateDate: (nextDate) => {
       currentDate = nextDate;
+      if (isNoteDeleteConfirmOpen) {
+        closeNoteDeleteConfirm({ force: true });
+      }
       if (isOverlayOpen) {
         setOverlayTitle(activeChild);
       }
@@ -2563,6 +2715,7 @@ export const bindObservations = ({
         closeEditOverlay();
         closeMultiTemplateOverlay();
         closeAssignOverlay();
+        closeNoteDeleteConfirm({ force: true });
       }
     },
   };
