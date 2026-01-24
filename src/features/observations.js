@@ -1110,31 +1110,31 @@ export const bindObservations = ({
   };
 
   const notesOverlay = multiTemplatesOverlay;
-  const notesOverlayScrollEl = notesOverlay?.querySelector(
+  let notesOverlayScrollEl = notesOverlay?.querySelector(
     '.observation-templates-overlay__content',
   );
-  const assignTabButtons = notesOverlay?.querySelectorAll(
+  let assignTabButtons = notesOverlay?.querySelectorAll(
     '[data-role="observation-assign-tab"]',
   );
-  const assignShortPaneEl = notesOverlay?.querySelector(
+  let assignShortPaneEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-pane"][data-tab="short"]',
   );
-  const assignNotesPaneEl = notesOverlay?.querySelector(
+  let assignNotesPaneEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-pane"][data-tab="notes"]',
   );
-  const assignNoteCreateListEl = notesOverlay?.querySelector(
+  let assignNoteCreateListEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-list"]',
   );
-  const assignNoteCreateInputEl = notesOverlay?.querySelector(
+  let assignNoteCreateInputEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-input"]',
   );
-  const assignNoteCreateSaveButtonEl = notesOverlay?.querySelector(
+  let assignNoteCreateSaveButtonEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-save"]',
   );
-  const assignNoteSharedListEl = notesOverlay?.querySelector(
+  let assignNoteSharedListEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-shared-list"]',
   );
-  const assignNoteSharedEmptyEl = notesOverlay?.querySelector(
+  let assignNoteSharedEmptyEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-shared-empty"]',
   );
   const noteDeleteConfirmEl =
@@ -1148,6 +1148,39 @@ export const bindObservations = ({
   const noteDeleteCancelButtonEl = noteDeleteConfirmEl?.querySelector(
     '[data-role="observation-note-delete-cancel"]',
   );
+
+  const refreshAssignNoteRefs = () => {
+    if (!notesOverlay) {
+      return;
+    }
+    notesOverlayScrollEl = notesOverlay.querySelector(
+      '.observation-templates-overlay__content',
+    );
+    assignTabButtons = notesOverlay.querySelectorAll(
+      '[data-role="observation-assign-tab"]',
+    );
+    assignShortPaneEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-pane"][data-tab="short"]',
+    );
+    assignNotesPaneEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-pane"][data-tab="notes"]',
+    );
+    assignNoteCreateListEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-note-create-list"]',
+    );
+    assignNoteCreateInputEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-note-create-input"]',
+    );
+    assignNoteCreateSaveButtonEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-note-create-save"]',
+    );
+    assignNoteSharedListEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-note-shared-list"]',
+    );
+    assignNoteSharedEmptyEl = notesOverlay.querySelector(
+      '[data-role="observation-assign-note-shared-empty"]',
+    );
+  };
 
   const closeNoteDeleteConfirm = ({ force = false } = {}) => {
     if (!noteDeleteConfirmEl) {
@@ -1390,6 +1423,7 @@ export const bindObservations = ({
   };
 
   const updateAssignNoteCreateSaveState = () => {
+    refreshAssignNoteRefs();
     const hasDraft = assignNoteCreateDraft.trim().length > 0;
     const hasSelection = Array.from(assignNoteCreateSelection).some((child) =>
       assignNoteAssignableSet.has(child),
@@ -1424,6 +1458,7 @@ export const bindObservations = ({
   };
 
   const setAssignTab = (nextTab, { shouldSync = true, focusInput = false } = {}) => {
+    refreshAssignNoteRefs();
     assignTab = nextTab === 'notes' ? 'notes' : 'short';
     assignTabButtons?.forEach((button) => {
       const tabId = button.dataset.tab;
@@ -1608,6 +1643,7 @@ export const bindObservations = ({
     if (!notesOverlay || !isMultiTemplateOpen) {
       return;
     }
+    refreshAssignNoteRefs();
     const previousScrollTop = notesOverlayScrollEl?.scrollTop ?? 0;
     const entries = getAssignChildEntries();
     const { assignableChildren, assignableSet } = syncAssignableChildren(entries);
@@ -1667,6 +1703,7 @@ export const bindObservations = ({
   };
 
   const resetAssignNoteState = ({ preserveTab = false } = {}) => {
+    refreshAssignNoteRefs();
     const nextTab = preserveTab ? assignTab : 'short';
     assignTab = nextTab;
     assignNoteCreateDraft = '';
