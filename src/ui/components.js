@@ -2176,113 +2176,10 @@ export const buildObservationAssignOverlay = ({ readOnly = false } = {}) => {
     className: 'd-flex flex-wrap gap-2 observation-assign-list',
     dataset: { role: 'observation-assign-list' },
   });
-  const tabsNav = createEl('ul', {
-    className: 'nav nav-tabs observation-assign-tabs',
-    attrs: { role: 'tablist' },
-    dataset: { role: 'observation-assign-tabs-nav' },
-  });
-  const tabContent = createEl('div', {
-    className: 'tab-content observation-assign-tabs-content',
-  });
-  const createTab = (tabId, label, isActive = false) => {
-    const button = createEl('button', {
-      className: `nav-link${isActive ? ' active' : ''}`,
-      text: label,
-      attrs: {
-        type: 'button',
-        role: 'tab',
-        'aria-selected': isActive ? 'true' : 'false',
-      },
-      dataset: { role: 'observation-assign-tab', tab: tabId },
-    });
-    const item = createEl('li', {
-      className: 'nav-item',
-      children: [button],
-    });
-    tabsNav.appendChild(item);
-    return button;
-  };
-  const shortTabButton = createTab('short', 'Kurze Einträge', true);
-  const notesTabButton = createTab('notes', 'Notizen');
-
-  const shortPane = createEl('div', {
-    className: 'tab-pane fade show active observation-assign-pane observation-assign-pane--short',
-    attrs: { role: 'tabpanel', 'aria-hidden': 'false' },
-    dataset: { role: 'observation-assign-pane', tab: 'short' },
-    children: [
-      createEl('div', {
-        className: 'd-flex flex-column gap-3 mt-3',
-        children: [observationLabel, list],
-      }),
-    ],
-  });
-
-  const noteCreateList = createEl('div', {
-    className: 'd-flex flex-wrap gap-2 observation-assign-note-list',
-    dataset: { role: 'observation-assign-note-create-list' },
-  });
-  const noteCreateInput = createEl('textarea', {
-    className: 'form-control observation-assign-note-input',
-    attrs: {
-      rows: '4',
-      placeholder: 'Notiz',
-      'aria-label': 'Neue Notiz für ausgewählte Kinder',
-    },
-    dataset: { role: 'observation-assign-note-create-input' },
-  });
-  noteCreateInput.disabled = readOnly;
-  const noteCreateSaveButton = createEl('button', {
-    className: 'btn btn-primary observation-assign-note-save align-self-start',
-    text: 'Speichern',
-    attrs: { type: 'button', disabled: readOnly ? 'true' : null },
-    dataset: { role: 'observation-assign-note-create-save' },
-  });
-
-  const noteSharedList = createEl('div', {
-    className: 'd-flex flex-column gap-3 observation-assign-note-shared-list',
-    dataset: { role: 'observation-assign-note-shared-list' },
-  });
-  const noteSharedEmpty = createEl('p', {
-    className: 'text-muted small mb-0',
-    text: 'Noch keine gemeinsamen Notizen.',
-    dataset: { role: 'observation-assign-note-shared-empty' },
-  });
-
-  const notesPane = createEl('div', {
-    className: 'tab-pane fade observation-assign-pane observation-assign-pane--notes d-none',
-    attrs: { role: 'tabpanel', 'aria-hidden': 'true' },
-    dataset: { role: 'observation-assign-pane', tab: 'notes' },
-    children: [
-      createEl('div', {
-        className: 'd-flex flex-column gap-3 mt-3 observation-assign-note-create',
-        children: [
-          createEl('div', {
-            className: 'd-flex flex-column gap-2',
-            children: [
-              createEl('h4', { className: 'h6 mb-0', text: 'Neue Notiz' }),
-              noteCreateInput,
-              noteCreateList,
-              noteCreateSaveButton,
-            ],
-          }),
-          createEl('div', {
-            className: 'd-flex flex-column gap-2 observation-assign-note-shared',
-            children: [
-              createEl('h4', { className: 'h6 mb-0', text: 'Gemeinsame Notizen' }),
-              noteSharedEmpty,
-              noteSharedList,
-            ],
-          }),
-        ],
-      }),
-    ],
-  });
-
-  tabContent.append(shortPane, notesPane);
 
   const content = createEl('div', {
     className: 'mt-3 d-flex flex-column gap-3',
-    children: [tabsNav, tabContent],
+    children: [observationLabel, list],
   });
   const scrollContent = createEl('div', {
     className: 'observation-templates-overlay__content',
@@ -2298,16 +2195,6 @@ export const buildObservationAssignOverlay = ({ readOnly = false } = {}) => {
       list,
       closeButton,
       observationLabel,
-      tabsNav,
-      shortTabButton,
-      notesTabButton,
-      shortPane,
-      notesPane,
-      noteCreateList,
-      noteCreateInput,
-      noteCreateSaveButton,
-      noteSharedList,
-      noteSharedEmpty,
     },
   };
 };
@@ -3928,18 +3815,6 @@ export const buildObservationsSection = ({
     isReadOnly = shouldBeReadOnly;
     currentFreeDayInfo = nextFreeDayInfo;
     multiObservationButton.disabled = isReadOnly;
-    const assignNoteCreateInput = refs.assignOverlay.querySelector(
-      '[data-role="observation-assign-note-create-input"]',
-    );
-    if (assignNoteCreateInput instanceof HTMLTextAreaElement) {
-      assignNoteCreateInput.disabled = isReadOnly;
-    }
-    const assignNoteCreateSaveButton = refs.assignOverlay.querySelector(
-      '[data-role="observation-assign-note-create-save"]',
-    );
-    if (assignNoteCreateSaveButton instanceof HTMLButtonElement) {
-      assignNoteCreateSaveButton.disabled = isReadOnly;
-    }
     const multiNoteCreateInput = refs.multiTemplatesOverlay.querySelector(
       '[data-role="observation-assign-note-create-input"]',
     );
@@ -3960,20 +3835,6 @@ export const buildObservationsSection = ({
         }
       });
     refs.multiTemplatesOverlay
-      .querySelectorAll('[data-role="observation-assign-note-shared-save"]')
-      .forEach((button) => {
-        if (button instanceof HTMLButtonElement) {
-          button.disabled = isReadOnly;
-        }
-      });
-    refs.assignOverlay
-      .querySelectorAll('[data-role="observation-assign-note-shared-input"]')
-      .forEach((input) => {
-        if (input instanceof HTMLTextAreaElement) {
-          input.disabled = isReadOnly;
-        }
-      });
-    refs.assignOverlay
       .querySelectorAll('[data-role="observation-assign-note-shared-save"]')
       .forEach((button) => {
         if (button instanceof HTMLButtonElement) {
