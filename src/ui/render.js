@@ -46,6 +46,7 @@ import {
   getFreizeitModulesForDate,
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
+import { normalizeObservationNoteList } from '../utils/observationNotes.js';
 
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -203,6 +204,26 @@ const normalizeObservations = (value) => {
   }
 
   return {};
+};
+
+const normalizeObservationNotes = (value, childrenList) => {
+  const source = value && typeof value === 'object' ? value : {};
+  const allowed = Array.isArray(childrenList) ? new Set(childrenList) : null;
+  const result = {};
+  Object.entries(source).forEach(([child, note]) => {
+    if (allowed && !allowed.has(child)) {
+      return;
+    }
+    result[child] = normalizeObservationNoteList(note);
+  });
+  if (allowed) {
+    allowed.forEach((child) => {
+      if (!(child in result)) {
+        result[child] = [];
+      }
+    });
+  }
+  return result;
 };
 
 const getPreservedUiState = (root) => ({
@@ -510,10 +531,7 @@ export const renderApp = (root, state) => {
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
-  const observationNotes =
-    entry.observationNotes && typeof entry.observationNotes === 'object'
-      ? entry.observationNotes
-      : {};
+  const observationNotes = normalizeObservationNotes(entry.observationNotes, sortedChildren);
   const angebotePresets = db.angebote || [];
   const observationPresets = db.observationTemplates || [];
   const angebotCatalog = db.angebotCatalog || [];
@@ -901,6 +919,7 @@ export const renderApp = (root, state) => {
       assignOverlay: observationsSection.refs.assignOverlay,
       editOverlay: observationsSection.refs.editOverlay,
       createOverlay: observationsSection.refs.createOverlay,
+      noteDeleteConfirmOverlay: observationsSection.refs.noteDeleteConfirmOverlay,
       date: selectedDate,
       observationGroups,
       savedFilters: savedObsFilters,
@@ -961,9 +980,21 @@ export const renderApp = (root, state) => {
   });
 
   if (appShell.mainTabsView?.refs?.angebotPane) {
-    appShell.mainTabsView.refs.angebotPane.replaceChildren(angebotSection.element);
+    const angebotPane = appShell.mainTabsView.refs.angebotPane;
+    const shouldReplaceAngebotPane =
+      angebotPane.childElementCount !== 1 ||
+      angebotPane.firstElementChild !== angebotSection.element;
+    if (shouldReplaceAngebotPane) {
+      angebotPane.replaceChildren(angebotSection.element);
+    }
   }
-  appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
+  const shouldReplaceContentWrap =
+    appShell.contentWrap.childElementCount !== 2 ||
+    appShell.contentWrap.firstElementChild !== appShell.headerEl ||
+    appShell.contentWrap.lastElementChild !== appShell.mainTabsEl;
+  if (shouldReplaceContentWrap) {
+    appShell.contentWrap.replaceChildren(appShell.headerEl, appShell.mainTabsEl);
+  }
 
   appShell.observationsView.update({
     nextChildren: sortedChildren,

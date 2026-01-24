@@ -9,6 +9,7 @@ import {
   normalizeObservationGroups,
   normalizeObservationKey,
 } from '../utils/observationCatalog.js';
+import { normalizeObservationNoteList } from '../utils/observationNotes.js';
 import {
   buildAngebotCatalogGroupMap,
   normalizeAngebotGroups,
@@ -92,14 +93,11 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
     return acc;
   }, {});
   const normalizedNotes = Object.entries(observationNotes || {}).reduce((acc, [child, value]) => {
-    if (typeof value !== 'string') {
+    const notes = normalizeObservationNoteList(value);
+    if (!notes.length) {
       return acc;
     }
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return acc;
-    }
-    acc[child] = trimmed;
+    acc[child] = notes;
     return acc;
   }, {});
 
@@ -831,7 +829,7 @@ const buildWeeklyTable = ({
     weekDays.forEach((item) => {
       const dayEntry = getDayEntry(item.dateKey);
       const obs = dayEntry.observations[child] || [];
-      const note = dayEntry.observationNotes?.[child] || '';
+      const notes = normalizeObservationNoteList(dayEntry.observationNotes?.[child]);
       const freeInfo = item.freeInfo;
       const isAbsent = dayEntry.absentChildren.includes(child);
       const cellClasses = [
@@ -844,7 +842,7 @@ const buildWeeklyTable = ({
       if (showAbsence && isAbsent) {
         bodyChildren.push(buildAbsenceBadge());
       }
-      if (note) {
+      if (notes.length) {
         bodyChildren.push(buildObservationNoteIcon());
       }
       if (showObservations) {
@@ -1789,7 +1787,7 @@ export const createWeeklyTableView = ({
     const buildChildCell = (dayEntry, child) => {
       const lines = [];
       const obs = dayEntry.observations[child] || [];
-      const note = dayEntry.observationNotes?.[child] || '';
+      const notes = normalizeObservationNoteList(dayEntry.observationNotes?.[child]);
       const isAbsent = dayEntry.absentChildren.includes(child);
       if (showAbsence && isAbsent) {
         lines.push('<span class="badge badge-absence">Abwesend</span>');
@@ -1802,9 +1800,9 @@ export const createWeeklyTableView = ({
               .join(' '),
           );
         }
-        if (note) {
+        notes.forEach((note) => {
           lines.push(`Notiz: ${escapeHtml(note)}`);
-        }
+        });
       }
       if (!lines.length) {
         return '<span class="muted">—</span>';
