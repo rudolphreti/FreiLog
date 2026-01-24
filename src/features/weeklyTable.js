@@ -728,6 +728,21 @@ const buildWeeklyTable = ({
     }),
   );
 
+  const themeContent = weekTheme
+    ? createEl('span', { text: weekTheme })
+    : createEl('span', { className: 'text-muted', text: '—' });
+  const themeRowFreeDayClass =
+    weekDays.length && weekDays.every((item) => item.freeInfo)
+      ? 'weekly-table__cell--free-day'
+      : '';
+  themeRow.append(
+    createEl('td', {
+      className: themeRowFreeDayClass,
+      attrs: { colspan: String(weekDays.length) },
+      children: [themeContent],
+    }),
+  );
+
   const angeboteRow = createEl('tr', {
     className: 'weekly-table__offers-row',
   });
@@ -744,18 +759,6 @@ const buildWeeklyTable = ({
     }
     return dayEntryByDateKey.get(dateKey);
   };
-  weekDays.forEach((item) => {
-    const freeInfo = item.freeInfo;
-    const themeContent = weekTheme
-      ? createEl('span', { text: weekTheme })
-      : createEl('span', { className: 'text-muted', text: '—' });
-    themeRow.append(
-      createEl('td', {
-        className: freeInfo ? 'weekly-table__cell--free-day' : '',
-        children: [themeContent],
-      }),
-    );
-  });
   if (showWeekTheme) {
     tbody.append(themeRow);
   }
@@ -1781,6 +1784,12 @@ export const createWeeklyTableView = ({
       ? weekGroups
           .map((group) => {
             const weekTheme = group.weekTheme || '';
+            const themeCellClass = group.days.every((day) => day.freeInfo)
+              ? 'cell-free-day'
+              : '';
+            const themeCellContent = weekTheme
+              ? escapeHtml(weekTheme)
+              : '<span class="muted">—</span>';
             const headerCells = group.days
               .map((day) => {
                 const holidayBadge = day.holidayLabel
@@ -1798,13 +1807,7 @@ export const createWeeklyTableView = ({
             const themeRow = showWeekTheme
               ? `<tr class="theme-row">
                   <th>${escapeHtml(UI_LABELS.themaDerWoche)}</th>
-                  ${group.days
-                    .map((day) => {
-                      const cellClasses = day.freeInfo ? 'cell-free-day' : '';
-                      const themeText = weekTheme ? escapeHtml(weekTheme) : '<span class="muted">—</span>';
-                      return `<td class="${cellClasses}">${themeText}</td>`;
-                    })
-                    .join('')}
+                  <td class="${themeCellClass}" colspan="${String(group.days.length)}">${themeCellContent}</td>
                 </tr>`
               : '';
             const offerRow = showOffers
