@@ -1672,6 +1672,10 @@ export const buildObservationTemplatesOverlay = ({
   showCreateButton = false,
   createButtonLabel = UI_LABELS.observationCreate,
   createButtonRole = 'observation-create-open',
+  readOnly = false,
+  withNotesTab = false,
+  shortTabLabel = 'Kurze Einträge',
+  notesTabLabel = 'Notizen',
 }) => {
   const templateEntries = buildObservationTemplateEntries(
     templates,
@@ -1986,10 +1990,129 @@ export const buildObservationTemplatesOverlay = ({
   empty.hidden = hasTemplates;
   empty.dataset.role = 'observation-template-empty';
 
-  const content = createEl('div', {
+  let noteCreateList = null;
+  let noteCreateInput = null;
+  let noteCreateSaveButton = null;
+  let noteSharedList = null;
+  let noteSharedEmpty = null;
+  let tabsNav = null;
+  let shortTabButton = null;
+  let notesTabButton = null;
+  let shortPane = null;
+  let notesPane = null;
+
+  const baseContent = createEl('div', {
     className: 'mt-3 d-flex flex-column gap-3',
     children: [filtersShell, list, empty],
   });
+
+  let content = baseContent;
+
+  if (withNotesTab) {
+    tabsNav = createEl('ul', {
+      className: 'nav nav-tabs observation-assign-tabs',
+      attrs: { role: 'tablist' },
+      dataset: { role: 'observation-assign-tabs-nav' },
+    });
+    const createTab = (tabId, label, isActive = false) => {
+      const button = createEl('button', {
+        className: `nav-link${isActive ? ' active' : ''}`,
+        text: label,
+        attrs: {
+          type: 'button',
+          role: 'tab',
+          'aria-selected': isActive ? 'true' : 'false',
+        },
+        dataset: { role: 'observation-assign-tab', tab: tabId },
+      });
+      const item = createEl('li', {
+        className: 'nav-item',
+        children: [button],
+      });
+      tabsNav.appendChild(item);
+      return button;
+    };
+    shortTabButton = createTab('short', shortTabLabel, true);
+    notesTabButton = createTab('notes', notesTabLabel);
+
+    const tabContent = createEl('div', {
+      className: 'tab-content observation-assign-tabs-content',
+    });
+
+    shortPane = createEl('div', {
+      className: 'tab-pane fade show active observation-assign-pane observation-assign-pane--short',
+      attrs: { role: 'tabpanel', 'aria-hidden': 'false' },
+      dataset: { role: 'observation-assign-pane', tab: 'short' },
+      children: [baseContent],
+    });
+
+    noteCreateList = createEl('div', {
+      className: 'd-flex flex-wrap gap-2 observation-assign-note-list',
+      dataset: { role: 'observation-assign-note-create-list' },
+    });
+    noteCreateInput = createEl('textarea', {
+      className: 'form-control observation-assign-note-input',
+      attrs: {
+        rows: '4',
+        placeholder: 'Notiz',
+        'aria-label': 'Neue Notiz für ausgewählte Kinder',
+      },
+      dataset: { role: 'observation-assign-note-create-input' },
+    });
+    noteCreateInput.disabled = readOnly;
+    noteCreateSaveButton = createEl('button', {
+      className: 'btn btn-primary observation-assign-note-save align-self-start',
+      text: 'Speichern',
+      attrs: { type: 'button', disabled: readOnly ? 'true' : null },
+      dataset: { role: 'observation-assign-note-create-save' },
+    });
+    noteSharedList = createEl('div', {
+      className: 'd-flex flex-column gap-3 observation-assign-note-shared-list',
+      dataset: { role: 'observation-assign-note-shared-list' },
+    });
+    noteSharedEmpty = createEl('p', {
+      className: 'text-muted small mb-0',
+      text: 'Noch keine gemeinsamen Notizen.',
+      dataset: { role: 'observation-assign-note-shared-empty' },
+    });
+
+    notesPane = createEl('div', {
+      className: 'tab-pane fade observation-assign-pane observation-assign-pane--notes d-none',
+      attrs: { role: 'tabpanel', 'aria-hidden': 'true' },
+      dataset: { role: 'observation-assign-pane', tab: 'notes' },
+      children: [
+        createEl('div', {
+          className: 'd-flex flex-column gap-3 mt-3 observation-assign-note-create',
+          children: [
+            createEl('div', {
+              className: 'd-flex flex-column gap-2',
+              children: [
+                createEl('h4', { className: 'h6 mb-0', text: 'Neue Notiz' }),
+                noteCreateInput,
+                noteCreateList,
+                noteCreateSaveButton,
+              ],
+            }),
+            createEl('div', {
+              className: 'd-flex flex-column gap-2 observation-assign-note-shared',
+              children: [
+                createEl('h4', { className: 'h6 mb-0', text: 'Gemeinsame Notizen' }),
+                noteSharedEmpty,
+                noteSharedList,
+              ],
+            }),
+          ],
+        }),
+      ],
+    });
+
+    tabContent.append(shortPane, notesPane);
+
+    content = createEl('div', {
+      className: 'mt-3 d-flex flex-column gap-3',
+      children: [tabsNav, tabContent],
+    });
+  }
 
   const scrollContent = createEl('div', {
     className: 'observation-templates-overlay__content',
@@ -2007,6 +2130,16 @@ export const buildObservationTemplatesOverlay = ({
       searchInput,
       empty,
       closeButton,
+      tabsNav,
+      shortTabButton,
+      notesTabButton,
+      shortPane,
+      notesPane,
+      noteCreateList,
+      noteCreateInput,
+      noteCreateSaveButton,
+      noteSharedList,
+      noteSharedEmpty,
     },
   };
 };
@@ -3556,9 +3689,14 @@ export const buildObservationsSection = ({
     observationCatalog,
     observationGroups,
     savedFilters: normalizedSavedFilters,
+    title: 'Kurze Beobachtungen oder Notizen mehreren Kindern zuweisen',
     role: 'observation-multi-catalog-overlay',
     className: 'observation-templates-overlay observation-multi-catalog-overlay',
     closeRole: 'observation-multi-catalog-close',
+    readOnly: isReadOnly,
+    withNotesTab: true,
+    shortTabLabel: 'Kurze Einträge',
+    notesTabLabel: 'Notizen',
   });
   const assignOverlay = buildObservationAssignOverlay({ readOnly: isReadOnly });
   const editOverlay = buildObservationEditOverlay({ observationGroups });
@@ -3802,6 +3940,32 @@ export const buildObservationsSection = ({
     if (assignNoteCreateSaveButton instanceof HTMLButtonElement) {
       assignNoteCreateSaveButton.disabled = isReadOnly;
     }
+    const multiNoteCreateInput = refs.multiTemplatesOverlay.querySelector(
+      '[data-role="observation-assign-note-create-input"]',
+    );
+    if (multiNoteCreateInput instanceof HTMLTextAreaElement) {
+      multiNoteCreateInput.disabled = isReadOnly;
+    }
+    const multiNoteCreateSaveButton = refs.multiTemplatesOverlay.querySelector(
+      '[data-role="observation-assign-note-create-save"]',
+    );
+    if (multiNoteCreateSaveButton instanceof HTMLButtonElement) {
+      multiNoteCreateSaveButton.disabled = isReadOnly;
+    }
+    refs.multiTemplatesOverlay
+      .querySelectorAll('[data-role="observation-assign-note-shared-input"]')
+      .forEach((input) => {
+        if (input instanceof HTMLTextAreaElement) {
+          input.disabled = isReadOnly;
+        }
+      });
+    refs.multiTemplatesOverlay
+      .querySelectorAll('[data-role="observation-assign-note-shared-save"]')
+      .forEach((button) => {
+        if (button instanceof HTMLButtonElement) {
+          button.disabled = isReadOnly;
+        }
+      });
     refs.assignOverlay
       .querySelectorAll('[data-role="observation-assign-note-shared-input"]')
       .forEach((input) => {

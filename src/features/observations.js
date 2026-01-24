@@ -1103,31 +1103,32 @@ export const bindObservations = ({
     }
   };
 
-  const assignOverlayScrollEl = assignOverlay?.querySelector(
+  const notesOverlay = multiTemplatesOverlay;
+  const notesOverlayScrollEl = notesOverlay?.querySelector(
     '.observation-templates-overlay__content',
   );
-  const assignTabButtons = assignOverlay?.querySelectorAll(
+  const assignTabButtons = notesOverlay?.querySelectorAll(
     '[data-role="observation-assign-tab"]',
   );
-  const assignShortPaneEl = assignOverlay?.querySelector(
+  const assignShortPaneEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-pane"][data-tab="short"]',
   );
-  const assignNotesPaneEl = assignOverlay?.querySelector(
+  const assignNotesPaneEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-pane"][data-tab="notes"]',
   );
-  const assignNoteCreateListEl = assignOverlay?.querySelector(
+  const assignNoteCreateListEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-list"]',
   );
-  const assignNoteCreateInputEl = assignOverlay?.querySelector(
+  const assignNoteCreateInputEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-input"]',
   );
-  const assignNoteCreateSaveButtonEl = assignOverlay?.querySelector(
+  const assignNoteCreateSaveButtonEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-create-save"]',
   );
-  const assignNoteSharedListEl = assignOverlay?.querySelector(
+  const assignNoteSharedListEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-shared-list"]',
   );
-  const assignNoteSharedEmptyEl = assignOverlay?.querySelector(
+  const assignNoteSharedEmptyEl = notesOverlay?.querySelector(
     '[data-role="observation-assign-note-shared-empty"]',
   );
   const noteDeleteConfirmEl =
@@ -1468,9 +1469,9 @@ export const bindObservations = ({
     const timerId = window.setTimeout(() => {
       assignNoteSharedFocusTimers.delete(key);
       assignNoteSharedFocusKeys.delete(key);
-      if (isAssignOverlayOpen && assignTab === 'notes') {
-        syncAssignNotesTab();
-      }
+    if (isMultiTemplateOpen && assignTab === 'notes') {
+      syncAssignNotesTab();
+    }
     }, 1500);
     assignNoteSharedFocusTimers.set(key, timerId);
   };
@@ -1598,10 +1599,10 @@ export const bindObservations = ({
   };
 
   const syncAssignNotesTab = ({ overrides = new Map() } = {}) => {
-    if (!assignOverlay || !isAssignOverlayOpen) {
+    if (!notesOverlay || !isMultiTemplateOpen) {
       return;
     }
-    const previousScrollTop = assignOverlayScrollEl?.scrollTop ?? 0;
+    const previousScrollTop = notesOverlayScrollEl?.scrollTop ?? 0;
     const entries = getAssignChildEntries();
     const { assignableChildren, assignableSet } = syncAssignableChildren(entries);
     const notesByChild = buildNotesByChild(entries, overrides);
@@ -1653,9 +1654,9 @@ export const bindObservations = ({
 
     updateAssignNoteSharedSaveStateForAll();
     setAssignTab(assignTab, { shouldSync: false });
-    if (assignOverlayScrollEl) {
-      const maxScrollTop = assignOverlayScrollEl.scrollHeight - assignOverlayScrollEl.clientHeight;
-      assignOverlayScrollEl.scrollTop = Math.min(previousScrollTop, Math.max(maxScrollTop, 0));
+    if (notesOverlayScrollEl) {
+      const maxScrollTop = notesOverlayScrollEl.scrollHeight - notesOverlayScrollEl.clientHeight;
+      notesOverlayScrollEl.scrollTop = Math.min(previousScrollTop, Math.max(maxScrollTop, 0));
     }
   };
 
@@ -1865,6 +1866,8 @@ export const bindObservations = ({
     }
     closeDrawerIfOpen();
     isMultiTemplateOpen = true;
+    resetAssignNoteState();
+    setAssignTab('short', { shouldSync: false });
     multiTemplatesOverlay.dataset.isOpen = 'true';
     multiTemplatesOverlay.classList.add('is-open');
     multiTemplatesOverlay.setAttribute('aria-hidden', 'false');
@@ -1883,6 +1886,7 @@ export const bindObservations = ({
       return;
     }
     isMultiTemplateOpen = false;
+    resetAssignNoteState();
     multiTemplatesOverlay.dataset.isOpen = 'false';
     setTemplateSettingsOpen(multiTemplatesOverlay, false);
     multiTemplatesOverlay.classList.remove('is-open');
@@ -1894,11 +1898,9 @@ export const bindObservations = ({
     if (isReadOnly || !assignOverlay || !observation) {
       return;
     }
-    resetAssignNoteState();
     activeMultiObservation = observation;
     isAssignOverlayOpen = true;
     setAssignObservationLabel(observation);
-    setAssignTab('short', { shouldSync: false });
     rebuildAssignList();
     assignOverlay.classList.add('is-open');
     assignOverlay.setAttribute('aria-hidden', 'false');
@@ -2315,7 +2317,16 @@ export const bindObservations = ({
 
   const handleMultiTemplateInput = (event) => {
     const target = event.target;
-    if (!isInputElement(target) || !multiTemplatesOverlay) {
+    if (!multiTemplatesOverlay || !isHtmlElement(target)) {
+      return;
+    }
+
+    if (isTextAreaElement(target)) {
+      handleAssignOverlayInput(event);
+      return;
+    }
+
+    if (!isInputElement(target)) {
       return;
     }
 
@@ -2647,6 +2658,13 @@ export const bindObservations = ({
       return;
     }
 
+    const tabButton = target.closest('[data-role="observation-assign-tab"]');
+    if (tabButton) {
+      const nextTab = tabButton.dataset.tab;
+      setAssignTab(nextTab, { focusInput: nextTab === 'notes' });
+      return;
+    }
+
     const closeTemplateButton = target.closest(
       '[data-role="observation-multi-catalog-close"]',
     );
@@ -2661,6 +2679,39 @@ export const bindObservations = ({
     if (settingsToggle) {
       const { settingsOpen: nextSettingsOpen } = getTemplateFlags(multiTemplatesOverlay);
       setTemplateSettingsOpen(multiTemplatesOverlay, !nextSettingsOpen);
+      return;
+    }
+
+    const noteCreateChildButton = target.closest(
+      '[data-role="observation-assign-note-create-child"]',
+    );
+    if (noteCreateChildButton) {
+      toggleAssignNoteCreateChild(noteCreateChildButton);
+      return;
+    }
+
+    const noteCreateSaveButton = target.closest(
+      '[data-role="observation-assign-note-create-save"]',
+    );
+    if (noteCreateSaveButton) {
+      saveAssignNoteCreate();
+      return;
+    }
+
+    const noteSharedChildButton = target.closest(
+      '[data-role="observation-assign-note-shared-child"]',
+    );
+    if (noteSharedChildButton) {
+      toggleAssignNoteSharedChild(noteSharedChildButton);
+      return;
+    }
+
+    const noteSharedSaveButton = target.closest(
+      '[data-role="observation-assign-note-shared-save"]',
+    );
+    if (noteSharedSaveButton) {
+      const noteKey = noteSharedSaveButton.dataset.noteKey;
+      saveAssignNoteShared(noteKey);
       return;
     }
 
@@ -2906,6 +2957,9 @@ export const bindObservations = ({
     if (!isTextAreaElement(target)) {
       return;
     }
+    if (notesOverlay && !notesOverlay.contains(target)) {
+      return;
+    }
     if (target.dataset.role === 'observation-assign-note-create-input') {
       assignNoteCreateDraft = target.value;
       updateAssignNoteCreateSaveState();
@@ -2931,46 +2985,6 @@ export const bindObservations = ({
 
     if (target === assignOverlay) {
       closeAssignOverlay();
-      return;
-    }
-
-    const tabButton = target.closest('[data-role="observation-assign-tab"]');
-    if (tabButton) {
-      const nextTab = tabButton.dataset.tab;
-      setAssignTab(nextTab, { focusInput: nextTab === 'notes' });
-      return;
-    }
-
-    const noteCreateChildButton = target.closest(
-      '[data-role="observation-assign-note-create-child"]',
-    );
-    if (noteCreateChildButton) {
-      toggleAssignNoteCreateChild(noteCreateChildButton);
-      return;
-    }
-
-    const noteCreateSaveButton = target.closest(
-      '[data-role="observation-assign-note-create-save"]',
-    );
-    if (noteCreateSaveButton) {
-      saveAssignNoteCreate();
-      return;
-    }
-
-    const noteSharedChildButton = target.closest(
-      '[data-role="observation-assign-note-shared-child"]',
-    );
-    if (noteSharedChildButton) {
-      toggleAssignNoteSharedChild(noteSharedChildButton);
-      return;
-    }
-
-    const noteSharedSaveButton = target.closest(
-      '[data-role="observation-assign-note-shared-save"]',
-    );
-    if (noteSharedSaveButton) {
-      const noteKey = noteSharedSaveButton.dataset.noteKey;
-      saveAssignNoteShared(noteKey);
       return;
     }
 
