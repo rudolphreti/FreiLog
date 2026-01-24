@@ -746,6 +746,7 @@ export const bindAngebotCatalog = ({
   let currentWeekThemes = normalizeWeekThemeAssignments(weekThemes, getWeekThemes());
   let currentSchoolYears = [];
   let selectedWeekThemeYear = null;
+  let weekThemeYearPinnedByUser = false;
   let currentCatalog = normalizeCatalog(catalog);
   let currentTopStats = topStats || {};
   let currentSelected = Array.isArray(selectedAngebote) ? selectedAngebote : [];
@@ -963,6 +964,20 @@ export const bindAngebotCatalog = ({
       return;
     }
     const availableLabels = new Set(currentSchoolYears.map((year) => year.label));
+    let dateYearLabel = '';
+    if (!weekThemeYearPinnedByUser && isValidYmd(currentDate)) {
+      for (const schoolYear of currentSchoolYears) {
+        const weeks = schoolYear.weeks || [];
+        if (weeks.some((week) => currentDate >= week.startYmd && currentDate <= week.endYmd)) {
+          dateYearLabel = schoolYear.label;
+          break;
+        }
+      }
+    }
+    if (dateYearLabel && availableLabels.has(dateYearLabel)) {
+      selectedWeekThemeYear = dateYearLabel;
+      return;
+    }
     if (!selectedWeekThemeYear || !availableLabels.has(selectedWeekThemeYear)) {
       selectedWeekThemeYear = currentSchoolYears[currentSchoolYears.length - 1].label;
     }
@@ -1303,6 +1318,7 @@ export const bindAngebotCatalog = ({
     manageOverlayRef.classList.add('is-open');
     manageOverlayRef.setAttribute('aria-hidden', 'false');
     document.body.classList.add('observation-overlay-open');
+    weekThemeYearPinnedByUser = false;
     renderManage();
   };
 
@@ -1818,6 +1834,7 @@ export const bindAngebotCatalog = ({
     if (target.dataset.role === 'angebot-week-theme-year-select') {
       if (target instanceof HTMLSelectElement) {
         selectedWeekThemeYear = target.value || null;
+        weekThemeYearPinnedByUser = true;
         renderManage();
       }
       return;
