@@ -1095,6 +1095,12 @@ export const bindObservations = ({
     if (!assignOverlay) {
       return;
     }
+    const title = assignOverlay.querySelector('[data-role="observation-assign-title"]');
+    if (isHtmlElement(title)) {
+      title.textContent = value
+        ? `${value} mehreren Kindern zuweisen`
+        : 'Beobachtung mehreren Kindern zuweisen';
+    }
     const label = assignOverlay.querySelector(
       '[data-role="observation-assign-observation"]',
     );
@@ -2724,7 +2730,6 @@ export const bindObservations = ({
       }
       const tag = templateButton.dataset.value;
       if (tag) {
-        closeMultiTemplateOverlay();
         openAssignOverlay(tag);
       }
       return;

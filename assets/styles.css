@@ -1611,6 +1611,12 @@ body.child-detail-overlay-open {
 
 .observation-assign-overlay .observation-templates-overlay__panel {
   position: relative;
+  width: min(calc(100% - 2rem), 720px);
+  max-height: calc(100vh - 2rem);
+  margin: 1rem auto;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
 }
 
 .observation-assign-note-overlay {
