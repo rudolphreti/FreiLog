@@ -27,6 +27,14 @@ const normalizeObservationInput = (value) => {
 const normalizeObservationKey = (value) =>
   normalizeObservationInput(value).toLocaleLowerCase();
 
+const normalizeNoteKey = (value) => {
+  if (typeof value !== 'string') {
+    return '';
+  }
+  const trimmed = value.trim();
+  return trimmed ? trimmed.toLocaleLowerCase('de') : '';
+};
+
 const normalizeObservationList = (value) => {
   if (typeof value === 'string') {
     const trimmed = normalizeObservationInput(value);
@@ -765,15 +773,20 @@ export const bindObservations = ({
   let isEditOverlayOpen = false;
   let isMultiTemplateOpen = false;
   let isAssignOverlayOpen = false;
-  let isAssignNoteOverlayOpen = false;
   let isNoteDeleteConfirmOpen = false;
   let isReadOnly = Boolean(readOnly);
   let editingObservation = null;
   let activeMultiObservation = null;
   let noteDeleteTarget = null;
-  let assignNoteDraft = '';
-  const activeAssignNoteChildren = new Set();
+  let assignTab = 'short';
+  let assignNoteCreateDraft = '';
+  const assignNoteCreateSelection = new Set();
   let assignNoteAssignableSet = new Set();
+  const assignNoteSharedDrafts = new Map();
+  const assignNoteSharedSelections = new Map();
+  const assignNoteSharedFocusKeys = new Set();
+  const assignNoteSharedFocusTimers = new Map();
+  const assignNoteSharedRefs = new Map();
   const notePersistDebouncers = new Map();
   const handleTemplateSearch = debounce((input) => {
     setTemplateQuery(templatesOverlay, input.value);
@@ -1074,7 +1087,6 @@ export const bindObservations = ({
       isEditOverlayOpen ||
       isMultiTemplateOpen ||
       isAssignOverlayOpen ||
-      isAssignNoteOverlayOpen ||
       isNoteDeleteConfirmOpen;
     document.body.classList.toggle('observation-overlay-open', shouldBeOpen);
   };
@@ -1091,20 +1103,32 @@ export const bindObservations = ({
     }
   };
 
-  const assignNoteOverlayEl = assignOverlay?.querySelector(
-    '[data-role="observation-assign-note-overlay"]',
+  const assignOverlayScrollEl = assignOverlay?.querySelector(
+    '.observation-templates-overlay__content',
   );
-  const assignNoteListEl = assignOverlay?.querySelector(
-    '[data-role="observation-assign-note-list"]',
+  const assignTabButtons = assignOverlay?.querySelectorAll(
+    '[data-role="observation-assign-tab"]',
   );
-  const assignNoteInputEl = assignOverlay?.querySelector(
-    '[data-role="observation-assign-note-input"]',
+  const assignShortPaneEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-pane"][data-tab="short"]',
   );
-  const assignNoteSaveButtonEl = assignOverlay?.querySelector(
-    '[data-role="observation-assign-note-save"]',
+  const assignNotesPaneEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-pane"][data-tab="notes"]',
   );
-  const assignNoteOpenButtonEl = assignOverlay?.querySelector(
-    '[data-role="observation-assign-note-open"]',
+  const assignNoteCreateListEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-create-list"]',
+  );
+  const assignNoteCreateInputEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-create-input"]',
+  );
+  const assignNoteCreateSaveButtonEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-create-save"]',
+  );
+  const assignNoteSharedListEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-shared-list"]',
+  );
+  const assignNoteSharedEmptyEl = assignOverlay?.querySelector(
+    '[data-role="observation-assign-note-shared-empty"]',
   );
   const noteDeleteConfirmEl =
     noteDeleteConfirmOverlay instanceof HTMLElement ? noteDeleteConfirmOverlay : null;
@@ -1304,21 +1328,28 @@ export const bindObservations = ({
     return entries;
   };
 
-  const syncAssignNoteSelection = (entries) => {
-    const assignable = entries
+  const syncAssignableChildren = (entries) => {
+    const assignableChildren = entries
       .filter(({ isAbsent }) => !isAbsent)
       .map(({ child }) => child);
-    const assignableSet = new Set(assignable);
+    const assignableSet = new Set(assignableChildren);
     assignNoteAssignableSet = assignableSet;
-    activeAssignNoteChildren.forEach((child) => {
+    assignNoteCreateSelection.forEach((child) => {
       if (!assignableSet.has(child)) {
-        activeAssignNoteChildren.delete(child);
+        assignNoteCreateSelection.delete(child);
       }
     });
-    if (!activeAssignNoteChildren.size && assignable.length) {
-      assignable.forEach((child) => activeAssignNoteChildren.add(child));
-    }
-    return assignableSet;
+    assignNoteSharedSelections.forEach((selected, key) => {
+      selected.forEach((child) => {
+        if (!assignableSet.has(child)) {
+          selected.delete(child);
+        }
+      });
+      if (!selected.size && !assignNoteSharedFocusKeys.has(key)) {
+        assignNoteSharedSelections.delete(key);
+      }
+    });
+    return { assignableChildren, assignableSet };
   };
 
   const updateAssignNoteButtonState = (button, isSelected) => {
@@ -1326,17 +1357,25 @@ export const bindObservations = ({
     button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
   };
 
-  const buildAssignNoteButton = ({ child, isAbsent }) => {
+  const buildAssignNoteButton = ({
+    child,
+    isAbsent,
+    role,
+    isSelected,
+    noteKey = null,
+  }) => {
     const button = document.createElement('button');
     button.type = 'button';
     button.className =
       'btn btn-outline-primary observation-assign-pill observation-assign-note-pill';
     button.textContent = child;
-    button.dataset.role = 'observation-assign-note-child';
+    button.dataset.role = role;
     button.dataset.child = child;
     button.dataset.absent = isAbsent ? 'true' : 'false';
-    const isSelected = activeAssignNoteChildren.has(child) && !isAbsent;
-    updateAssignNoteButtonState(button, isSelected);
+    if (noteKey) {
+      button.dataset.noteKey = noteKey;
+    }
+    updateAssignNoteButtonState(button, isSelected && !isAbsent);
     if (isAbsent) {
       button.classList.add('is-absent');
     }
@@ -1344,110 +1383,305 @@ export const bindObservations = ({
     return button;
   };
 
-  const updateAssignNoteSaveState = () => {
-    const hasDraft = assignNoteDraft.trim().length > 0;
-    const hasSelection = Array.from(activeAssignNoteChildren).some((child) =>
+  const updateAssignNoteCreateSaveState = () => {
+    const hasDraft = assignNoteCreateDraft.trim().length > 0;
+    const hasSelection = Array.from(assignNoteCreateSelection).some((child) =>
       assignNoteAssignableSet.has(child),
     );
     const shouldDisable = isReadOnly || !hasDraft || !hasSelection;
-    if (isButtonElement(assignNoteSaveButtonEl)) {
-      assignNoteSaveButtonEl.disabled = shouldDisable;
+    if (isButtonElement(assignNoteCreateSaveButtonEl)) {
+      assignNoteCreateSaveButtonEl.disabled = shouldDisable;
     }
-    if (isButtonElement(assignNoteOpenButtonEl)) {
-      assignNoteOpenButtonEl.disabled = isReadOnly || assignNoteAssignableSet.size === 0;
-    }
-    if (isTextAreaElement(assignNoteInputEl)) {
-      assignNoteInputEl.disabled = isReadOnly || assignNoteAssignableSet.size === 0;
+    if (isTextAreaElement(assignNoteCreateInputEl)) {
+      assignNoteCreateInputEl.disabled = isReadOnly || assignNoteAssignableSet.size === 0;
     }
   };
 
-  const rebuildAssignNoteList = () => {
-    if (!assignOverlay || !assignNoteListEl) {
+  const updateAssignNoteSharedSaveState = (key) => {
+    const refs = assignNoteSharedRefs.get(key);
+    if (!refs) {
       return;
     }
-    const entries = getAssignChildEntries();
-    syncAssignNoteSelection(entries);
-    if (isTextAreaElement(assignNoteInputEl) && assignNoteInputEl.value !== assignNoteDraft) {
-      assignNoteInputEl.value = assignNoteDraft;
-    }
-    const nextButtons = entries.map((entry) => buildAssignNoteButton(entry));
-    assignNoteListEl.replaceChildren(...nextButtons);
-    updateAssignNoteSaveState();
+    const draft = assignNoteSharedDrafts.get(key) ?? refs.input.value;
+    const selection = assignNoteSharedSelections.get(key);
+    const hasSelection = Array.from(selection || []).some((child) =>
+      assignNoteAssignableSet.has(child),
+    );
+    const shouldDisable = isReadOnly || !draft.trim() || !hasSelection;
+    refs.saveButton.disabled = shouldDisable;
   };
 
-  const refreshAssignNoteButtons = () => {
+  const updateAssignNoteSharedSaveStateForAll = () => {
+    assignNoteSharedRefs.forEach((_refs, key) => {
+      updateAssignNoteSharedSaveState(key);
+    });
+  };
+
+  const setAssignTab = (nextTab, { shouldSync = true, focusInput = false } = {}) => {
+    assignTab = nextTab === 'notes' ? 'notes' : 'short';
+    assignTabButtons?.forEach((button) => {
+      const tabId = button.dataset.tab;
+      const isActive = tabId === assignTab;
+      button.classList.toggle('active', isActive);
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+    const togglePane = (pane, isActive) => {
+      if (!pane) {
+        return;
+      }
+      pane.classList.toggle('active', isActive);
+      pane.classList.toggle('show', isActive);
+      pane.classList.toggle('d-none', !isActive);
+      pane.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+    };
+    togglePane(assignShortPaneEl, assignTab === 'short');
+    togglePane(assignNotesPaneEl, assignTab === 'notes');
+    if (assignTab === 'notes' && shouldSync) {
+      syncAssignNotesTab();
+    }
+    if (assignTab === 'notes' && focusInput && isTextAreaElement(assignNoteCreateInputEl)) {
+      requestAnimationFrame(() => {
+        if (!assignNoteCreateInputEl.disabled) {
+          assignNoteCreateInputEl.focus();
+        }
+      });
+    }
+  };
+
+  const clearAssignNoteSharedFocus = (key) => {
+    const timerId = assignNoteSharedFocusTimers.get(key);
+    if (timerId) {
+      window.clearTimeout(timerId);
+      assignNoteSharedFocusTimers.delete(key);
+    }
+    assignNoteSharedFocusKeys.delete(key);
+  };
+
+  const markAssignNoteSharedFocus = (key) => {
+    if (!key) {
+      return;
+    }
+    assignNoteSharedFocusKeys.add(key);
+    const existingTimer = assignNoteSharedFocusTimers.get(key);
+    if (existingTimer) {
+      window.clearTimeout(existingTimer);
+    }
+    const timerId = window.setTimeout(() => {
+      assignNoteSharedFocusTimers.delete(key);
+      assignNoteSharedFocusKeys.delete(key);
+      if (isAssignOverlayOpen && assignTab === 'notes') {
+        syncAssignNotesTab();
+      }
+    }, 1500);
+    assignNoteSharedFocusTimers.set(key, timerId);
+  };
+
+  const buildNotesByChild = (entries, overrides = new Map()) => {
+    const entry = getEntry(getDate());
+    const notesByChild = new Map();
+    entries.forEach(({ child, isAbsent }) => {
+      if (!child || isAbsent) {
+        return;
+      }
+      const override = overrides.get(child);
+      const notes = override
+        ? normalizeObservationNoteList(override)
+        : getObservationNotesForChild(entry, child);
+      notesByChild.set(child, notes);
+    });
+    return notesByChild;
+  };
+
+  const buildNoteChildrenMap = (notesByChild) => {
+    const noteMap = new Map();
+    notesByChild.forEach((notes, child) => {
+      notes.forEach((note) => {
+        const key = normalizeNoteKey(note);
+        if (!key) {
+          return;
+        }
+        const existing = noteMap.get(key);
+        if (existing) {
+          existing.children.add(child);
+          if (!existing.text.trim()) {
+            existing.text = note;
+          }
+          return;
+        }
+        noteMap.set(key, {
+          key,
+          text: note,
+          children: new Set([child]),
+        });
+      });
+    });
+    return noteMap;
+  };
+
+  const buildSharedNotesData = (notesByChild) =>
+    Array.from(buildNoteChildrenMap(notesByChild).values())
+      .filter(({ children }) => children.size > 1)
+      .sort((a, b) => a.text.localeCompare(b.text, 'de', { sensitivity: 'base' }));
+
+  const createAssignSharedNoteItem = (key) => {
+    const item = document.createElement('div');
+    item.className = 'observation-assign-note-item d-flex flex-column gap-2';
+    item.dataset.role = 'observation-assign-note-shared-item';
+    item.dataset.noteKey = key;
+    const input = document.createElement('textarea');
+    input.className = 'form-control observation-assign-note-input';
+    input.rows = 3;
+    input.placeholder = 'Notiz';
+    input.dataset.role = 'observation-assign-note-shared-input';
+    input.dataset.noteKey = key;
+    const children = document.createElement('div');
+    children.className = 'd-flex flex-wrap gap-2 observation-assign-note-list';
+    children.dataset.role = 'observation-assign-note-shared-children';
+    children.dataset.noteKey = key;
+    const saveButton = document.createElement('button');
+    saveButton.type = 'button';
+    saveButton.className = 'btn btn-primary btn-sm observation-assign-note-save align-self-start';
+    saveButton.textContent = 'Speichern';
+    saveButton.dataset.role = 'observation-assign-note-shared-save';
+    saveButton.dataset.noteKey = key;
+    item.append(input, children, saveButton);
+    const refs = { item, input, children, saveButton };
+    assignNoteSharedRefs.set(key, refs);
+    return refs;
+  };
+
+  const syncAssignSharedNoteItem = (key, data, assignableSet) => {
+    const refs = assignNoteSharedRefs.get(key) || createAssignSharedNoteItem(key);
+    refs.item.dataset.noteKey = key;
+    refs.input.dataset.noteKey = key;
+    refs.children.dataset.noteKey = key;
+    refs.saveButton.dataset.noteKey = key;
+
+    const isFocused = document.activeElement === refs.input;
+    const actualChildren = new Set(Array.from(data.children).filter((child) => assignableSet.has(child)));
+    let selectedChildren = assignNoteSharedSelections.get(key);
+    if (!selectedChildren || !assignNoteSharedFocusKeys.has(key)) {
+      selectedChildren = new Set(actualChildren);
+      assignNoteSharedSelections.set(key, selectedChildren);
+    } else {
+      selectedChildren.forEach((child) => {
+        if (!assignableSet.has(child)) {
+          selectedChildren.delete(child);
+        }
+      });
+      if (!selectedChildren.size) {
+        actualChildren.forEach((child) => selectedChildren.add(child));
+      }
+    }
+
+    let draft = assignNoteSharedDrafts.get(key);
+    if (!draft || !assignNoteSharedFocusKeys.has(key)) {
+      draft = data.text;
+      assignNoteSharedDrafts.set(key, draft);
+    }
+    if (!isFocused && refs.input.value !== draft) {
+      refs.input.value = draft;
+    }
+
+    const buttons = Array.from(assignableSet).map((child) =>
+      buildAssignNoteButton({
+        child,
+        isAbsent: false,
+        role: 'observation-assign-note-shared-child',
+        isSelected: selectedChildren.has(child),
+        noteKey: key,
+      }),
+    );
+    refs.children.replaceChildren(...buttons);
+    refs.input.disabled = isReadOnly;
+    refs.saveButton.disabled = isReadOnly;
+    return refs;
+  };
+
+  const syncAssignNotesTab = ({ overrides = new Map() } = {}) => {
     if (!assignOverlay || !isAssignOverlayOpen) {
       return;
     }
-    rebuildAssignNoteList();
-    assignNoteListEl
-      ?.querySelectorAll('[data-role="observation-assign-note-child"]')
-      .forEach((button) => {
-        const child = button.dataset.child;
-        const isAbsent = button.dataset.absent === 'true';
-        const isSelected = Boolean(child) && activeAssignNoteChildren.has(child) && !isAbsent;
-        updateAssignNoteButtonState(button, isSelected);
-        button.disabled = isReadOnly || isAbsent;
-      });
-    updateAssignNoteSaveState();
-  };
+    const previousScrollTop = assignOverlayScrollEl?.scrollTop ?? 0;
+    const entries = getAssignChildEntries();
+    const { assignableChildren, assignableSet } = syncAssignableChildren(entries);
+    const notesByChild = buildNotesByChild(entries, overrides);
+    const sharedNotes = buildSharedNotesData(notesByChild);
 
-  const openAssignNoteOverlay = () => {
-    if (
-      isReadOnly ||
-      !assignOverlay ||
-      !assignNoteOverlayEl ||
-      !isAssignOverlayOpen
-    ) {
-      return;
+    if (isTextAreaElement(assignNoteCreateInputEl) && document.activeElement !== assignNoteCreateInputEl) {
+      if (assignNoteCreateInputEl.value !== assignNoteCreateDraft) {
+        assignNoteCreateInputEl.value = assignNoteCreateDraft;
+      }
     }
-    rebuildAssignNoteList();
-    isAssignNoteOverlayOpen = true;
-    assignNoteOverlayEl.classList.add('is-open');
-    assignNoteOverlayEl.setAttribute('aria-hidden', 'false');
-    updateBodyOverlayClass();
-    if (isTextAreaElement(assignNoteInputEl) && !assignNoteInputEl.disabled) {
-      requestAnimationFrame(() => {
-        assignNoteInputEl.focus();
-      });
+    if (assignNoteCreateListEl) {
+      const buttons = assignableChildren.map((child) =>
+        buildAssignNoteButton({
+          child,
+          isAbsent: false,
+          role: 'observation-assign-note-create-child',
+          isSelected: assignNoteCreateSelection.has(child),
+        }),
+      );
+      assignNoteCreateListEl.replaceChildren(...buttons);
     }
-  };
+    updateAssignNoteCreateSaveState();
 
-  const closeAssignNoteOverlay = ({ clearDraft = false, force = false } = {}) => {
-    if (!assignNoteOverlayEl) {
-      return;
-    }
-    if (!isAssignNoteOverlayOpen && !force) {
-      if (clearDraft) {
-        assignNoteDraft = '';
-        if (isTextAreaElement(assignNoteInputEl)) {
-          assignNoteInputEl.value = '';
+    if (assignNoteSharedListEl) {
+      const desiredKeys = new Set(sharedNotes.map(({ key }) => key));
+      assignNoteSharedRefs.forEach((refs, key) => {
+        if (desiredKeys.has(key)) {
+          return;
         }
-        updateAssignNoteSaveState();
+        const containsFocus = refs.item.contains(document.activeElement);
+        if (containsFocus && assignNoteSharedFocusKeys.has(key)) {
+          return;
+        }
+        refs.item.remove();
+        assignNoteSharedRefs.delete(key);
+        assignNoteSharedDrafts.delete(key);
+        assignNoteSharedSelections.delete(key);
+        clearAssignNoteSharedFocus(key);
+      });
+
+      sharedNotes.forEach((note) => {
+        const refs = syncAssignSharedNoteItem(note.key, note, assignableSet);
+        assignNoteSharedListEl.appendChild(refs.item);
+      });
+      if (assignNoteSharedEmptyEl) {
+        assignNoteSharedEmptyEl.hidden = sharedNotes.length > 0;
       }
-      return;
     }
-    isAssignNoteOverlayOpen = false;
-    assignNoteOverlayEl.classList.remove('is-open');
-    assignNoteOverlayEl.setAttribute('aria-hidden', 'true');
-    if (clearDraft) {
-      assignNoteDraft = '';
-      if (isTextAreaElement(assignNoteInputEl)) {
-        assignNoteInputEl.value = '';
-      }
+
+    updateAssignNoteSharedSaveStateForAll();
+    setAssignTab(assignTab, { shouldSync: false });
+    if (assignOverlayScrollEl) {
+      const maxScrollTop = assignOverlayScrollEl.scrollHeight - assignOverlayScrollEl.clientHeight;
+      assignOverlayScrollEl.scrollTop = Math.min(previousScrollTop, Math.max(maxScrollTop, 0));
     }
-    updateAssignNoteSaveState();
-    updateBodyOverlayClass();
   };
 
-  const resetAssignNoteState = () => {
-    activeAssignNoteChildren.clear();
+  const resetAssignNoteState = ({ preserveTab = false } = {}) => {
+    const nextTab = preserveTab ? assignTab : 'short';
+    assignTab = nextTab;
+    assignNoteCreateDraft = '';
+    assignNoteCreateSelection.clear();
     assignNoteAssignableSet = new Set();
-    assignNoteDraft = '';
-    if (isTextAreaElement(assignNoteInputEl)) {
-      assignNoteInputEl.value = '';
+    assignNoteSharedDrafts.clear();
+    assignNoteSharedSelections.clear();
+    assignNoteSharedFocusKeys.clear();
+    assignNoteSharedFocusTimers.forEach((timerId) => window.clearTimeout(timerId));
+    assignNoteSharedFocusTimers.clear();
+    assignNoteSharedRefs.forEach(({ item }) => item.remove());
+    assignNoteSharedRefs.clear();
+    if (isTextAreaElement(assignNoteCreateInputEl)) {
+      assignNoteCreateInputEl.value = '';
     }
-    closeAssignNoteOverlay({ force: true });
+    if (assignNoteSharedEmptyEl) {
+      assignNoteSharedEmptyEl.hidden = false;
+    }
+    assignNoteSharedListEl?.replaceChildren();
+    setAssignTab(nextTab, { shouldSync: false });
+    updateAssignNoteCreateSaveState();
   };
 
   const buildAssignButton = ({ child, isAbsent }) => {
@@ -1479,7 +1713,6 @@ export const bindObservations = ({
     const entries = getAssignChildEntries();
     const nextButtons = entries.map((entry) => buildAssignButton(entry));
     assignList.replaceChildren(...nextButtons);
-    rebuildAssignNoteList();
   };
 
   const hasObservationForChild = (dateValue, child, observationKey) => {
@@ -1525,7 +1758,7 @@ export const bindObservations = ({
         updateAssignButtonState(button, isAssigned);
         button.disabled = isReadOnly || isAbsent;
       });
-    refreshAssignNoteButtons();
+    syncAssignNotesTab();
   };
 
   const setOverlayState = (child) => {
@@ -1664,9 +1897,10 @@ export const bindObservations = ({
     }
     resetAssignNoteState();
     activeMultiObservation = observation;
-    rebuildAssignList();
-    setAssignObservationLabel(observation);
     isAssignOverlayOpen = true;
+    setAssignObservationLabel(observation);
+    setAssignTab('short', { shouldSync: false });
+    rebuildAssignList();
     assignOverlay.classList.add('is-open');
     assignOverlay.setAttribute('aria-hidden', 'false');
     refreshAssignButtons();
@@ -2492,7 +2726,7 @@ export const bindObservations = ({
     }
   };
 
-  const toggleAssignNoteChild = (childButton) => {
+  const toggleAssignNoteCreateChild = (childButton) => {
     if (isReadOnly || childButton.dataset.absent === 'true') {
       return;
     }
@@ -2500,50 +2734,172 @@ export const bindObservations = ({
     if (!child || !assignNoteAssignableSet.has(child)) {
       return;
     }
-    if (activeAssignNoteChildren.has(child)) {
-      activeAssignNoteChildren.delete(child);
+    if (assignNoteCreateSelection.has(child)) {
+      assignNoteCreateSelection.delete(child);
     } else {
-      activeAssignNoteChildren.add(child);
+      assignNoteCreateSelection.add(child);
     }
-    updateAssignNoteButtonState(childButton, activeAssignNoteChildren.has(child));
-    updateAssignNoteSaveState();
+    updateAssignNoteButtonState(childButton, assignNoteCreateSelection.has(child));
+    updateAssignNoteCreateSaveState();
   };
 
-  const saveAssignNote = () => {
+  const toggleAssignNoteSharedChild = (childButton) => {
+    if (isReadOnly || childButton.dataset.absent === 'true') {
+      return;
+    }
+    const child = childButton.dataset.child;
+    const noteKey = childButton.dataset.noteKey;
+    if (!child || !noteKey || !assignNoteAssignableSet.has(child)) {
+      return;
+    }
+    const selectedChildren = assignNoteSharedSelections.get(noteKey) || new Set();
+    if (selectedChildren.has(child)) {
+      selectedChildren.delete(child);
+    } else {
+      selectedChildren.add(child);
+    }
+    assignNoteSharedSelections.set(noteKey, selectedChildren);
+    markAssignNoteSharedFocus(noteKey);
+    updateAssignNoteButtonState(childButton, selectedChildren.has(child));
+    updateAssignNoteSharedSaveState(noteKey);
+  };
+
+  const saveAssignNoteCreate = () => {
     if (isReadOnly) {
       return;
     }
-    const noteValue = isTextAreaElement(assignNoteInputEl)
-      ? assignNoteInputEl.value
-      : assignNoteDraft;
-    assignNoteDraft = noteValue;
-    if (!noteValue.trim()) {
-      updateAssignNoteSaveState();
-      return;
-    }
-    const selectedChildren = Array.from(activeAssignNoteChildren).filter((child) =>
+    const noteValue = isTextAreaElement(assignNoteCreateInputEl)
+      ? assignNoteCreateInputEl.value
+      : assignNoteCreateDraft;
+    assignNoteCreateDraft = noteValue;
+    const trimmedKey = normalizeNoteKey(noteValue);
+    const selectedChildren = Array.from(assignNoteCreateSelection).filter((child) =>
       assignNoteAssignableSet.has(child),
     );
-    if (!selectedChildren.length) {
-      updateAssignNoteSaveState();
+    if (!trimmedKey || !selectedChildren.length) {
+      updateAssignNoteCreateSaveState();
       return;
     }
-    const observationNotesPatch = {};
+    const entries = getAssignChildEntries();
+    const { assignableSet } = syncAssignableChildren(entries);
+    const baseNotesByChild = buildNotesByChild(entries);
+    const overrides = new Map();
+    const patch = {};
     selectedChildren.forEach((child) => {
-      observationNotesPatch[child] = {
-        items: [noteValue],
-        append: true,
+      if (!assignableSet.has(child)) {
+        return;
+      }
+      const existing = baseNotesByChild.get(child) || [];
+      const nextNotes = normalizeObservationNoteList([...existing, noteValue]);
+      overrides.set(child, nextNotes);
+      patch[child] = {
+        items: nextNotes,
+        replace: true,
       };
     });
-    updateEntry(getDate(), {
-      observationNotes: observationNotesPatch,
-    });
-    assignNoteDraft = '';
-    if (isTextAreaElement(assignNoteInputEl)) {
-      assignNoteInputEl.value = '';
+    if (!Object.keys(patch).length) {
+      updateAssignNoteCreateSaveState();
+      return;
     }
-    closeAssignNoteOverlay({ clearDraft: true });
-    refreshAssignNoteButtons();
+    syncAssignNotesTab({ overrides });
+    assignNoteCreateDraft = '';
+    assignNoteCreateSelection.clear();
+    if (isTextAreaElement(assignNoteCreateInputEl)) {
+      assignNoteCreateInputEl.value = '';
+    }
+    updateAssignNoteCreateSaveState();
+    updateEntry(getDate(), {
+      observationNotes: patch,
+    });
+  };
+
+  const saveAssignNoteShared = (noteKey) => {
+    if (isReadOnly) {
+      return;
+    }
+    const normalizedKey = normalizeNoteKey(noteKey);
+    if (!normalizedKey) {
+      return;
+    }
+    const refs = assignNoteSharedRefs.get(normalizedKey);
+    const draftValue = refs?.input.value ?? assignNoteSharedDrafts.get(normalizedKey) ?? '';
+    assignNoteSharedDrafts.set(normalizedKey, draftValue);
+    const nextKey = normalizeNoteKey(draftValue);
+    const selectedChildrenRaw = assignNoteSharedSelections.get(normalizedKey) || new Set();
+    const entries = getAssignChildEntries();
+    const { assignableSet } = syncAssignableChildren(entries);
+    const selectedChildren = new Set(
+      Array.from(selectedChildrenRaw).filter((child) => assignableSet.has(child)),
+    );
+    if (!nextKey || !selectedChildren.size) {
+      updateAssignNoteSharedSaveState(normalizedKey);
+      return;
+    }
+
+    const baseNotesByChild = buildNotesByChild(entries);
+    const noteMap = buildNoteChildrenMap(baseNotesByChild);
+    const currentChildren = noteMap.get(normalizedKey)?.children || new Set();
+
+    let targetKey = normalizedKey;
+    if (nextKey !== normalizedKey) {
+      const currentRefs = assignNoteSharedRefs.get(normalizedKey);
+      if (currentRefs) {
+        const existingRefs = assignNoteSharedRefs.get(nextKey);
+        if (existingRefs && existingRefs !== currentRefs) {
+          existingRefs.item.remove();
+          assignNoteSharedRefs.delete(nextKey);
+          assignNoteSharedDrafts.delete(nextKey);
+          assignNoteSharedSelections.delete(nextKey);
+          clearAssignNoteSharedFocus(nextKey);
+        }
+        assignNoteSharedRefs.delete(normalizedKey);
+        assignNoteSharedRefs.set(nextKey, currentRefs);
+        currentRefs.item.dataset.noteKey = nextKey;
+        currentRefs.input.dataset.noteKey = nextKey;
+        currentRefs.children.dataset.noteKey = nextKey;
+        currentRefs.saveButton.dataset.noteKey = nextKey;
+      }
+      const currentDraft = assignNoteSharedDrafts.get(normalizedKey);
+      if (currentDraft !== undefined) {
+        assignNoteSharedDrafts.set(nextKey, currentDraft);
+        assignNoteSharedDrafts.delete(normalizedKey);
+      }
+      const currentSelection = assignNoteSharedSelections.get(normalizedKey);
+      if (currentSelection) {
+        assignNoteSharedSelections.set(nextKey, currentSelection);
+        assignNoteSharedSelections.delete(normalizedKey);
+      }
+      clearAssignNoteSharedFocus(normalizedKey);
+      targetKey = nextKey;
+    }
+    assignNoteSharedDrafts.set(targetKey, draftValue);
+    assignNoteSharedSelections.set(targetKey, selectedChildren);
+    markAssignNoteSharedFocus(targetKey);
+
+    const affectedChildren = new Set([...currentChildren, ...selectedChildren]);
+    const overrides = new Map();
+    const patch = {};
+    affectedChildren.forEach((child) => {
+      const existing = baseNotesByChild.get(child) || [];
+      const filtered = existing.filter((note) => normalizeNoteKey(note) !== normalizedKey);
+      if (selectedChildren.has(child)) {
+        filtered.push(draftValue);
+      }
+      const nextNotes = normalizeObservationNoteList(filtered);
+      overrides.set(child, nextNotes);
+      patch[child] = {
+        items: nextNotes,
+        replace: true,
+      };
+    });
+    if (!Object.keys(patch).length) {
+      updateAssignNoteSharedSaveState(targetKey);
+      return;
+    }
+    syncAssignNotesTab({ overrides });
+    updateEntry(getDate(), {
+      observationNotes: patch,
+    });
   };
 
   const handleAssignOverlayInput = (event) => {
@@ -2551,11 +2907,21 @@ export const bindObservations = ({
     if (!isTextAreaElement(target)) {
       return;
     }
-    if (target.dataset.role !== 'observation-assign-note-input') {
+    if (target.dataset.role === 'observation-assign-note-create-input') {
+      assignNoteCreateDraft = target.value;
+      updateAssignNoteCreateSaveState();
       return;
     }
-    assignNoteDraft = target.value;
-    updateAssignNoteSaveState();
+    if (target.dataset.role !== 'observation-assign-note-shared-input') {
+      return;
+    }
+    const noteKey = normalizeNoteKey(target.dataset.noteKey);
+    if (!noteKey) {
+      return;
+    }
+    assignNoteSharedDrafts.set(noteKey, target.value);
+    markAssignNoteSharedFocus(noteKey);
+    updateAssignNoteSharedSaveState(noteKey);
   };
 
   const handleAssignOverlayClick = (event) => {
@@ -2565,44 +2931,47 @@ export const bindObservations = ({
     }
 
     if (target === assignOverlay) {
-      if (isAssignNoteOverlayOpen) {
-        closeAssignNoteOverlay();
-      } else {
-        closeAssignOverlay();
-      }
+      closeAssignOverlay();
       return;
     }
 
-    if (assignNoteOverlayEl && target === assignNoteOverlayEl) {
-      closeAssignNoteOverlay();
+    const tabButton = target.closest('[data-role="observation-assign-tab"]');
+    if (tabButton) {
+      const nextTab = tabButton.dataset.tab;
+      setAssignTab(nextTab, { focusInput: nextTab === 'notes' });
       return;
     }
 
-    const noteCloseButton = target.closest('[data-role="observation-assign-note-close"]');
-    if (noteCloseButton) {
-      closeAssignNoteOverlay();
+    const noteCreateChildButton = target.closest(
+      '[data-role="observation-assign-note-create-child"]',
+    );
+    if (noteCreateChildButton) {
+      toggleAssignNoteCreateChild(noteCreateChildButton);
       return;
     }
 
-    const noteOpenButton = target.closest('[data-role="observation-assign-note-open"]');
-    if (noteOpenButton) {
-      if (isAssignNoteOverlayOpen) {
-        closeAssignNoteOverlay();
-      } else {
-        openAssignNoteOverlay();
-      }
+    const noteCreateSaveButton = target.closest(
+      '[data-role="observation-assign-note-create-save"]',
+    );
+    if (noteCreateSaveButton) {
+      saveAssignNoteCreate();
       return;
     }
 
-    const noteChildButton = target.closest('[data-role="observation-assign-note-child"]');
-    if (noteChildButton) {
-      toggleAssignNoteChild(noteChildButton);
+    const noteSharedChildButton = target.closest(
+      '[data-role="observation-assign-note-shared-child"]',
+    );
+    if (noteSharedChildButton) {
+      toggleAssignNoteSharedChild(noteSharedChildButton);
       return;
     }
 
-    const noteSaveButton = target.closest('[data-role="observation-assign-note-save"]');
-    if (noteSaveButton) {
-      saveAssignNote();
+    const noteSharedSaveButton = target.closest(
+      '[data-role="observation-assign-note-shared-save"]',
+    );
+    if (noteSharedSaveButton) {
+      const noteKey = noteSharedSaveButton.dataset.noteKey;
+      saveAssignNoteShared(noteKey);
       return;
     }
 
@@ -2856,6 +3225,7 @@ export const bindObservations = ({
         setOverlayTitle(activeChild);
       }
       if (isAssignOverlayOpen) {
+        resetAssignNoteState({ preserveTab: true });
         refreshAssignButtons();
       }
     },
