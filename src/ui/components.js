@@ -2026,7 +2026,7 @@ export const buildObservationAssignOverlay = ({ readOnly = false } = {}) => {
   });
   const titleEl = createEl('h3', {
     className: 'h5 mb-0',
-    text: 'Kinder zuweisen',
+    text: 'Kurze Beobachtungen oder Notizen mehreren Kindern zuweisen',
   });
   const closeButton = createEl('button', {
     className: 'btn-close observation-templates-overlay__close',

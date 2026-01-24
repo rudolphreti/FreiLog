@@ -460,12 +460,6 @@ body {
   min-height: 2.5rem;
 }
 
-.observation-assign-note-pill.is-selected {
-  background: #2563eb;
-  border-color: #2563eb;
-  color: #ffffff;
-}
-
 .observation-note-item textarea {
   resize: vertical;
 }

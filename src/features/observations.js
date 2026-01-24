@@ -1353,7 +1353,7 @@ export const bindObservations = ({
   };
 
   const updateAssignNoteButtonState = (button, isSelected) => {
-    button.classList.toggle('is-selected', isSelected);
+    button.classList.toggle('is-assigned', isSelected);
     button.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
   };
 
@@ -1366,8 +1366,7 @@ export const bindObservations = ({
   }) => {
     const button = document.createElement('button');
     button.type = 'button';
-    button.className =
-      'btn btn-outline-primary observation-assign-pill observation-assign-note-pill';
+    button.className = 'btn btn-outline-primary observation-assign-pill';
     button.textContent = child;
     button.dataset.role = role;
     button.dataset.child = child;
