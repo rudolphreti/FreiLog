@@ -2146,7 +2146,7 @@ export const buildObservationTemplatesOverlay = ({
     tabContent.append(shortPane, notesPane);
 
     content = createEl('div', {
-      className: 'mt-3 d-flex flex-column gap-3',
+      className: 'mt-3 d-flex flex-column gap-0',
       children: [tabsNav, tabContent],
     });
   }
@@ -3182,7 +3182,7 @@ export const buildMainTabsSection = ({
   });
 
   const angebotPane = createEl('div', {
-    className: 'tab-pane fade pt-3',
+    className: 'tab-pane fade',
     attrs: {
       id: angebotPaneId,
       role: 'tabpanel',
@@ -3194,7 +3194,7 @@ export const buildMainTabsSection = ({
     className: 'tab-content',
     children: [
       createEl('div', {
-        className: 'tab-pane fade show active pt-3',
+        className: 'tab-pane fade show active',
         attrs: {
           id: observationsPaneId,
           role: 'tabpanel',
@@ -3203,7 +3203,7 @@ export const buildMainTabsSection = ({
         children: [observationsSection],
       }),
       createEl('div', {
-        className: 'tab-pane fade pt-3',
+        className: 'tab-pane fade',
         attrs: {
           id: entlassungPaneId,
           role: 'tabpanel',
@@ -3217,7 +3217,7 @@ export const buildMainTabsSection = ({
 
   return {
     element: createEl('div', {
-      className: 'd-flex flex-column gap-2',
+      className: 'd-flex flex-column gap-0',
       children: [tabList, tabContent],
     }),
     refs: {

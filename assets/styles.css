@@ -1737,7 +1737,7 @@ body.child-detail-overlay-open {
 }
 
 .angebot-modules-nav {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
   gap: 0.25rem;
 }
 
@@ -1760,7 +1760,16 @@ body.child-detail-overlay-open {
 }
 
 .angebot-manage-tabs-content {
-  padding-top: 0.25rem;
+  padding-top: 0;
+}
+
+.nav-tabs {
+  margin-bottom: 0;
+}
+
+.nav-tabs + .tab-content {
+  margin-top: 0;
+  padding-top: 0;
 }
 
 .angebot-week-theme__year-row {
