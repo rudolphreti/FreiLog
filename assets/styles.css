@@ -124,10 +124,14 @@ body {
 }
 
 @media (max-width: 480px) {
+  .app {
+    padding: 0.5rem 0 1.5rem;
+  }
+
   .app-header {
     padding-inline: 0.75rem;
-    padding-top: calc(0.75rem + env(safe-area-inset-top));
-    padding-bottom: 0.75rem;
+    padding-top: calc(0.5rem + env(safe-area-inset-top));
+    padding-bottom: 0.5rem;
   }
 
   .header-content {

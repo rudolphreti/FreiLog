@@ -789,7 +789,7 @@ export const renderApp = (root, state) => {
     const container = document.createElement('div');
     container.className = 'app';
     const contentWrap = document.createElement('div');
-    contentWrap.className = 'container d-flex flex-column gap-3';
+    contentWrap.className = 'container d-flex flex-column gap-2 gap-sm-3';
     const mainTabs = buildMainTabsSection({
       angebotSection: angebotSection.element,
       observationsSection: observationsSection.element,
