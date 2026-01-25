@@ -3674,7 +3674,6 @@ export const buildObservationsSection = ({
     templatesOverlay.element,
     editOverlay.element,
     createOverlay.element,
-    noteDeleteConfirmOverlay.element,
   );
   overlay.appendChild(overlayPanel);
 
@@ -3684,6 +3683,7 @@ export const buildObservationsSection = ({
     overlay,
     multiTemplatesOverlay.element,
     assignOverlay.element,
+    noteDeleteConfirmOverlay.element,
   );
   section.appendChild(body);
 

@@ -1,4 +1,3 @@
-import { getEntry } from '../db/dbRepository.js';
 import { getState, setSelectedDate } from '../state/store.js';
 import { addDaysYmd, ensureYmd, todayYmd } from '../utils/date.js';
 
@@ -14,7 +13,6 @@ const applyDateSelection = (input, value) => {
   if (currentSelected !== normalized) {
     setSelectedDate(normalized);
   }
-  getEntry(normalized);
 };
 
 const resolveInput = (target) => {
