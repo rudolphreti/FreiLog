@@ -2509,7 +2509,7 @@ const buildObservationNoteDeleteConfirm = () => {
       }),
       createEl('button', {
         className: 'btn btn-outline-secondary',
-        text: 'Abbrechen',
+        text: 'Nein',
         attrs: { type: 'button' },
         dataset: { role: 'observation-note-delete-cancel' },
       }),

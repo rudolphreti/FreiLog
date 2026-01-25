@@ -1196,6 +1196,45 @@ export const bindObservations = ({
     updateBodyOverlayClass();
   };
 
+  const deleteSharedNote = (noteKey) => {
+    const normalizedKey = normalizeNoteKey(noteKey);
+    if (!normalizedKey) {
+      return;
+    }
+    const entries = getAssignChildEntries();
+    const baseNotesByChild = buildNotesByChild(entries);
+    const overrides = new Map();
+    const patch = {};
+    baseNotesByChild.forEach((notes, child) => {
+      const filtered = notes.filter((note) => normalizeNoteKey(note) !== normalizedKey);
+      if (filtered.length === notes.length) {
+        return;
+      }
+      const nextNotes = normalizeObservationNoteList(filtered);
+      overrides.set(child, nextNotes);
+      patch[child] = {
+        items: nextNotes,
+        replace: true,
+      };
+    });
+    assignNoteSharedDrafts.delete(normalizedKey);
+    assignNoteSharedSelections.delete(normalizedKey);
+    clearAssignNoteSharedFocus(normalizedKey);
+    const refs = assignNoteSharedRefs.get(normalizedKey);
+    if (refs) {
+      refs.item.remove();
+      assignNoteSharedRefs.delete(normalizedKey);
+    }
+    if (!Object.keys(patch).length) {
+      syncAssignNotesTab();
+      return;
+    }
+    syncAssignNotesTab({ overrides });
+    updateEntry(getDate(), {
+      observationNotes: patch,
+    });
+  };
+
   const syncNotesAfterDelete = (panel, nextNotes, deletedIndex) => {
     if (!panel) {
       return;
@@ -1343,12 +1382,42 @@ export const bindObservations = ({
     }
   };
 
+  const openSharedNoteDeleteConfirm = ({ noteKey, note }) => {
+    if (isReadOnly || !noteDeleteConfirmEl || !noteKey) {
+      return;
+    }
+    const normalizedKey = normalizeNoteKey(noteKey);
+    if (!normalizedKey) {
+      return;
+    }
+    noteDeleteTarget = { noteKey: normalizedKey, type: 'shared' };
+    const trimmed = typeof note === 'string' ? note.trim() : '';
+    const noteLabel = trimmed ? `„${trimmed}”` : 'diese leere gemeinsame Notiz';
+    if (isHtmlElement(noteDeleteConfirmMessageEl)) {
+      noteDeleteConfirmMessageEl.textContent = `Möchtest du ${noteLabel} wirklich löschen?`;
+    }
+    noteDeleteConfirmEl.classList.remove('d-none');
+    noteDeleteConfirmEl.setAttribute('aria-hidden', 'false');
+    isNoteDeleteConfirmOpen = true;
+    updateBodyOverlayClass();
+    const focusTarget = noteDeleteConfirmButtonEl || noteDeleteCancelButtonEl;
+    if (isButtonElement(focusTarget)) {
+      requestAnimationFrame(() => {
+        focusTarget.focus();
+      });
+    }
+  };
+
   const confirmNoteDelete = () => {
     if (!noteDeleteTarget) {
       return;
     }
-    const { child, index } = noteDeleteTarget;
+    const { child, index, noteKey, type } = noteDeleteTarget;
     closeNoteDeleteConfirm({ force: true });
+    if (type === 'shared') {
+      deleteSharedNote(noteKey);
+      return;
+    }
     deleteNoteForChild(child, index);
   };
 
@@ -1582,8 +1651,14 @@ export const bindObservations = ({
     saveButton.textContent = 'Speichern';
     saveButton.dataset.role = 'observation-assign-note-shared-save';
     saveButton.dataset.noteKey = key;
-    item.append(input, children, saveButton);
-    const refs = { item, input, children, saveButton };
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'btn btn-outline-danger btn-sm observation-assign-note-delete align-self-start';
+    deleteButton.textContent = 'Löschen';
+    deleteButton.dataset.role = 'observation-assign-note-shared-delete';
+    deleteButton.dataset.noteKey = key;
+    item.append(input, children, saveButton, deleteButton);
+    const refs = { item, input, children, saveButton, deleteButton };
     assignNoteSharedRefs.set(key, refs);
     return refs;
   };
@@ -1594,6 +1669,7 @@ export const bindObservations = ({
     refs.input.dataset.noteKey = key;
     refs.children.dataset.noteKey = key;
     refs.saveButton.dataset.noteKey = key;
+    refs.deleteButton.dataset.noteKey = key;
 
     const isFocused = document.activeElement === refs.input;
     const actualChildren = new Set(Array.from(data.children).filter((child) => assignableSet.has(child)));
@@ -1630,6 +1706,7 @@ export const bindObservations = ({
     refs.children.replaceChildren(...buttons);
     refs.input.disabled = isReadOnly;
     refs.saveButton.disabled = isReadOnly;
+    refs.deleteButton.disabled = isReadOnly;
     return refs;
   };
 
@@ -2749,6 +2826,17 @@ export const bindObservations = ({
     if (noteSharedSaveButton) {
       const noteKey = noteSharedSaveButton.dataset.noteKey;
       saveAssignNoteShared(noteKey);
+      return;
+    }
+
+    const noteSharedDeleteButton = target.closest(
+      '[data-role="observation-assign-note-shared-delete"]',
+    );
+    if (noteSharedDeleteButton) {
+      const noteKey = noteSharedDeleteButton.dataset.noteKey;
+      const refs = noteKey ? assignNoteSharedRefs.get(noteKey) : null;
+      const noteValue = refs?.input?.value ?? '';
+      openSharedNoteDeleteConfirm({ noteKey, note: noteValue });
       return;
     }
 
