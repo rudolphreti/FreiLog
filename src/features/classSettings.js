@@ -434,7 +434,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   });
 
   const entlassungCard = createEl('div', {
-    className: 'card border-0 shadow-sm',
+    className: 'card border-0',
     children: [
       createEl('div', {
         className: 'card-body d-flex flex-column gap-3',
@@ -538,7 +538,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     children: [createEl('span', { text: '⚠️' }), createEl('span', { text: 'Löschen…' })],
   });
   const deleteChildCard = createEl('div', {
-    className: 'card border-0 shadow-sm',
+    className: 'card border-0',
     children: [
       createEl('div', {
         className: 'card-body d-flex flex-column gap-2',
@@ -1283,7 +1283,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     });
 
     const card = createEl('div', {
-      className: 'card border-0 shadow-sm',
+      className: 'card border-0',
       children: [
         createEl('div', {
           className: 'card-body d-flex flex-column gap-2',

@@ -582,7 +582,8 @@ export const buildAngebotOverlay = ({ angebotGroups }) => {
     dataset: { role: 'angebot-modules-nav' },
   });
   const modulesContent = createEl('div', {
-    className: 'tab-content angebot-modules-content',
+    className:
+      'tab-content angebot-modules-content border border-top-0 rounded-bottom bg-white p-3',
     dataset: { role: 'angebot-modules-content' },
   });
   const modulesEmpty = createEl('p', {
@@ -943,7 +944,8 @@ export const buildAngebotCatalogOverlay = ({
       dataset: { role: 'angebot-manage-tabs-nav' },
     });
     const tabContent = createEl('div', {
-      className: 'tab-content angebot-manage-tabs-content',
+      className:
+        'tab-content angebot-manage-tabs-content border border-top-0 rounded-bottom bg-white p-3',
     });
 
     const addTab = (tabId, label, isActive = false) => {
@@ -2073,7 +2075,8 @@ export const buildObservationTemplatesOverlay = ({
     notesTabButton = createTab('notes', notesTabLabel);
 
     const tabContent = createEl('div', {
-      className: 'tab-content observation-assign-tabs-content',
+      className:
+        'tab-content observation-assign-tabs-content border border-top-0 rounded-bottom bg-white p-3',
     });
 
     shortPane = createEl('div', {
@@ -2146,7 +2149,7 @@ export const buildObservationTemplatesOverlay = ({
     tabContent.append(shortPane, notesPane);
 
     content = createEl('div', {
-      className: 'mt-3 d-flex flex-column gap-0',
+      className: 'mt-3 d-flex flex-column',
       children: [tabsNav, tabContent],
     });
   }
@@ -3191,7 +3194,7 @@ export const buildMainTabsSection = ({
     children: [angebotSection],
   });
   const tabContent = createEl('div', {
-    className: 'tab-content',
+    className: 'tab-content border border-top-0 rounded-bottom bg-white p-3',
     children: [
       createEl('div', {
         className: 'tab-pane fade show active',
@@ -3217,7 +3220,7 @@ export const buildMainTabsSection = ({
 
   return {
     element: createEl('div', {
-      className: 'd-flex flex-column gap-0',
+      className: 'd-flex flex-column',
       children: [tabList, tabContent],
     }),
     refs: {
@@ -3240,7 +3243,7 @@ export const buildEntlassungSection = ({
   freeDayInfo = null,
 }) => {
   const section = createEl('section', {
-    className: 'card shadow-sm border-0 entlassung-panel',
+    className: 'card border-0 entlassung-panel',
     dataset: { readonly: readOnly ? 'true' : 'false' },
   });
   const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
@@ -3526,7 +3529,7 @@ export const buildObservationsSection = ({
   freeDayInfo = null,
 }) => {
   const section = createEl('section', {
-    className: 'card shadow-sm border-0',
+    className: 'card border-0',
   });
   const body = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   const absentSet = new Set(absentChildren || []);

@@ -66,7 +66,7 @@ const buildEntryCard = ({ entry, children }) => {
   });
 
   return createEl('div', {
-    className: 'card shadow-sm border-0 geldsammlung-card',
+    className: 'card border-0 geldsammlung-card',
     dataset: { id: entry.id },
     children: [
       createEl('div', {
@@ -108,7 +108,7 @@ export const createGeldsammlungenView = ({
   header.append(title, closeButton);
 
   const formCard = createEl('div', {
-    className: 'card shadow-sm border-0',
+    className: 'card border-0',
   });
   const formBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   const nameInput = createEl('input', {

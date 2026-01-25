@@ -1741,10 +1741,6 @@ body.child-detail-overlay-open {
   gap: 0.25rem;
 }
 
-.angebot-modules-content {
-  padding: 0.5rem 0 0.25rem;
-}
-
 .angebot-modules-content .badge-pill {
   margin-bottom: 0.25rem;
 }
@@ -1759,18 +1755,10 @@ body.child-detail-overlay-open {
   border-top-right-radius: 0.75rem;
 }
 
-.angebot-manage-tabs-content {
-  padding-top: 0;
-}
-
 .nav-tabs {
   margin-bottom: 0;
 }
 
-.nav-tabs + .tab-content {
-  margin-top: 0;
-  padding-top: 0;
-}
 
 .angebot-week-theme__year-row {
   justify-content: space-between;

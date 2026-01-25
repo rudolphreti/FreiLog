@@ -178,19 +178,19 @@ export const createTimetableSettingsView = ({
 
   const content = createEl('div', { className: 'timetable-overlay__content d-flex flex-column gap-3' });
 
-  const subjectsCard = createEl('section', { className: 'card border-0 shadow-sm' });
+  const subjectsCard = createEl('section', { className: 'card border-0' });
   const subjectsBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   subjectsCard.append(subjectsBody);
 
-  const lessonsCard = createEl('section', { className: 'card border-0 shadow-sm' });
+  const lessonsCard = createEl('section', { className: 'card border-0' });
   const lessonsBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   lessonsCard.append(lessonsBody);
 
-  const cautionCard = createEl('section', { className: 'card border-0 shadow-sm' });
+  const cautionCard = createEl('section', { className: 'card border-0' });
   const cautionBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   cautionCard.append(cautionBody);
 
-  const gridCard = createEl('section', { className: 'card border-0 shadow-sm' });
+  const gridCard = createEl('section', { className: 'card border-0' });
   const gridBody = createEl('div', { className: 'card-body d-flex flex-column gap-3' });
   gridCard.append(gridBody);
 
