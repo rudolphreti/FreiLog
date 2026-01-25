@@ -1385,9 +1385,6 @@ export const bindObservations = ({
           selected.delete(child);
         }
       });
-      if (!selected.size && !assignNoteSharedFocusKeys.has(key)) {
-        assignNoteSharedSelections.delete(key);
-      }
     });
     return { assignableChildren, assignableSet };
   };
@@ -1601,7 +1598,7 @@ export const bindObservations = ({
     const isFocused = document.activeElement === refs.input;
     const actualChildren = new Set(Array.from(data.children).filter((child) => assignableSet.has(child)));
     let selectedChildren = assignNoteSharedSelections.get(key);
-    if (!selectedChildren || !assignNoteSharedFocusKeys.has(key)) {
+    if (!selectedChildren) {
       selectedChildren = new Set(actualChildren);
       assignNoteSharedSelections.set(key, selectedChildren);
     } else {
@@ -1610,13 +1607,10 @@ export const bindObservations = ({
           selectedChildren.delete(child);
         }
       });
-      if (!selectedChildren.size) {
-        actualChildren.forEach((child) => selectedChildren.add(child));
-      }
     }
 
     let draft = assignNoteSharedDrafts.get(key);
-    if (!draft || !assignNoteSharedFocusKeys.has(key)) {
+    if (draft === undefined) {
       draft = data.text;
       assignNoteSharedDrafts.set(key, draft);
     }
