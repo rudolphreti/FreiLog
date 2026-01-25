@@ -17,15 +17,15 @@ body {
 .header-content {
   gap: 1rem;
   align-items: center;
-  flex-wrap: wrap;
-  padding-right: 4rem;
+  flex-wrap: nowrap;
 }
 
 .header-date {
-  flex: 1 1 320px;
+  flex: 1 1 auto;
   min-width: 14ch;
   max-width: 100%;
   gap: 0.5rem;
+  flex-wrap: nowrap;
 }
 
 .header-date-input {
@@ -119,18 +119,22 @@ body {
   position: sticky;
 }
 
-.header-menu-anchor {
-  position: absolute;
-  top: max(0.75rem, env(safe-area-inset-top));
-  right: max(0.75rem, env(safe-area-inset-right));
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  z-index: 2;
-}
-
 .app-header {
   padding-top: calc(1rem + env(safe-area-inset-top));
+}
+
+@media (min-width: 768px) {
+  .header-content {
+    flex-wrap: wrap;
+  }
+
+  .header-date {
+    flex-wrap: wrap;
+  }
+
+  .header-actions {
+    flex-wrap: wrap;
+  }
 }
 
 .section-title {

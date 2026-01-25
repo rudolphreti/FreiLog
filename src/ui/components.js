@@ -27,7 +27,7 @@ export const buildHeader = ({
   freeDayInfo = null,
 }) => {
   const header = createEl('header', {
-    className: 'bg-white shadow-sm rounded-4 px-3 py-3 sticky-top app-header',
+    className: 'bg-white px-3 py-3 sticky-top app-header',
   });
 
   const exportButton = createEl('button', {
@@ -108,12 +108,7 @@ export const buildHeader = ({
 
   const actionsGroup = createEl('div', {
     className: 'd-flex align-items-center gap-2 header-actions flex-wrap',
-    children: actionNodes,
-  });
-
-  const menuContainer = createEl('div', {
-    className: 'header-menu-anchor',
-    children: [showExport ? exportButton : null, menuButton].filter(Boolean),
+    children: [showExport ? exportButton : null, menuButton, ...actionNodes].filter(Boolean),
   });
 
   const headerContent = createEl('div', {
@@ -122,7 +117,7 @@ export const buildHeader = ({
     children: [dateGroup, actionsGroup],
   });
 
-  header.append(headerContent, menuContainer);
+  header.append(headerContent);
 
   return {
     element: header,
