@@ -1922,14 +1922,14 @@ export const createWeeklyTableView = ({
       .meta { margin: 0 0 16px; display: grid; gap: 4px; }
       .legend { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 12px; }
       .legend-item { display: inline-flex; align-items: center; gap: 6px; }
-      .dot { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+      .dot { width: 12px; height: 12px; border-radius: 999px; display: inline-block; }
       .dot-observations { background: #2563eb; }
       .dot-offers { background: #f59e0b; }
       .pdf-item { display: inline-flex; align-items: center; gap: 4px; }
       .pdf-item-text { display: inline-block; }
       .pdf-group-dots { display: inline-flex; align-items: center; gap: 3px; }
-      .pdf-group-dot { color: var(--group-color, #6c757d); font-size: 11px; line-height: 1; display: inline-flex; align-items: center; }
-      .pdf-group-dot--overflow { color: #475569; font-size: 9px; font-weight: 400; }
+      .pdf-group-dot { color: var(--group-color, #6c757d); font-size: 14px; line-height: 1; display: inline-flex; align-items: center; }
+      .pdf-group-dot--overflow { color: #475569; font-size: 10px; font-weight: 400; }
       .pdf-module-line { display: grid; gap: 2px; }
       .pdf-module-label { font-weight: 400; color: #334155; display: inline-flex; }
       .pdf-module-offers { display: inline-flex; flex-wrap: wrap; gap: 4px; }
@@ -1940,6 +1940,8 @@ export const createWeeklyTableView = ({
       th, td { border: 1px solid #000; padding: 6px; vertical-align: top; text-align: left; font-size: 11px; font-weight: 400; }
       th { background: #fff; font-weight: 400; }
       th:first-child { width: 130px; }
+      thead th { background: #f1f5f9; }
+      tbody th { background: #f1f5f9; }
       .day-header { display: grid; gap: 4px; }
       .day-title { font-weight: 400; }
       .day-date { color: #64748b; font-size: 11px; }
