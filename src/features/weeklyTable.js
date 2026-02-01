@@ -548,14 +548,10 @@ const buildObservationList = (values, getGroupsForLabel, observationGroups) => {
   return list;
 };
 
-const buildObservationNoteIcon = () =>
-  createEl('span', {
-    className: 'weekly-table__note-icon',
-    text: '📝',
-    attrs: {
-      title: 'Notizen vorhanden',
-      'aria-label': 'Notizen vorhanden',
-    },
+const buildObservationNote = (note) =>
+  createEl('p', {
+    className: 'weekly-table__observation-note text-muted small mb-0',
+    text: note,
   });
 
 const buildAbsenceBadge = () =>
@@ -846,11 +842,13 @@ const buildWeeklyTable = ({
       if (showAbsence && isAbsent) {
         bodyChildren.push(buildAbsenceBadge());
       }
-      if (notes.length) {
-        bodyChildren.push(buildObservationNoteIcon());
-      }
       if (showObservations) {
         bodyChildren.push(buildObservationList(obs, getGroupsForLabel, observationGroups));
+      }
+      if (notes.length) {
+        notes.forEach((note) => {
+          bodyChildren.push(buildObservationNote(note));
+        });
       }
       if (!bodyChildren.length) {
         bodyChildren.push(
