@@ -712,7 +712,9 @@ const buildWeeklyTable = ({
   const weekTheme = normalizedWeekThemes[week.id] || '';
   const showWeekTheme = typeFilters?.weekTheme !== false;
   const showOffers = typeFilters?.offers !== false;
+  const showOfferNotes = typeFilters?.offerNotes !== false;
   const showObservations = typeFilters?.observations !== false;
+  const showObservationNotes = typeFilters?.observationNotes !== false;
   const showAbsence = showObservations;
   const themeDisplayLabel = `${week.label} · ${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(
     week.endYmd,
@@ -792,7 +794,7 @@ const buildWeeklyTable = ({
                   modules: dayEntry.freizeitModules,
                   assignments: dayEntry.angebotModules,
                   extras: dayEntry.angebote,
-                  note: dayEntry.angebotNotes,
+                  note: showOfferNotes ? dayEntry.angebotNotes : null,
                   getGroupsForLabel: getAngebotGroupsForLabel,
                   angebotGroups,
                 })
@@ -829,7 +831,9 @@ const buildWeeklyTable = ({
     weekDays.forEach((item) => {
       const dayEntry = getDayEntry(item.dateKey);
       const obs = dayEntry.observations[child] || [];
-      const notes = normalizeObservationNoteList(dayEntry.observationNotes?.[child]);
+      const notes = showObservationNotes
+        ? normalizeObservationNoteList(dayEntry.observationNotes?.[child])
+        : [];
       const freeInfo = item.freeInfo;
       const isAbsent = dayEntry.absentChildren.includes(child);
       const cellClasses = [
@@ -992,6 +996,8 @@ export const createWeeklyTableView = ({
   let typeFilters = {
     observations: true,
     offers: true,
+    observationNotes: true,
+    offerNotes: true,
     weekTheme: true,
   };
   let freeDayFilters = {
@@ -1067,7 +1073,9 @@ export const createWeeklyTableView = ({
     options: [
       { value: 'weekTheme', label: UI_LABELS.themaDerWoche, checked: true },
       { value: 'observations', label: 'Beobachtungen', checked: true },
+      { value: 'observationNotes', label: 'Notizen zu Beobachtungen', checked: true },
       { value: 'offers', label: 'Angebote', checked: true },
+      { value: 'offerNotes', label: 'Notizen zu Angeboten', checked: true },
     ],
   });
   controls.append(
@@ -1655,7 +1663,9 @@ export const createWeeklyTableView = ({
         : currentChildren;
     const sortedChildren = [...visibleChildren].sort((a, b) => a.localeCompare(b, 'de'));
     const showOffers = typeFilters?.offers !== false;
+    const showOfferNotes = typeFilters?.offerNotes !== false;
     const showObservations = typeFilters?.observations !== false;
+    const showObservationNotes = typeFilters?.observationNotes !== false;
     const showAbsence = showObservations;
     const showWeekTheme = typeFilters?.weekTheme !== false;
 
@@ -1776,7 +1786,7 @@ export const createWeeklyTableView = ({
       if (!lines.length) {
         lines.push('<span class="muted">Keine Angebote</span>');
       }
-      if (dayEntry.angebotNotes) {
+      if (showOfferNotes && dayEntry.angebotNotes) {
         lines.push(`Notiz: ${escapeHtml(dayEntry.angebotNotes)}`);
       }
       return `<div class="cell-lines">${lines
@@ -1787,7 +1797,9 @@ export const createWeeklyTableView = ({
     const buildChildCell = (dayEntry, child) => {
       const lines = [];
       const obs = dayEntry.observations[child] || [];
-      const notes = normalizeObservationNoteList(dayEntry.observationNotes?.[child]);
+      const notes = showObservationNotes
+        ? normalizeObservationNoteList(dayEntry.observationNotes?.[child])
+        : [];
       const isAbsent = dayEntry.absentChildren.includes(child);
       if (showAbsence && isAbsent) {
         lines.push('<span class="badge badge-absence">Abwesend</span>');
@@ -1800,9 +1812,11 @@ export const createWeeklyTableView = ({
               .join(' '),
           );
         }
-        notes.forEach((note) => {
-          lines.push(`Notiz: ${escapeHtml(note)}`);
-        });
+        if (showObservationNotes) {
+          notes.forEach((note) => {
+            lines.push(`Notiz: ${escapeHtml(note)}`);
+          });
+        }
       }
       if (!lines.length) {
         return '<span class="muted">—</span>';
