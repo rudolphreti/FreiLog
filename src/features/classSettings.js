@@ -230,6 +230,9 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
   let emojiPickerReady = false;
   let emojiPickerPromise = null;
   let courseIdCounter = 0;
+  let latestProfile = profile;
+  let latestChildren = children;
+  let hasPendingUpdate = false;
   const courseCardRefs = new Map();
   const entlassungRegularErrors = {};
   const entlassungSpecialErrors = {};
@@ -2087,6 +2090,10 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     overlay.classList.add('is-open');
     overlay.setAttribute('aria-hidden', 'false');
     document.body.classList.add('class-settings-overlay-open');
+    if (hasPendingUpdate) {
+      hasPendingUpdate = false;
+      update({ profile: latestProfile, children: latestChildren });
+    }
     window.requestAnimationFrame(() => {
       nameInput.focus({ preventScroll: true });
     });
@@ -2148,7 +2155,7 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
   });
 
-  const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
+  const applyUpdate = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
     updateProfileInputs(nextProfile);
     syncRows(nextProfile, nextChildren);
     const nextCoursesState = normalizeCourses(nextProfile.courses, getAvailableChildren()).map(
@@ -2165,6 +2172,16 @@ export const createClassSettingsView = ({ profile = {}, children = [] } = {}) =>
     }
     entlassungState = normalizeEntlassung(nextProfile.entlassung, getAvailableChildren());
     renderEntlassung();
+  };
+
+  const update = ({ profile: nextProfile = {}, children: nextChildren = [] } = {}) => {
+    latestProfile = nextProfile;
+    latestChildren = nextChildren;
+    if (!overlay.classList.contains('is-open')) {
+      hasPendingUpdate = true;
+      return;
+    }
+    applyUpdate({ profile: nextProfile, children: nextChildren });
   };
 
   update({ profile, children });
