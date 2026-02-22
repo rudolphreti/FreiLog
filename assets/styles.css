@@ -2349,6 +2349,13 @@ body.observation-overlay-open {
 
 
 .weekly-table__inline-note-input {
+  width: 100%;
   min-height: 2.5rem;
   resize: vertical;
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-table__notes-cell-content {
+  display: block;
 }

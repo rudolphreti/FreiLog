@@ -863,16 +863,24 @@ const buildWeeklyTable = ({
         ? 'weekly-table__cell--free-day'
         : '';
 
+    const noteCellContent = createEl('div', {
+      className: 'weekly-table__cell-content weekly-table__notes-cell-content',
+      children: [noteContent],
+    });
+    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
+      noteCellContent.addEventListener('click', (event) => {
+        if (event.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        noteContent.focus();
+      });
+    }
+
     weeklyNoteRow.append(
       createEl('td', {
         className: cellClassName,
         attrs: { colspan: String(weekDays.length) },
-        children: [
-          createEl('div', {
-            className: 'weekly-table__cell-content',
-            children: [noteContent],
-          }),
-        ],
+        children: [noteCellContent],
       }),
     );
     tbody.append(weeklyNoteRow);
