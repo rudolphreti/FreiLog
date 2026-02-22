@@ -831,7 +831,7 @@ const buildWeeklyTable = ({
     const weekNote = weekDays
       .map((item) => getDayEntry(item.dateKey).notes)
       .find((value) => typeof value === 'string' && value.trim()) || '';
-    const isDirectEditable = isEditMode && editableDateKeys.length > 0;
+    const isDirectEditable = editableDateKeys.length > 0;
     const noteContent = isDirectEditable
       ? createEl('textarea', {
           className: 'form-control form-control-sm weekly-table__inline-note-input',
