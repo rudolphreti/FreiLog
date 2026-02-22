@@ -25,6 +25,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { normalizeWeekThemeAssignments } from '../db/dbSchema.js';
+import { updateEntry } from '../db/dbRepository.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -121,6 +122,7 @@ const normalizeDayEntry = (days, dateKey, timetableSchedule, timetableLessons) =
     observations: normalizedObs,
     observationNotes: normalizedNotes,
     absentChildren: [...new Set(absentChildren)],
+    notes: typeof entry.notes === 'string' ? entry.notes.trim() : '',
   };
 };
 
@@ -711,6 +713,7 @@ const buildWeeklyTable = ({
   const showOfferNotes = typeFilters?.offerNotes !== false;
   const showObservations = typeFilters?.observations !== false;
   const showObservationNotes = typeFilters?.observationNotes !== false;
+  const showWeeklyNote = typeFilters?.weeklyNote !== false;
   const showAbsence = showObservations;
   const themeDisplayLabel = `${week.label} · ${formatDisplayDate(week.startYmd)} – ${formatDisplayDate(
     week.endYmd,
@@ -812,6 +815,75 @@ const buildWeeklyTable = ({
   });
   if (showOffers) {
     tbody.append(angeboteRow);
+  }
+
+  if (showWeeklyNote) {
+    const weeklyNoteRow = createEl('tr', {
+      className: 'weekly-table__notes-row weekly-table__offers-row',
+    });
+    weeklyNoteRow.append(
+      createEl('th', { scope: 'row', className: 'text-nowrap', text: 'Wöchentliche Notiz' }),
+    );
+
+    const editableDateKeys = weekDays
+      .filter((item) => !item.freeInfo)
+      .map((item) => item.dateKey);
+    const weekNote = weekDays
+      .map((item) => getDayEntry(item.dateKey).notes)
+      .find((value) => typeof value === 'string' && value.trim()) || '';
+    const isDirectEditable = isEditMode && editableDateKeys.length > 0;
+    const noteContent = isDirectEditable
+      ? createEl('textarea', {
+          className: 'form-control form-control-sm weekly-table__inline-note-input',
+          attrs: {
+            rows: '3',
+            'aria-label': `Wöchentliche Notiz bearbeiten (${themeDisplayLabel})`,
+            placeholder: 'Wöchentliche Notiz',
+          },
+        })
+      : weekNote
+        ? createEl('span', { text: weekNote })
+        : createEl('span', { className: 'text-muted small', text: '—' });
+
+    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
+      noteContent.value = weekNote;
+      noteContent.addEventListener('blur', () => {
+        const nextValue = noteContent.value || '';
+        if (nextValue === weekNote) {
+          return;
+        }
+        editableDateKeys.forEach((dateKey) => {
+          updateEntry(dateKey, { notes: nextValue });
+        });
+      });
+    }
+
+    const cellClassName =
+      weekDays.length && weekDays.every((item) => item.freeInfo)
+        ? 'weekly-table__cell--free-day'
+        : '';
+
+    const noteCellContent = createEl('div', {
+      className: 'weekly-table__cell-content weekly-table__notes-cell-content',
+      children: [noteContent],
+    });
+    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
+      noteCellContent.addEventListener('click', (event) => {
+        if (event.target instanceof HTMLTextAreaElement) {
+          return;
+        }
+        noteContent.focus();
+      });
+    }
+
+    weeklyNoteRow.append(
+      createEl('td', {
+        className: cellClassName,
+        attrs: { colspan: String(weekDays.length) },
+        children: [noteCellContent],
+      }),
+    );
+    tbody.append(weeklyNoteRow);
   }
 
   const sortedChildren = [...children].sort((a, b) => a.localeCompare(b, 'de'));
@@ -997,6 +1069,7 @@ export const createWeeklyTableView = ({
     observationNotes: true,
     offerNotes: true,
     weekTheme: true,
+    weeklyNote: true,
   };
   let freeDayFilters = {
     weekend: false,
@@ -1074,6 +1147,7 @@ export const createWeeklyTableView = ({
       { value: 'observationNotes', label: 'Notizen zu Beobachtungen', checked: true },
       { value: 'offers', label: 'Angebote', checked: true },
       { value: 'offerNotes', label: 'Notizen zu Angeboten', checked: true },
+      { value: 'weeklyNote', label: 'Wöchentliche Notiz', checked: true },
     ],
   });
   controls.append(
@@ -1524,6 +1598,19 @@ export const createWeeklyTableView = ({
     const showDayControls = selectedTimeFilter === 'day';
     const showMonthControls = selectedTimeFilter === 'month';
 
+    const weeklyNoteFilterInput = typeFilterGroup.inputs.get('weeklyNote');
+    const weeklyNoteFilterOption = weeklyNoteFilterInput?.closest('.weekly-table__type-option');
+    const showWeeklyNoteFilter = selectedTimeFilter === 'week' || selectedTimeFilter === 'month' || selectedTimeFilter === 'year';
+    if (weeklyNoteFilterOption) {
+      weeklyNoteFilterOption.classList.toggle('d-none', !showWeeklyNoteFilter);
+    }
+    if (weeklyNoteFilterInput) {
+      weeklyNoteFilterInput.checked = showWeeklyNoteFilter ? typeFilters.weeklyNote !== false : false;
+    }
+    if (!showWeeklyNoteFilter) {
+      typeFilters = { ...typeFilters, weeklyNote: false };
+    }
+
     yearSelectGroup.wrapper.classList.toggle('d-none', !showYearControls || !hasMultipleYears);
     weekSelectGroup.wrapper.classList.toggle('d-none', !showWeekControls);
     daySelectGroup.wrapper.classList.toggle('d-none', !showDayControls);
@@ -1664,6 +1751,7 @@ export const createWeeklyTableView = ({
     const showOfferNotes = typeFilters?.offerNotes !== false;
     const showObservations = typeFilters?.observations !== false;
     const showObservationNotes = typeFilters?.observationNotes !== false;
+    const showWeeklyNote = typeFilters?.weeklyNote !== false;
     const showAbsence = showObservations;
     const showWeekTheme = typeFilters?.weekTheme !== false;
 
@@ -1871,6 +1959,31 @@ export const createWeeklyTableView = ({
                     .join('')}
                 </tr>`
               : '';
+            const weeklyNoteRow = showWeeklyNote
+              ? (() => {
+                  const weekNote = group.days
+                    .map((day) => {
+                      const dayEntry = normalizeDayEntry(
+                        currentDays,
+                        day.dateKey,
+                        currentTimetableSchedule,
+                        currentTimetableLessons,
+                      );
+                      return dayEntry.notes;
+                    })
+                    .find((value) => typeof value === 'string' && value.trim()) || '';
+                  const cellClass = group.days.every((day) => day.freeInfo)
+                    ? 'cell-free-day'
+                    : '';
+                  const content = weekNote
+                    ? escapeHtml(weekNote)
+                    : '<span class="muted">—</span>';
+                  return `<tr class="weekly-note-row">
+                    <th>Wöchentliche Notiz</th>
+                    <td class="${cellClass}" colspan="${String(group.days.length)}">${content}</td>
+                  </tr>`;
+                })()
+              : '';
             const childRows =
               showObservations || showAbsence
                 ? sortedChildren
@@ -1900,7 +2013,7 @@ export const createWeeklyTableView = ({
               ? `<h3 class="group-title">${escapeHtml(group.heading)}</h3>`
               : '';
             const tableHead = `<thead><tr><th></th>${headerCells}</tr></thead>`;
-            const rows = `${themeRow}${offerRow}${childRows}`;
+            const rows = `${themeRow}${offerRow}${weeklyNoteRow}${childRows}`;
             return `<section class="group">${heading}<table>${tableHead}<tbody>${rows}</tbody></table></section>`;
           })
           .join('')

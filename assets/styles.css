@@ -915,7 +915,9 @@ body.child-detail-overlay-open {
 }
 
 .weekly-table .weekly-table__offers-row th,
-.weekly-table .weekly-table__offers-row td {
+.weekly-table .weekly-table__offers-row td,
+.weekly-table .weekly-table__notes-row th,
+.weekly-table .weekly-table__notes-row td {
   background: #fff4e5;
   border-color: #f7c68f;
   box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.03);
@@ -1147,7 +1149,8 @@ body.child-detail-overlay-open {
   box-shadow: 2px 0 0 #c7d2fe, 4px 0 0 #e0e7ff;
 }
 
-.weekly-table .weekly-table__offers-row th {
+.weekly-table .weekly-table__offers-row th,
+.weekly-table .weekly-table__notes-row th {
   background: #fff4e5;
   color: #8a4b14;
   border-color: #f7c68f;
@@ -1171,7 +1174,8 @@ body.child-detail-overlay-open {
   background: #e0e7ff;
 }
 
-.weekly-table .weekly-table__offers-row th::after {
+.weekly-table .weekly-table__offers-row th::after,
+.weekly-table .weekly-table__notes-row th::after {
   background: #fff4e5;
 }
 
@@ -1189,7 +1193,8 @@ body.child-detail-overlay-open {
   background: #e0e7ff;
 }
 
-.weekly-table .weekly-table__offers-row th::before {
+.weekly-table .weekly-table__offers-row th::before,
+.weekly-table .weekly-table__notes-row th::before {
   background: #fff4e5;
 }
 
@@ -1217,11 +1222,11 @@ body.child-detail-overlay-open {
   background: #1d4ed8;
 }
 
-.weekly-table tbody tr:not(.weekly-table__offers-row):not(.weekly-table__theme-row):nth-child(odd) td {
+.weekly-table tbody tr:not(.weekly-table__offers-row):not(.weekly-table__notes-row):not(.weekly-table__theme-row):nth-child(odd) td {
   background: #ffffff;
 }
 
-.weekly-table tbody tr:not(.weekly-table__offers-row):not(.weekly-table__theme-row):nth-child(even) td {
+.weekly-table tbody tr:not(.weekly-table__offers-row):not(.weekly-table__notes-row):not(.weekly-table__theme-row):nth-child(even) td {
   background: #f9fafb;
 }
 
@@ -2340,4 +2345,17 @@ body.observation-overlay-open {
 .course-emoji-picker {
   display: block;
   width: 100%;
+}
+
+
+.weekly-table__inline-note-input {
+  width: 100%;
+  min-height: 2.5rem;
+  resize: vertical;
+  position: relative;
+  z-index: 1;
+}
+
+.weekly-table__notes-cell-content {
+  display: block;
 }

@@ -47,6 +47,7 @@ import {
   normalizeModuleAssignments,
 } from '../utils/angebotModules.js';
 import { normalizeObservationNoteList } from '../utils/observationNotes.js';
+import { updateEntry } from '../db/dbRepository.js';
 
 const pad = (value) => String(value).padStart(2, '0');
 
@@ -565,6 +566,7 @@ export const renderApp = (root, state) => {
   });
   const selectedAngebote = Array.isArray(entry.angebote) ? entry.angebote : [];
   const angebotNote = typeof entry.angebotNotes === 'string' ? entry.angebotNotes : '';
+  const weeklyNote = typeof entry.notes === 'string' ? entry.notes : '';
   const freizeitModules = getFreizeitModulesForDate(
     selectedDate,
     timetableSchedule,
@@ -794,6 +796,8 @@ export const renderApp = (root, state) => {
       angebotSection: angebotSection.element,
       observationsSection: observationsSection.element,
       entlassungSection: entlassungSection.element,
+      weeklyNote,
+      weeklyNoteReadOnly: isReadOnlyDay,
     });
     contentWrap.append(header.element, mainTabs.element);
 
@@ -824,6 +828,14 @@ export const renderApp = (root, state) => {
       prevButton: header.refs.prevDateButton,
       nextButton: header.refs.nextDateButton,
     });
+    if (mainTabs.refs.weeklyNoteInput) {
+      mainTabs.refs.weeklyNoteInput.addEventListener('blur', (event) => {
+        if (!(event.target instanceof HTMLTextAreaElement) || event.target.disabled) {
+          return;
+        }
+        updateEntry(selectedDate, { notes: event.target.value || '' });
+      });
+    }
     const actions = drawerContentRefs?.actions;
     bindImportExport({
       exportButton: header.refs.exportButton,
@@ -978,6 +990,15 @@ export const renderApp = (root, state) => {
     prevButton: header.refs.prevDateButton,
     nextButton: header.refs.nextDateButton,
   });
+
+  if (appShell.mainTabsView?.refs?.weeklyNoteInput) {
+    const weeklyNoteInput = appShell.mainTabsView.refs.weeklyNoteInput;
+    const nextWeeklyNote = typeof weeklyNote === 'string' ? weeklyNote : '';
+    if (weeklyNoteInput.value !== nextWeeklyNote) {
+      weeklyNoteInput.value = nextWeeklyNote;
+    }
+    weeklyNoteInput.disabled = Boolean(isReadOnlyDay);
+  }
 
   if (appShell.mainTabsView?.refs?.angebotPane) {
     const angebotPane = appShell.mainTabsView.refs.angebotPane;

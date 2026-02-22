@@ -3105,6 +3105,8 @@ export const buildMainTabsSection = ({
   angebotSection,
   observationsSection,
   entlassungSection,
+  weeklyNote,
+  weeklyNoteReadOnly = false,
 }) => {
   const tabsId = 'main-tabs';
   const angebotTabId = 'main-angebot-tab';
@@ -3113,6 +3115,8 @@ export const buildMainTabsSection = ({
   const angebotPaneId = 'main-angebot-pane';
   const observationsPaneId = 'main-observations-pane';
   const entlassungPaneId = 'main-entlassung-pane';
+  const weeklyNoteTabId = 'main-weekly-note-tab';
+  const weeklyNotePaneId = 'main-weekly-note-pane';
 
   const tabList = createEl('ul', {
     className: 'nav nav-tabs',
@@ -3181,6 +3185,52 @@ export const buildMainTabsSection = ({
           }),
         ],
       }),
+      createEl('li', {
+        className: 'nav-item',
+        attrs: { role: 'presentation' },
+        children: [
+          createEl('button', {
+            className: 'nav-link',
+            attrs: {
+              id: weeklyNoteTabId,
+              type: 'button',
+              role: 'tab',
+              'data-bs-toggle': 'tab',
+              'data-bs-target': `#${weeklyNotePaneId}`,
+              'aria-controls': weeklyNotePaneId,
+              'aria-label': 'Wöchentliche Notiz',
+              'aria-selected': 'false',
+              title: 'Wöchentliche Notiz',
+            },
+            text: '📝',
+          }),
+        ],
+      }),
+    ],
+  });
+
+  const weeklyNoteInput = createEl('textarea', {
+    className: 'form-control',
+    attrs: {
+      rows: '8',
+      placeholder: 'Wöchentliche Notiz',
+      'aria-label': 'Wöchentliche Notiz',
+    },
+    dataset: { role: 'weekly-note-input' },
+  });
+  const weeklyNoteInputId = 'main-weekly-note-input';
+  weeklyNoteInput.id = weeklyNoteInputId;
+  weeklyNoteInput.value = typeof weeklyNote === 'string' ? weeklyNote : '';
+  weeklyNoteInput.disabled = Boolean(weeklyNoteReadOnly);
+  const weeklyNoteSection = createEl('section', {
+    className: 'd-flex flex-column gap-2',
+    children: [
+      createEl('label', {
+        className: 'form-label mb-0',
+        attrs: { for: weeklyNoteInputId },
+        text: 'Wöchentliche Notiz',
+      }),
+      weeklyNoteInput,
     ],
   });
 
@@ -3215,6 +3265,15 @@ export const buildMainTabsSection = ({
         children: [entlassungSection],
       }),
       angebotPane,
+      createEl('div', {
+        className: 'tab-pane fade',
+        attrs: {
+          id: weeklyNotePaneId,
+          role: 'tabpanel',
+          'aria-labelledby': weeklyNoteTabId,
+        },
+        children: [weeklyNoteSection],
+      }),
     ],
   });
 
@@ -3225,6 +3284,7 @@ export const buildMainTabsSection = ({
     }),
     refs: {
       angebotPane,
+      weeklyNoteInput,
     },
   };
 };
