@@ -829,12 +829,11 @@ export const renderApp = (root, state) => {
       nextButton: header.refs.nextDateButton,
     });
     if (mainTabs.refs.weeklyNoteInput) {
-      mainTabs.refs.weeklyNoteInput.addEventListener('input', (event) => {
+      mainTabs.refs.weeklyNoteInput.addEventListener('blur', (event) => {
         if (!(event.target instanceof HTMLTextAreaElement) || event.target.disabled) {
           return;
         }
-        const activeDate = getSelectedDate(getState());
-        updateEntry(activeDate, { notes: event.target.value || '' });
+        updateEntry(selectedDate, { notes: event.target.value || '' });
       });
     }
     const actions = drawerContentRefs?.actions;

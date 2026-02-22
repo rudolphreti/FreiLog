@@ -847,8 +847,11 @@ const buildWeeklyTable = ({
 
     if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
       noteContent.value = weekNote;
-      noteContent.addEventListener('input', () => {
+      noteContent.addEventListener('blur', () => {
         const nextValue = noteContent.value || '';
+        if (nextValue === weekNote) {
+          return;
+        }
         editableDateKeys.forEach((dateKey) => {
           updateEntry(dateKey, { notes: nextValue });
         });
