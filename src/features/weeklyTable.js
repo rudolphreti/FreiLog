@@ -1664,6 +1664,18 @@ export const createWeeklyTableView = ({
   const setEditMode = (nextValue) => {
     isEditMode = Boolean(nextValue);
     renderTable();
+    if (!isEditMode) {
+      return;
+    }
+    window.requestAnimationFrame(() => {
+      const noteInput = tableContainer.querySelector('.weekly-table__inline-note-input');
+      if (!(noteInput instanceof HTMLTextAreaElement) || noteInput.disabled) {
+        return;
+      }
+      noteInput.focus();
+      const valueLength = noteInput.value.length;
+      noteInput.setSelectionRange(valueLength, valueLength);
+    });
   };
 
   const openFilterOverlay = () => {
