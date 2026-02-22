@@ -818,46 +818,60 @@ const buildWeeklyTable = ({
   }
 
   if (showWeeklyNote) {
-    const weeklyNoteRow = createEl('tr', { className: 'weekly-table__notes-row weekly-table__offers-row' });
+    const weeklyNoteRow = createEl('tr', {
+      className: 'weekly-table__notes-row weekly-table__offers-row',
+    });
     weeklyNoteRow.append(
       createEl('th', { scope: 'row', className: 'text-nowrap', text: 'Wöchentliche Notiz' }),
     );
-    weekDays.forEach((item) => {
-      const dayEntry = getDayEntry(item.dateKey);
-      const freeInfo = item.freeInfo;
-      const isDirectEditable = isEditMode && !freeInfo;
-      const noteContent = isDirectEditable
-        ? createEl('textarea', {
-            className: 'form-control form-control-sm weekly-table__inline-note-input',
-            attrs: {
-              rows: '2',
-              'aria-label': `Wöchentliche Notiz bearbeiten (${item.displayDate})`,
-              placeholder: 'Wöchentliche Notiz',
-            },
-          })
-        : dayEntry.notes
-          ? createEl('span', { text: dayEntry.notes })
-          : createEl('span', { className: 'text-muted small', text: '—' });
 
-      if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
-        noteContent.value = dayEntry.notes || '';
-        noteContent.addEventListener('input', () => {
-          updateEntry(item.dateKey, { notes: noteContent.value || '' });
+    const editableDateKeys = weekDays
+      .filter((item) => !item.freeInfo)
+      .map((item) => item.dateKey);
+    const weekNote = weekDays
+      .map((item) => getDayEntry(item.dateKey).notes)
+      .find((value) => typeof value === 'string' && value.trim()) || '';
+    const isDirectEditable = isEditMode && editableDateKeys.length > 0;
+    const noteContent = isDirectEditable
+      ? createEl('textarea', {
+          className: 'form-control form-control-sm weekly-table__inline-note-input',
+          attrs: {
+            rows: '3',
+            'aria-label': `Wöchentliche Notiz bearbeiten (${themeDisplayLabel})`,
+            placeholder: 'Wöchentliche Notiz',
+          },
+        })
+      : weekNote
+        ? createEl('span', { text: weekNote })
+        : createEl('span', { className: 'text-muted small', text: '—' });
+
+    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
+      noteContent.value = weekNote;
+      noteContent.addEventListener('input', () => {
+        const nextValue = noteContent.value || '';
+        editableDateKeys.forEach((dateKey) => {
+          updateEntry(dateKey, { notes: nextValue });
         });
-      }
+      });
+    }
 
-      weeklyNoteRow.append(
-        createEl('td', {
-          className: freeInfo ? 'weekly-table__cell--free-day' : '',
-          children: [
-            createEl('div', {
-              className: 'weekly-table__cell-content',
-              children: [noteContent],
-            }),
-          ],
-        }),
-      );
-    });
+    const cellClassName =
+      weekDays.length && weekDays.every((item) => item.freeInfo)
+        ? 'weekly-table__cell--free-day'
+        : '';
+
+    weeklyNoteRow.append(
+      createEl('td', {
+        className: cellClassName,
+        attrs: { colspan: String(weekDays.length) },
+        children: [
+          createEl('div', {
+            className: 'weekly-table__cell-content',
+            children: [noteContent],
+          }),
+        ],
+      }),
+    );
     tbody.append(weeklyNoteRow);
   }
 
@@ -1935,9 +1949,8 @@ export const createWeeklyTableView = ({
                 </tr>`
               : '';
             const weeklyNoteRow = showWeeklyNote
-              ? `<tr class="weekly-note-row">
-                  <th>Wöchentliche Notiz</th>
-                  ${group.days
+              ? (() => {
+                  const weekNote = group.days
                     .map((day) => {
                       const dayEntry = normalizeDayEntry(
                         currentDays,
@@ -1945,14 +1958,20 @@ export const createWeeklyTableView = ({
                         currentTimetableSchedule,
                         currentTimetableLessons,
                       );
-                      const cellClasses = day.freeInfo ? 'cell-free-day' : '';
-                      const content = dayEntry.notes
-                        ? escapeHtml(dayEntry.notes)
-                        : '<span class="muted">—</span>';
-                      return `<td class="${cellClasses}">${content}</td>`;
+                      return dayEntry.notes;
                     })
-                    .join('')}
-                </tr>`
+                    .find((value) => typeof value === 'string' && value.trim()) || '';
+                  const cellClass = group.days.every((day) => day.freeInfo)
+                    ? 'cell-free-day'
+                    : '';
+                  const content = weekNote
+                    ? escapeHtml(weekNote)
+                    : '<span class="muted">—</span>';
+                  return `<tr class="weekly-note-row">
+                    <th>Wöchentliche Notiz</th>
+                    <td class="${cellClass}" colspan="${String(group.days.length)}">${content}</td>
+                  </tr>`;
+                })()
               : '';
             const childRows =
               showObservations || showAbsence
