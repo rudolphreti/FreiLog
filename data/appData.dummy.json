@@ -36,30 +36,78 @@
     "entlassung": {
       "regular": {
         "monday": [
-          { "time": "15:30", "children": [] },
-          { "time": "16:30", "children": [] },
-          { "time": "17:30", "children": [] }
+          {
+            "time": "15:30",
+            "children": []
+          },
+          {
+            "time": "16:30",
+            "children": []
+          },
+          {
+            "time": "17:30",
+            "children": []
+          }
         ],
         "tuesday": [
-          { "time": "15:30", "children": [] },
-          { "time": "16:30", "children": [] },
-          { "time": "17:30", "children": [] }
+          {
+            "time": "15:30",
+            "children": []
+          },
+          {
+            "time": "16:30",
+            "children": []
+          },
+          {
+            "time": "17:30",
+            "children": []
+          }
         ],
         "wednesday": [
-          { "time": "15:30", "children": [] },
-          { "time": "16:30", "children": [] },
-          { "time": "17:30", "children": [] }
+          {
+            "time": "15:30",
+            "children": []
+          },
+          {
+            "time": "16:30",
+            "children": []
+          },
+          {
+            "time": "17:30",
+            "children": []
+          }
         ],
         "thursday": [
-          { "time": "15:30", "children": [] },
-          { "time": "16:30", "children": [] },
-          { "time": "17:30", "children": [] }
+          {
+            "time": "15:30",
+            "children": []
+          },
+          {
+            "time": "16:30",
+            "children": []
+          },
+          {
+            "time": "17:30",
+            "children": []
+          }
         ],
         "friday": [
-          { "time": "13:50", "children": [] },
-          { "time": "15:30", "children": [] },
-          { "time": "16:30", "children": [] },
-          { "time": "17:30", "children": [] }
+          {
+            "time": "13:50",
+            "children": []
+          },
+          {
+            "time": "15:30",
+            "children": []
+          },
+          {
+            "time": "16:30",
+            "children": []
+          },
+          {
+            "time": "17:30",
+            "children": []
+          }
         ]
       },
       "special": []
@@ -83,21 +131,130 @@
     "Theater"
   ],
   "angebotCatalog": [
-    { "id": "ausflug", "text": "Ausflug", "groups": ["ORANGE", "LILA"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "basteln", "text": "Basteln", "groups": ["ROT"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "bau-ecke", "text": "Bau-Ecke", "groups": ["GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "bewegung", "text": "Bewegung", "groups": ["ORANGE"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "forschen", "text": "Forschen", "groups": ["GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "freispiel", "text": "Freispiel", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "kochen", "text": "Kochen", "groups": ["GRUEN", "ROT"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "kreativatelier", "text": "Kreativatelier", "groups": ["ROT"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "lernzeit", "text": "Lernzeit", "groups": ["LILA", "GRUEN"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "lesen", "text": "Lesen", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "musik", "text": "Musik", "groups": ["BLAU"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "musikraum", "text": "Musikraum", "groups": ["BLAU"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "spiele", "text": "Spiele", "groups": ["LILA"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "sport", "text": "Sport", "groups": ["ORANGE"], "createdAt": "2025-01-01T00:00:00Z" },
-    { "id": "theater", "text": "Theater", "groups": ["ROT", "LILA"], "createdAt": "2025-01-01T00:00:00Z" }
+    {
+      "id": "ausflug",
+      "text": "Ausflug",
+      "groups": [
+        "ORANGE",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "basteln",
+      "text": "Basteln",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "bau-ecke",
+      "text": "Bau-Ecke",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "bewegung",
+      "text": "Bewegung",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "forschen",
+      "text": "Forschen",
+      "groups": [
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "freispiel",
+      "text": "Freispiel",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "kochen",
+      "text": "Kochen",
+      "groups": [
+        "GRUEN",
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "kreativatelier",
+      "text": "Kreativatelier",
+      "groups": [
+        "ROT"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "lernzeit",
+      "text": "Lernzeit",
+      "groups": [
+        "LILA",
+        "GRUEN"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "lesen",
+      "text": "Lesen",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "musik",
+      "text": "Musik",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "musikraum",
+      "text": "Musikraum",
+      "groups": [
+        "BLAU"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "spiele",
+      "text": "Spiele",
+      "groups": [
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "sport",
+      "text": "Sport",
+      "groups": [
+        "ORANGE"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": "theater",
+      "text": "Theater",
+      "groups": [
+        "ROT",
+        "LILA"
+      ],
+      "createdAt": "2025-01-01T00:00:00Z"
+    }
   ],
   "timetableSubjects": [
     "Bewegung und Sport",
@@ -122,77 +279,222 @@
     "Freizeit": "#FACC15"
   },
   "timetableLessons": [
-    { "period": 1, "start": "08:00", "end": "08:50" },
-    { "period": 2, "start": "08:55", "end": "09:45" },
-    { "period": 3, "start": "10:10", "end": "11:00" },
-    { "period": 4, "start": "11:05", "end": "11:55" },
-    { "period": 5, "start": "12:05", "end": "12:55" },
-    { "period": 6, "start": "13:00", "end": "13:50" },
-    { "period": 7, "start": "13:50", "end": "14:40" },
-    { "period": 8, "start": "14:40", "end": "15:30" },
-    { "period": 9, "start": "15:30", "end": "16:30" },
-    { "period": 10, "start": "16:30", "end": "17:30" }
+    {
+      "period": 1,
+      "start": "08:00",
+      "end": "08:50"
+    },
+    {
+      "period": 2,
+      "start": "08:55",
+      "end": "09:45"
+    },
+    {
+      "period": 3,
+      "start": "10:10",
+      "end": "11:00"
+    },
+    {
+      "period": 4,
+      "start": "11:05",
+      "end": "11:55"
+    },
+    {
+      "period": 5,
+      "start": "12:05",
+      "end": "12:55"
+    },
+    {
+      "period": 6,
+      "start": "13:00",
+      "end": "13:50"
+    },
+    {
+      "period": 7,
+      "start": "13:50",
+      "end": "14:40"
+    },
+    {
+      "period": 8,
+      "start": "14:40",
+      "end": "15:30"
+    },
+    {
+      "period": 9,
+      "start": "15:30",
+      "end": "16:30"
+    },
+    {
+      "period": 10,
+      "start": "16:30",
+      "end": "17:30"
+    }
   ],
   "timetableSchedule": {
     "monday": [
-      ["Deutsch"],
-      ["Mathe"],
-      ["Deutsch", "IFÖ"],
-      ["Mittagsessen"],
-      ["BuS"],
-      ["Musik"],
-      ["Lernzeit"],
-      ["Freizeit"],
-      ["Spätdienst"],
-      ["Spätdienst"]
+      [
+        "Deutsch"
+      ],
+      [
+        "Mathe"
+      ],
+      [
+        "Deutsch",
+        "IFÖ"
+      ],
+      [
+        "Mittagsessen"
+      ],
+      [
+        "BuS"
+      ],
+      [
+        "Musik"
+      ],
+      [
+        "Lernzeit"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Spätdienst"
+      ],
+      [
+        "Spätdienst"
+      ]
     ],
     "tuesday": [
-      ["Mathe"],
-      ["SU"],
-      ["Deutsch"],
-      ["Mittagsessen"],
-      ["Deutsch"],
-      ["Lernzeit", "Rel. Isl."],
-      ["SU"],
-      ["Freizeit"],
-      ["Spätdienst"],
-      ["Spätdienst"]
+      [
+        "Mathe"
+      ],
+      [
+        "SU"
+      ],
+      [
+        "Deutsch"
+      ],
+      [
+        "Mittagsessen"
+      ],
+      [
+        "Deutsch"
+      ],
+      [
+        "Lernzeit",
+        "Rel. Isl."
+      ],
+      [
+        "SU"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Spätdienst"
+      ],
+      [
+        "Spätdienst"
+      ]
     ],
     "wednesday": [
-      ["Deutsch"],
-      ["Mathe"],
-      ["KuG"],
-      ["Mittagsessen"],
-      ["Freizeit"],
-      ["Lernzeit"],
-      ["Lernzeit"],
-      ["Rel. Isl.", "Freizeit"],
-      ["Spätdienst"],
-      ["Spätdienst"]
+      [
+        "Deutsch"
+      ],
+      [
+        "Mathe"
+      ],
+      [
+        "KuG"
+      ],
+      [
+        "Mittagsessen"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Lernzeit"
+      ],
+      [
+        "Lernzeit"
+      ],
+      [
+        "Rel. Isl.",
+        "Freizeit"
+      ],
+      [
+        "Spätdienst"
+      ],
+      [
+        "Spätdienst"
+      ]
     ],
     "thursday": [
-      ["Deutsch"],
-      ["Sachunterricht"],
-      ["TeD"],
-      ["Mittagsessen"],
-      ["Bewegung und Sport"],
-      ["Freizeit", "Rel. RK"],
-      ["Freizeit"],
-      ["Freizeit", "Rel. Ort."],
-      ["Spätdienst"],
-      ["Spätdienst"]
+      [
+        "Deutsch"
+      ],
+      [
+        "Sachunterricht"
+      ],
+      [
+        "TeD"
+      ],
+      [
+        "Mittagsessen"
+      ],
+      [
+        "Bewegung und Sport"
+      ],
+      [
+        "Freizeit",
+        "Rel. RK"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Freizeit",
+        "Rel. Ort."
+      ],
+      [
+        "Spätdienst"
+      ],
+      [
+        "Spätdienst"
+      ]
     ],
     "friday": [
-      ["Deutsch"],
-      ["Bewegung und Sport"],
-      ["Mathe"],
-      ["Mittagsessen"],
-      ["Lernzeit"],
-      ["Freizeit"],
-      ["Freizeit"],
-      ["Freizeit"],
-      ["Spätdienst"],
-      ["Spätdienst"]
+      [
+        "Deutsch"
+      ],
+      [
+        "Bewegung und Sport"
+      ],
+      [
+        "Mathe"
+      ],
+      [
+        "Mittagsessen"
+      ],
+      [
+        "Lernzeit"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Freizeit"
+      ],
+      [
+        "Spätdienst"
+      ],
+      [
+        "Spätdienst"
+      ]
     ]
   },
   "observationTemplates": [
@@ -605,7 +907,7 @@
       "absentChildIds": [
         "Linus"
       ],
-      "notes": "Außenspiel mit kurzer Regenpause"
+      "notes": ""
     },
     "2025-09-05": {
       "date": "2025-09-05",
@@ -629,7 +931,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Neue Lieder ausprobiert"
+      "notes": ""
     },
     "2025-09-09": {
       "date": "2025-09-09",
@@ -655,7 +957,7 @@
       "absentChildIds": [
         "Yara"
       ],
-      "notes": "Turmbau-Challenge"
+      "notes": ""
     },
     "2025-09-12": {
       "date": "2025-09-12",
@@ -678,7 +980,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Parcours in der Turnhalle"
+      "notes": ""
     },
     "2025-09-16": {
       "date": "2025-09-16",
@@ -701,7 +1003,7 @@
       "absentChildIds": [
         "Aylin"
       ],
-      "notes": "Rhythmusspiele mit Trommeln"
+      "notes": ""
     },
     "2025-09-19": {
       "date": "2025-09-19",
@@ -725,7 +1027,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Herbstblätter geklebt"
+      "notes": ""
     },
     "2025-09-23": {
       "date": "2025-09-23",
@@ -747,7 +1049,7 @@
       "absentChildIds": [
         "Ben"
       ],
-      "notes": "Ballspiele im Hof"
+      "notes": ""
     },
     "2025-09-26": {
       "date": "2025-09-26",
@@ -770,7 +1072,7 @@
       "absentChildIds": [
         "Gustav"
       ],
-      "notes": "Gemüsesuppe gemeinsam gekocht"
+      "notes": ""
     },
     "2025-10-01": {
       "date": "2025-10-01",
@@ -792,7 +1094,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Besuch im Stadtpark"
+      "notes": ""
     },
     "2025-10-07": {
       "date": "2025-10-07",
@@ -817,7 +1119,7 @@
       "absentChildIds": [
         "Oskar"
       ],
-      "notes": "Theaterstück geplant"
+      "notes": ""
     },
     "2025-10-14": {
       "date": "2025-10-14",
@@ -840,7 +1142,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Laternen gebastelt"
+      "notes": ""
     },
     "2025-10-21": {
       "date": "2025-10-21",
@@ -865,7 +1167,7 @@
       "absentChildIds": [
         "Valeska"
       ],
-      "notes": "Hindernislauf im Garten"
+      "notes": ""
     },
     "2025-10-28": {
       "date": "2025-10-28",
@@ -887,7 +1189,7 @@
       "absentChildIds": [
         "Aylin"
       ],
-      "notes": "Geschichten zur Jahreszeit"
+      "notes": ""
     },
     "2025-11-04": {
       "date": "2025-11-04",
@@ -910,7 +1212,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Kürbissuppe vorbereitet"
+      "notes": ""
     },
     "2025-11-12": {
       "date": "2025-11-12",
@@ -934,7 +1236,7 @@
       "absentChildIds": [
         "Linus"
       ],
-      "notes": "Waldspaziergang"
+      "notes": ""
     },
     "2025-11-18": {
       "date": "2025-11-18",
@@ -957,7 +1259,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Probe für Winteraufführung"
+      "notes": ""
     },
     "2025-11-26": {
       "date": "2025-11-26",
@@ -982,7 +1284,7 @@
       "absentChildIds": [
         "Rana"
       ],
-      "notes": "Winterdeko entworfen"
+      "notes": ""
     },
     "2025-12-03": {
       "date": "2025-12-03",
@@ -1007,7 +1309,7 @@
       "absentChildIds": [
         "Wiebke"
       ],
-      "notes": "Vorlesenachmittag"
+      "notes": ""
     },
     "2025-12-11": {
       "date": "2025-12-11",
@@ -1030,7 +1332,7 @@
         ]
       },
       "absentChildIds": [],
-      "notes": "Plätzchen gebacken"
+      "notes": ""
     }
   },
   "observationStats": {},

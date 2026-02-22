@@ -25,6 +25,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { normalizeWeekThemeAssignments } from '../db/dbSchema.js';
+import { updateEntry } from '../db/dbRepository.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -817,32 +818,41 @@ const buildWeeklyTable = ({
   }
 
   if (showWeeklyNote) {
-    const weeklyNoteRow = createEl('tr', { className: 'weekly-table__notes-row' });
+    const weeklyNoteRow = createEl('tr', { className: 'weekly-table__notes-row weekly-table__offers-row' });
     weeklyNoteRow.append(
       createEl('th', { scope: 'row', className: 'text-nowrap', text: 'Wöchentliche Notiz' }),
     );
     weekDays.forEach((item) => {
       const dayEntry = getDayEntry(item.dateKey);
       const freeInfo = item.freeInfo;
-      const noteContent = dayEntry.notes
-        ? createEl('span', { text: dayEntry.notes })
-        : createEl('span', { className: 'text-muted small', text: '—' });
+      const isDirectEditable = isEditMode && !freeInfo;
+      const noteContent = isDirectEditable
+        ? createEl('textarea', {
+            className: 'form-control form-control-sm weekly-table__inline-note-input',
+            attrs: {
+              rows: '2',
+              'aria-label': `Wöchentliche Notiz bearbeiten (${item.displayDate})`,
+              placeholder: 'Wöchentliche Notiz',
+            },
+          })
+        : dayEntry.notes
+          ? createEl('span', { text: dayEntry.notes })
+          : createEl('span', { className: 'text-muted small', text: '—' });
+
+      if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
+        noteContent.value = dayEntry.notes || '';
+        noteContent.addEventListener('input', () => {
+          updateEntry(item.dateKey, { notes: noteContent.value || '' });
+        });
+      }
+
       weeklyNoteRow.append(
         createEl('td', {
           className: freeInfo ? 'weekly-table__cell--free-day' : '',
           children: [
-            buildCellContent({
-              content: noteContent,
-              dateKey: item.dateKey,
-              displayDate: item.displayDate,
-              isEditMode,
-              onEditCell,
-              isFreeDay: Boolean(freeInfo),
-              editLabel: 'Wöchentliche Notiz',
-              editPayload: {
-                type: 'weekly-note',
-                dateKey: item.dateKey,
-              },
+            createEl('div', {
+              className: 'weekly-table__cell-content',
+              children: [noteContent],
             }),
           ],
         }),
