@@ -1173,6 +1173,9 @@ export const createWeeklyTableView = ({
       rows: '8',
       placeholder: 'Wöchentliche Notiz',
       'aria-label': 'Wöchentliche Notiz',
+      spellcheck: 'false',
+      autocorrect: 'off',
+      autocapitalize: 'off',
     },
   });
   const weeklyNoteSaveButton = createEl('button', {
