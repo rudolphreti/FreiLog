@@ -529,6 +529,7 @@ export const renderApp = (root, state) => {
   const freeDays = db.settings?.freeDays || [];
   const freeDayInfo = getFreeDayInfo(selectedDate, freeDays);
   const isReadOnlyDay = isFreeDay(selectedDate, freeDays);
+  const isWeeklyNoteReadOnly = false;
 
   const absentChildren = getAbsentChildren(entry);
   const observations = normalizeObservations(entry.observations);
@@ -797,7 +798,7 @@ export const renderApp = (root, state) => {
       observationsSection: observationsSection.element,
       entlassungSection: entlassungSection.element,
       weeklyNote,
-      weeklyNoteReadOnly: isReadOnlyDay,
+      weeklyNoteReadOnly: isWeeklyNoteReadOnly,
     });
     contentWrap.append(header.element, mainTabs.element);
 
@@ -830,7 +831,7 @@ export const renderApp = (root, state) => {
     });
     if (mainTabs.refs.weeklyNoteInput) {
       mainTabs.refs.weeklyNoteInput.addEventListener('blur', (event) => {
-        if (!(event.target instanceof HTMLTextAreaElement) || event.target.disabled) {
+        if (!(event.target instanceof HTMLTextAreaElement)) {
           return;
         }
         updateEntry(selectedDate, { notes: event.target.value || '' });
@@ -997,7 +998,7 @@ export const renderApp = (root, state) => {
     if (weeklyNoteInput.value !== nextWeeklyNote) {
       weeklyNoteInput.value = nextWeeklyNote;
     }
-    weeklyNoteInput.disabled = Boolean(isReadOnlyDay);
+    weeklyNoteInput.disabled = Boolean(isWeeklyNoteReadOnly);
   }
 
   if (appShell.mainTabsView?.refs?.angebotPane) {
