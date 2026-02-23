@@ -859,6 +859,7 @@ export const renderApp = (root, state) => {
     });
     if (weeklyTableViewBinding && actions?.weeklyTableButton) {
       actions.weeklyTableButton.addEventListener('click', () => {
+        closeDrawer();
         weeklyTableViewBinding.open();
       });
     }
@@ -1121,6 +1122,7 @@ export const renderApp = (root, state) => {
   });
   if (weeklyTableViewBinding && actions?.weeklyTableButton) {
     actions.weeklyTableButton.addEventListener('click', () => {
+      closeDrawer();
       weeklyTableViewBinding.open();
     });
   }
