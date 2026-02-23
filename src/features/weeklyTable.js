@@ -1203,7 +1203,7 @@ export const createWeeklyTableView = ({
 
   content.append(infoRow, tableContainer);
   panel.append(header, content);
-  overlay.append(panel, filterOverlay, weeklyNoteOverlay);
+  overlay.append(panel, filterOverlay);
 
   const isOpen = () => overlay.classList.contains('is-open');
 
@@ -1710,6 +1710,9 @@ export const createWeeklyTableView = ({
   };
 
   const openWeeklyNoteOverlay = ({ editableDateKeys = [], value = '' } = {}) => {
+    if (!weeklyNoteOverlay.isConnected) {
+      document.body.appendChild(weeklyNoteOverlay);
+    }
     closeFilterOverlay();
     weeklyNoteEditState = {
       editableDateKeys: [...editableDateKeys],
@@ -1749,6 +1752,9 @@ export const createWeeklyTableView = ({
     document.body.classList.remove('weekly-table-overlay-open');
     closeFilterOverlay();
     closeWeeklyNoteOverlay();
+    if (weeklyNoteOverlay.isConnected) {
+      weeklyNoteOverlay.remove();
+    }
   };
 
   closeButton.addEventListener('click', () => {
