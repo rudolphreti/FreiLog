@@ -832,7 +832,10 @@ const buildWeeklyTable = ({
       .map((item) => getDayEntry(item.dateKey).notes)
       .find((value) => typeof value === 'string' && value.trim()) || '';
     const noteContent = weekNote
-      ? createEl('span', { text: weekNote })
+      ? createEl('span', {
+          className: 'weekly-table__notes-cell-content text-muted small',
+          text: weekNote,
+        })
       : createEl('span', { className: 'text-muted small', text: '—' });
     const editTargetDateKey = editableDateKeys[0] || '';
 
