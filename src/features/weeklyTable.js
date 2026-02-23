@@ -1704,11 +1704,14 @@ export const createWeeklyTableView = ({
   };
 
   const openWeeklyNoteOverlay = ({ editableDateKeys = [], value = '' } = {}) => {
+    closeFilterOverlay();
     weeklyNoteEditState = {
       editableDateKeys: [...editableDateKeys],
       initialValue: typeof value === 'string' ? value : '',
     };
     weeklyNoteTextarea.value = weeklyNoteEditState.initialValue;
+    weeklyNoteTextarea.disabled = false;
+    weeklyNoteTextarea.readOnly = false;
     weeklyNoteOverlay.classList.add('is-open');
     weeklyNoteOverlay.setAttribute('aria-hidden', 'false');
     window.requestAnimationFrame(() => {
@@ -1780,6 +1783,13 @@ export const createWeeklyTableView = ({
     if (event.target === weeklyNoteOverlay) {
       closeWeeklyNoteOverlay();
     }
+  });
+
+  weeklyNotePanel.addEventListener('pointerdown', (event) => {
+    event.stopPropagation();
+  });
+  weeklyNotePanel.addEventListener('click', (event) => {
+    event.stopPropagation();
   });
 
   const escapeHtml = (value) =>
