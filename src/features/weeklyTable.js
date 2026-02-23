@@ -847,14 +847,6 @@ const buildWeeklyTable = ({
 
     if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
       noteContent.value = weekNote;
-      noteContent.disabled = false;
-      noteContent.readOnly = false;
-      noteContent.addEventListener('pointerdown', (event) => {
-        event.stopPropagation();
-      });
-      noteContent.addEventListener('click', (event) => {
-        event.stopPropagation();
-      });
       noteContent.addEventListener('blur', () => {
         const nextValue = noteContent.value || '';
         if (nextValue === weekNote) {
@@ -871,32 +863,11 @@ const buildWeeklyTable = ({
         ? 'weekly-table__cell--free-day'
         : '';
 
-    const noteCellContent = createEl('div', {
-      className: 'weekly-table__cell-content weekly-table__notes-cell-content',
-      children: [noteContent],
-    });
-    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
-      noteCellContent.addEventListener('pointerdown', (event) => {
-        if (event.target instanceof HTMLTextAreaElement) {
-          return;
-        }
-        event.preventDefault();
-        noteContent.focus();
-      });
-      noteCellContent.addEventListener('click', (event) => {
-        if (event.target instanceof HTMLTextAreaElement) {
-          return;
-        }
-        event.preventDefault();
-        noteContent.focus();
-      });
-    }
-
     weeklyNoteRow.append(
       createEl('td', {
         className: cellClassName,
         attrs: { colspan: String(weekDays.length) },
-        children: [noteCellContent],
+        children: [noteContent],
       }),
     );
     tbody.append(weeklyNoteRow);
