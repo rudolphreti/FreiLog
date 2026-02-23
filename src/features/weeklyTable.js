@@ -25,6 +25,7 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { normalizeWeekThemeAssignments } from '../db/dbSchema.js';
+import { updateEntry } from '../db/dbRepository.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -856,6 +857,8 @@ const buildWeeklyTable = ({
             editPayload: {
               type: 'weeklyNote',
               dateKey: editTargetDateKey,
+              editableDateKeys,
+              value: weekNote,
             },
           }),
         ],
@@ -1049,6 +1052,10 @@ export const createWeeklyTableView = ({
     weekTheme: true,
     weeklyNote: true,
   };
+  let weeklyNoteEditState = {
+    editableDateKeys: [],
+    initialValue: '',
+  };
   let freeDayFilters = {
     weekend: false,
     holidays: true,
@@ -1077,6 +1084,10 @@ export const createWeeklyTableView = ({
 
   const content = createEl('div', { className: 'weekly-table-overlay__content' });
   const filterOverlay = createEl('div', {
+    className: 'weekly-table-filter-overlay',
+    attrs: { 'aria-hidden': 'true' },
+  });
+  const weeklyNoteOverlay = createEl('div', {
     className: 'weekly-table-filter-overlay',
     attrs: { 'aria-hidden': 'true' },
   });
@@ -1141,6 +1152,37 @@ export const createWeeklyTableView = ({
   filterPanel.append(filterHeader, filterContent);
   filterOverlay.append(filterPanel);
 
+  const weeklyNotePanel = createEl('div', { className: 'weekly-table-filter-overlay__panel' });
+  const weeklyNoteHeader = createEl('div', { className: 'weekly-table-filter-overlay__header' });
+  const weeklyNoteTitle = createEl('h3', { className: 'h4 mb-0', text: 'Wöchentliche Notiz' });
+  const weeklyNoteCloseButton = createEl('button', {
+    className: 'btn-close weekly-table-filter-overlay__close',
+    attrs: { type: 'button', 'aria-label': 'Schließen' },
+  });
+  weeklyNoteHeader.append(weeklyNoteTitle, weeklyNoteCloseButton);
+  const weeklyNoteContent = createEl('div', { className: 'weekly-table-filter-overlay__content' });
+  const weeklyNoteTextarea = createEl('textarea', {
+    className: 'form-control',
+    attrs: {
+      rows: '8',
+      placeholder: 'Wöchentliche Notiz',
+      'aria-label': 'Wöchentliche Notiz',
+    },
+  });
+  const weeklyNoteSaveButton = createEl('button', {
+    className: 'btn btn-primary',
+    attrs: { type: 'button' },
+    text: 'Speichern',
+  });
+  weeklyNoteContent.append(
+    createEl('div', {
+      className: 'd-flex flex-column gap-3',
+      children: [weeklyNoteTextarea, weeklyNoteSaveButton],
+    }),
+  );
+  weeklyNotePanel.append(weeklyNoteHeader, weeklyNoteContent);
+  weeklyNoteOverlay.append(weeklyNotePanel);
+
   const infoText = createEl('div', { className: 'text-muted small' });
   const pdfButton = createEl('button', {
     className: 'btn btn-outline-primary d-inline-flex align-items-center gap-2 weekly-table__pdf',
@@ -1155,7 +1197,7 @@ export const createWeeklyTableView = ({
 
   content.append(infoRow, tableContainer);
   panel.append(header, content);
-  overlay.append(panel, filterOverlay);
+  overlay.append(panel, filterOverlay, weeklyNoteOverlay);
 
   const isOpen = () => overlay.classList.contains('is-open');
 
@@ -1418,22 +1460,15 @@ export const createWeeklyTableView = ({
       getAngebotGroupsForLabel,
       angebotGroups: currentAngebotGroups,
       observationGroups: currentObservationGroups,
-      onEditCell: ({ child, dateKey, weekId, schoolYearLabel, type }) => {
+      onEditCell: ({ child, dateKey, weekId, schoolYearLabel, type, editableDateKeys, value }) => {
         if (!dateKey && !weekId) {
           return;
         }
         if (type === 'weeklyNote') {
-          if (dateKey) {
-            setSelectedDate(dateKey);
-          }
-          close();
-          window.setTimeout(() => {
-            window.dispatchEvent(
-              new CustomEvent('freilog:weekly-note-open', {
-                detail: { dateKey },
-              }),
-            );
-          }, 120);
+          openWeeklyNoteOverlay({
+            editableDateKeys,
+            value,
+          });
           return;
         }
         if (dateKey) {
@@ -1668,6 +1703,26 @@ export const createWeeklyTableView = ({
     filterOverlay.setAttribute('aria-hidden', 'true');
   };
 
+  const openWeeklyNoteOverlay = ({ editableDateKeys = [], value = '' } = {}) => {
+    weeklyNoteEditState = {
+      editableDateKeys: [...editableDateKeys],
+      initialValue: typeof value === 'string' ? value : '',
+    };
+    weeklyNoteTextarea.value = weeklyNoteEditState.initialValue;
+    weeklyNoteOverlay.classList.add('is-open');
+    weeklyNoteOverlay.setAttribute('aria-hidden', 'false');
+    window.requestAnimationFrame(() => {
+      weeklyNoteTextarea.focus();
+      const valueLength = weeklyNoteTextarea.value.length;
+      weeklyNoteTextarea.setSelectionRange(valueLength, valueLength);
+    });
+  };
+
+  const closeWeeklyNoteOverlay = () => {
+    weeklyNoteOverlay.classList.remove('is-open');
+    weeklyNoteOverlay.setAttribute('aria-hidden', 'true');
+  };
+
   const open = () => {
     if (!schoolYears.length) {
       render();
@@ -1684,6 +1739,7 @@ export const createWeeklyTableView = ({
     overlay.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('weekly-table-overlay-open');
     closeFilterOverlay();
+    closeWeeklyNoteOverlay();
   };
 
   closeButton.addEventListener('click', () => {
@@ -1692,6 +1748,20 @@ export const createWeeklyTableView = ({
 
   filterCloseButton.addEventListener('click', () => {
     closeFilterOverlay();
+  });
+
+  weeklyNoteCloseButton.addEventListener('click', () => {
+    closeWeeklyNoteOverlay();
+  });
+
+  weeklyNoteSaveButton.addEventListener('click', () => {
+    const nextValue = weeklyNoteTextarea.value || '';
+    if (nextValue !== weeklyNoteEditState.initialValue) {
+      weeklyNoteEditState.editableDateKeys.forEach((dateKey) => {
+        updateEntry(dateKey, { notes: nextValue });
+      });
+    }
+    closeWeeklyNoteOverlay();
   });
 
   overlay.addEventListener('click', (event) => {
@@ -1703,6 +1773,12 @@ export const createWeeklyTableView = ({
   filterOverlay.addEventListener('click', (event) => {
     if (event.target === filterOverlay) {
       closeFilterOverlay();
+    }
+  });
+
+  weeklyNoteOverlay.addEventListener('click', (event) => {
+    if (event.target === weeklyNoteOverlay) {
+      closeWeeklyNoteOverlay();
     }
   });
 
