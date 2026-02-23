@@ -1088,7 +1088,7 @@ export const createWeeklyTableView = ({
     attrs: { 'aria-hidden': 'true' },
   });
   const weeklyNoteOverlay = createEl('div', {
-    className: 'weekly-table-note-overlay',
+    className: 'observation-create-overlay weekly-table-note-overlay',
     attrs: { 'aria-hidden': 'true' },
   });
   const filterPanel = createEl('div', { className: 'weekly-table-filter-overlay__panel' });
@@ -1152,15 +1152,21 @@ export const createWeeklyTableView = ({
   filterPanel.append(filterHeader, filterContent);
   filterOverlay.append(filterPanel);
 
-  const weeklyNotePanel = createEl('div', { className: 'weekly-table-note-overlay__panel' });
-  const weeklyNoteHeader = createEl('div', { className: 'weekly-table-note-overlay__header' });
+  const weeklyNotePanel = createEl('div', {
+    className: 'observation-create-overlay__panel weekly-table-note-overlay__panel',
+  });
+  const weeklyNoteHeader = createEl('div', {
+    className: 'observation-create-overlay__header weekly-table-note-overlay__header',
+  });
   const weeklyNoteTitle = createEl('h3', { className: 'h4 mb-0', text: 'Wöchentliche Notiz' });
   const weeklyNoteCloseButton = createEl('button', {
-    className: 'btn-close weekly-table-note-overlay__close',
+    className: 'btn-close observation-create-overlay__close weekly-table-note-overlay__close',
     attrs: { type: 'button', 'aria-label': 'Schließen' },
   });
   weeklyNoteHeader.append(weeklyNoteTitle, weeklyNoteCloseButton);
-  const weeklyNoteContent = createEl('div', { className: 'weekly-table-note-overlay__content' });
+  const weeklyNoteContent = createEl('div', {
+    className: 'observation-create-overlay__content weekly-table-note-overlay__content',
+  });
   const weeklyNoteTextarea = createEl('textarea', {
     className: 'form-control',
     attrs: {
