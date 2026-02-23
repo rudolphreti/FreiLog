@@ -25,7 +25,6 @@ import {
 } from '../utils/angebotModules.js';
 import { normalizeAngebotNote } from '../utils/angebotNotes.js';
 import { normalizeWeekThemeAssignments } from '../db/dbSchema.js';
-import { updateEntry } from '../db/dbRepository.js';
 
 const WEEKDAY_LABELS = [
   { label: 'Montag', offset: 0 },
@@ -831,32 +830,10 @@ const buildWeeklyTable = ({
     const weekNote = weekDays
       .map((item) => getDayEntry(item.dateKey).notes)
       .find((value) => typeof value === 'string' && value.trim()) || '';
-    const isDirectEditable = isEditMode && editableDateKeys.length > 0;
-    const noteContent = isDirectEditable
-      ? createEl('textarea', {
-          className: 'form-control form-control-sm weekly-table__inline-note-input',
-          attrs: {
-            rows: '3',
-            'aria-label': `Wöchentliche Notiz bearbeiten (${themeDisplayLabel})`,
-            placeholder: 'Wöchentliche Notiz',
-          },
-        })
-      : weekNote
-        ? createEl('span', { text: weekNote })
-        : createEl('span', { className: 'text-muted small', text: '—' });
-
-    if (isDirectEditable && noteContent instanceof HTMLTextAreaElement) {
-      noteContent.value = weekNote;
-      noteContent.addEventListener('blur', () => {
-        const nextValue = noteContent.value || '';
-        if (nextValue === weekNote) {
-          return;
-        }
-        editableDateKeys.forEach((dateKey) => {
-          updateEntry(dateKey, { notes: nextValue });
-        });
-      });
-    }
+    const noteContent = weekNote
+      ? createEl('span', { text: weekNote })
+      : createEl('span', { className: 'text-muted small', text: '—' });
+    const editTargetDateKey = editableDateKeys[0] || '';
 
     const cellClassName =
       weekDays.length && weekDays.every((item) => item.freeInfo)
@@ -867,7 +844,21 @@ const buildWeeklyTable = ({
       createEl('td', {
         className: cellClassName,
         attrs: { colspan: String(weekDays.length) },
-        children: [noteContent],
+        children: [
+          buildCellContent({
+            content: noteContent,
+            dateKey: editTargetDateKey,
+            displayDate: themeDisplayLabel,
+            isEditMode,
+            onEditCell,
+            isFreeDay: !editTargetDateKey,
+            editLabel: 'Wöchentliche Notiz',
+            editPayload: {
+              type: 'weeklyNote',
+              dateKey: editTargetDateKey,
+            },
+          }),
+        ],
       }),
     );
     tbody.append(weeklyNoteRow);
@@ -1427,8 +1418,22 @@ export const createWeeklyTableView = ({
       getAngebotGroupsForLabel,
       angebotGroups: currentAngebotGroups,
       observationGroups: currentObservationGroups,
-      onEditCell: ({ child, dateKey, weekId, schoolYearLabel }) => {
+      onEditCell: ({ child, dateKey, weekId, schoolYearLabel, type }) => {
         if (!dateKey && !weekId) {
+          return;
+        }
+        if (type === 'weeklyNote') {
+          if (dateKey) {
+            setSelectedDate(dateKey);
+          }
+          close();
+          window.setTimeout(() => {
+            window.dispatchEvent(
+              new CustomEvent('freilog:weekly-note-open', {
+                detail: { dateKey },
+              }),
+            );
+          }, 120);
           return;
         }
         if (dateKey) {
@@ -1651,18 +1656,6 @@ export const createWeeklyTableView = ({
   const setEditMode = (nextValue) => {
     isEditMode = Boolean(nextValue);
     renderTable();
-    if (!isEditMode) {
-      return;
-    }
-    window.requestAnimationFrame(() => {
-      const noteInput = tableContainer.querySelector('.weekly-table__inline-note-input');
-      if (!(noteInput instanceof HTMLTextAreaElement) || noteInput.disabled) {
-        return;
-      }
-      noteInput.focus();
-      const valueLength = noteInput.value.length;
-      noteInput.setSelectionRange(valueLength, valueLength);
-    });
   };
 
   const openFilterOverlay = () => {

@@ -469,6 +469,7 @@ let angebotDetailOverlayView = null;
 let angebotDeleteConfirmView = null;
 let angebotOpenButtonRef = null;
 let angebotOpenListenerAttached = false;
+let weeklyNoteOpenListenerAttached = false;
 let observationCatalogOverlayView = null;
 let observationCatalogBinding = null;
 let observationCatalogCreateOverlay = null;
@@ -979,6 +980,23 @@ export const renderApp = (root, state) => {
         }
       });
       angebotOpenListenerAttached = true;
+    }
+    if (!weeklyNoteOpenListenerAttached) {
+      window.addEventListener('freilog:weekly-note-open', () => {
+        const tabButton = document.getElementById('main-weekly-note-tab');
+        if (tabButton instanceof HTMLButtonElement) {
+          tabButton.click();
+        }
+        const noteInput = appShell?.mainTabsView?.refs?.weeklyNoteInput;
+        if (noteInput instanceof HTMLTextAreaElement && !noteInput.disabled) {
+          window.requestAnimationFrame(() => {
+            noteInput.focus();
+            const valueLength = noteInput.value.length;
+            noteInput.setSelectionRange(valueLength, valueLength);
+          });
+        }
+      });
+      weeklyNoteOpenListenerAttached = true;
     }
     return;
   }
