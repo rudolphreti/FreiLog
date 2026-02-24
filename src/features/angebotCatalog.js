@@ -747,7 +747,10 @@ export const bindAngebotCatalog = ({
   let currentDate = date;
   let currentDays = days || {};
   let currentFreeDays = Array.isArray(freeDays) ? [...freeDays] : [];
-  let currentWeekThemes = normalizeWeekThemeAssignments(weekThemes, getWeekThemes());
+  const resolveWeekThemes = (value) =>
+    normalizeWeekThemeAssignments(value === undefined ? getWeekThemes() : value);
+
+  let currentWeekThemes = resolveWeekThemes(weekThemes);
   let currentSchoolYears = [];
   let selectedWeekThemeYear = null;
   let currentCatalog = normalizeCatalog(catalog);
@@ -2447,7 +2450,7 @@ export const bindAngebotCatalog = ({
       currentDate = nextDate || currentDate;
       currentDays = nextDays || {};
       currentFreeDays = Array.isArray(nextFreeDays) ? [...nextFreeDays] : [];
-      currentWeekThemes = normalizeWeekThemeAssignments(nextWeekThemes, getWeekThemes());
+      currentWeekThemes = resolveWeekThemes(nextWeekThemes);
       currentCatalog = normalizeCatalog(nextCatalog || currentCatalog);
       currentTopStats = nextStats || {};
       currentModules = Array.isArray(nextModules) ? nextModules : [];
