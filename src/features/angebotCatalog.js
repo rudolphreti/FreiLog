@@ -1196,6 +1196,41 @@ export const bindAngebotCatalog = ({
     setWeekThemeForWeek(weekId, normalized);
   };
 
+  const syncWeekThemeSaveButton = (input) => {
+    if (!(input instanceof HTMLInputElement)) {
+      return;
+    }
+    const weekId = input.dataset.weekId;
+    if (!weekId) {
+      return;
+    }
+    const item = input.closest('.angebot-week-theme__item');
+    if (!(item instanceof HTMLElement)) {
+      return;
+    }
+    const saveButton = item.querySelector('[data-role="angebot-week-theme-save"]');
+    if (!(saveButton instanceof HTMLButtonElement)) {
+      return;
+    }
+    if (input.dataset.disabledWeek === 'true' || input.disabled) {
+      saveButton.disabled = true;
+      return;
+    }
+    const normalizedCurrent = normalizeWeekThemeText(input.value);
+    const normalizedSaved = normalizeWeekThemeText(currentWeekThemes[weekId] || '');
+    saveButton.disabled = normalizedCurrent === normalizedSaved;
+  };
+
+  const saveWeekThemeFromButton = (button) => {
+    if (!(button instanceof HTMLElement)) {
+      return;
+    }
+    const item = button.closest('.angebot-week-theme__item');
+    const input = item?.querySelector('[data-role="angebot-week-theme-input"]');
+    commitWeekThemeInput(input);
+    syncWeekThemeSaveButton(input);
+  };
+
   const renderWeekThemeList = () => {
     if (!manageOverlayRef) {
       return;
@@ -1273,7 +1308,18 @@ export const bindAngebotCatalog = ({
       if (datalistId) {
         input.setAttribute('list', datalistId);
       }
+      const saveButton = document.createElement('button');
+      saveButton.type = 'button';
+      saveButton.className = 'btn btn-outline-primary btn-sm mt-2 align-self-start';
+      saveButton.dataset.role = 'angebot-week-theme-save';
+      saveButton.dataset.weekId = week.id;
+      saveButton.textContent = 'Speichern';
+      saveButton.disabled = isDisabled;
       inputWrap.appendChild(input);
+      inputWrap.appendChild(saveButton);
+      if (!isDisabled) {
+        syncWeekThemeSaveButton(input);
+      }
       if (isDisabled) {
         const helper = document.createElement('div');
         helper.className = 'form-text small';
@@ -1918,6 +1964,11 @@ export const bindAngebotCatalog = ({
       openCreateOverlay('manage');
       return;
     }
+    const saveButton = target.closest('[data-role="angebot-week-theme-save"]');
+    if (saveButton) {
+      saveWeekThemeFromButton(saveButton);
+      return;
+    }
     if (activeTab !== 'catalog') {
       return;
     }
@@ -1943,18 +1994,34 @@ export const bindAngebotCatalog = ({
       }
       return;
     }
-    if (target.dataset.role === 'angebot-week-theme-input') {
-      commitWeekThemeInput(target);
-    }
   };
 
-  const handleManageFocusOut = (event) => {
+  const handleManageInput = (event) => {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) {
+    if (!(target instanceof HTMLInputElement)) {
       return;
     }
     if (target.dataset.role === 'angebot-week-theme-input') {
-      commitWeekThemeInput(target);
+      syncWeekThemeSaveButton(target);
+    }
+  };
+
+  const handleManageKeyDown = (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) {
+      return;
+    }
+    if (target.dataset.role !== 'angebot-week-theme-input') {
+      return;
+    }
+    if (event.key !== 'Enter') {
+      return;
+    }
+    event.preventDefault();
+    const item = target.closest('.angebot-week-theme__item');
+    const saveButton = item?.querySelector('[data-role="angebot-week-theme-save"]');
+    if (saveButton instanceof HTMLButtonElement && !saveButton.disabled) {
+      saveWeekThemeFromButton(saveButton);
     }
   };
 
@@ -2392,8 +2459,9 @@ export const bindAngebotCatalog = ({
   if (manageOverlayRef) {
     manageOverlayRef.addEventListener('click', handleManageClick);
     manageOverlayRef.addEventListener('input', handleSearchInput);
+    manageOverlayRef.addEventListener('input', handleManageInput);
     manageOverlayRef.addEventListener('change', handleManageChange);
-    manageOverlayRef.addEventListener('focusout', handleManageFocusOut);
+    manageOverlayRef.addEventListener('keydown', handleManageKeyDown);
   }
   if (detailOverlayRef) {
     detailOverlayRef.addEventListener('click', handleDetailClick);
